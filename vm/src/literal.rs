@@ -2,7 +2,7 @@ use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Literal {
-    Num(i64),
+    Num(f64),
     Nil,
 }
 
