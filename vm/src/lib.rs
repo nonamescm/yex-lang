@@ -1,52 +1,89 @@
 mod literal;
 #[cfg(test)]
 mod tests;
-
 pub use literal::Literal;
 
-type Address = usize;
-
 pub enum Instruction {
-    Add(Address, Address, Address),
-    Sub(Address, Address, Address),
-    Mul(Address, Address, Address),
-    Div(Address, Address, Address),
-    Load(Literal, Address),
-    Ret(Address),
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Neg,
+    Push(Literal),
+    Ret,
+    Halt,
 }
 
 pub struct VirtualMachine {
-    reg: [Literal; 256],
+    stack: Vec<Literal>,
+    is_running: bool,
+    line: usize,
+    column: usize,
 }
 
 impl VirtualMachine {
     pub fn run(&mut self, code: Vec<Instruction>) -> Literal {
         for intr in code {
             if let Some(v) = self.run_instruction(intr) {
-                return v.to_owned();
+                return v;
             }
         }
         Literal::Nil
     }
 
-    fn run_instruction(&mut self, intr: Instruction) -> Option<&Literal> {
+    fn pop(&mut self) -> Literal {
+        self.stack.pop().unwrap_or(Literal::Nil)
+    }
+
+    fn push(&mut self, literal: Literal) {
+        self.stack.push(literal)
+    }
+
+    fn try_do<E: std::fmt::Display>(&self, result: Result<Literal, E>) -> Literal {
+        match result {
+            Ok(l) => l,
+            Err(e) => panic!("[{}:{}] {}", self.line, self.column, e),
+        }
+    }
+
+    fn run_instruction(&mut self, intr: Instruction) -> Option<Literal> {
         match intr {
-            Instruction::Add(addr1, addr2, new_addr) => {
-                self.reg[new_addr] = &self.reg[addr1] + &self.reg[addr2];
+            Instruction::Add => {
+                let second = self.pop();
+                let first = self.pop();
+
+                self.push(self.try_do(first + second));
             }
-            Instruction::Sub(addr1, addr2, new_addr) => {
-                self.reg[new_addr] = &self.reg[addr1] - &self.reg[addr2];
+            Instruction::Sub => {
+                let second = self.pop();
+                let first = self.pop();
+
+                self.push(self.try_do(first - second));
             }
-            Instruction::Mul(addr1, addr2, new_addr) => {
-                self.reg[new_addr] = &self.reg[addr1] * &self.reg[addr2];
+            Instruction::Mul => {
+                let second = self.pop();
+                let first = self.pop();
+
+                self.push(self.try_do(first * second));
             }
-            Instruction::Div(addr1, addr2, new_addr) => {
-                self.reg[new_addr] = &self.reg[addr1] / &self.reg[addr2];
+            Instruction::Div => {
+                let second = self.pop();
+                let first = self.pop();
+
+                self.push(self.try_do(first / second));
             }
-            Instruction::Load(lit, reg) => {
-                self.reg[reg] = lit;
+            Instruction::Neg => {
+                let first = self.pop();
+                self.push(self.try_do(-first));
             }
-            Instruction::Ret(addr) => return Some(&self.reg[addr]),
+            Instruction::Push(lit) => {
+                self.push(lit);
+            }
+            Instruction::Ret => return Some(self.pop()),
+            Instruction::Halt => {
+                self.is_running = false;
+                self.stack = vec![];
+            }
         };
         None
     }
@@ -54,6 +91,11 @@ impl VirtualMachine {
 
 impl Default for VirtualMachine {
     fn default() -> Self {
-        Self { reg: vec![Literal::Nil; 256].try_into().unwrap() }
+        Self {
+            stack: vec![],
+            is_running: false,
+            line: 1,
+            column: 1,
+        }
     }
 }

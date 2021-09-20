@@ -5,10 +5,10 @@ fn test_add() {
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
-        Instruction::Load(Literal::Num(112.0), 40),
-        Instruction::Load(Literal::Num(137.0), 255),
-        Instruction::Add(40, 255, 30),
-        Instruction::Ret(30),
+        Instruction::Push(Literal::Num(112.0)),
+        Instruction::Push(Literal::Num(137.0)),
+        Instruction::Add,
+        Instruction::Ret,
     ]);
 
     assert_eq!(test, Literal::Num(112.0 + 137.0))
@@ -21,10 +21,10 @@ fn test_sub() {
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
-        Instruction::Load(Literal::Num(112.0), 40),
-        Instruction::Load(Literal::Num(137.0), 255),
-        Instruction::Sub(40, 255, 30),
-        Instruction::Ret(30),
+        Instruction::Push(Literal::Num(112.0)),
+        Instruction::Push(Literal::Num(137.0)),
+        Instruction::Sub,
+        Instruction::Ret,
     ]);
 
     assert_eq!(test, Literal::Num(112.0 - 137.0))
@@ -37,10 +37,10 @@ fn test_mul() {
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
-        Instruction::Load(Literal::Num(112.0), 40),
-        Instruction::Load(Literal::Num(137.0), 255),
-        Instruction::Mul(40, 255, 30),
-        Instruction::Ret(30),
+        Instruction::Push(Literal::Num(112.0)),
+        Instruction::Push(Literal::Num(137.0)),
+        Instruction::Mul,
+        Instruction::Ret,
     ]);
 
     assert_eq!(test, Literal::Num(112.0 * 137.0))
@@ -53,10 +53,10 @@ fn test_div() {
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
-        Instruction::Load(Literal::Num(112.0), 40),
-        Instruction::Load(Literal::Num(137.0), 255),
-        Instruction::Div(40, 255, 30),
-        Instruction::Ret(30),
+        Instruction::Push(Literal::Num(112.0)),
+        Instruction::Push(Literal::Num(137.0)),
+        Instruction::Div,
+        Instruction::Ret,
     ]);
 
     assert_eq!(test, Literal::Num(112.0 / 137.0))
@@ -69,13 +69,29 @@ fn test_string_concat() {
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
-        Instruction::Load(Literal::Str("Hello, ".to_string()), 40),
-        Instruction::Load(Literal::Str("World".to_string()), 255),
-        Instruction::Add(40, 255, 30),
-        Instruction::Ret(30),
+        Instruction::Push(Literal::Str("Hello, ".to_string())),
+        Instruction::Push(Literal::Str("World".to_string())),
+        Instruction::Add,
+        Instruction::Ret,
     ]);
 
     assert_eq!(test, Literal::Str("Hello, World".to_string()));
+}
+
+#[test]
+fn test_neg() {
+    use crate::{Instruction, Literal, VirtualMachine};
+
+    let mut vm = VirtualMachine::default();
+
+    let test = vm.run(vec![
+        Instruction::Push(Literal::Num(112.0)),
+        Instruction::Neg,
+        Instruction::Ret,
+    ]);
+
+    assert_eq!(test, Literal::Num(-112.0))
+
 }
 
 #[test]
@@ -85,12 +101,10 @@ fn should_panic_string_add_number() {
 
     let mut vm = VirtualMachine::default();
 
-    let test = vm.run(vec![
-        Instruction::Load(Literal::Str("Hello, ".to_string()), 40),
-        Instruction::Load(Literal::Num(1.0), 255),
-        Instruction::Add(40, 255, 30),
-        Instruction::Ret(30),
+    vm.run(vec![
+        Instruction::Push(Literal::Str("Hello, ".to_string())),
+        Instruction::Push(Literal::Num(1.0)),
+        Instruction::Add,
+        Instruction::Ret,
     ]);
-
-    assert_eq!(test, Literal::Str("Hello, World".to_string()));
 }

@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
@@ -7,108 +7,144 @@ pub enum Literal {
     Nil,
 }
 
+type LiteralErr = Result<Literal, String>;
+
+macro_rules! err {
+    ($($tt: tt),+) => {
+        Err(format!($($tt),+))
+    }
+}
+
+impl std::fmt::Display for Literal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use Literal::*;
+        let tk = match self {
+            Nil => "nil".to_string(),
+            Str(s) => s.to_string(),
+            Num(n) => n.to_string(),
+        };
+        write!(f, "{}", tk)
+    }
+}
+
 impl Add for Literal {
-    type Output = Self;
+    type Output = Result<Self, String>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        match (self, &rhs) {
-            (Self::Num(x), Self::Num(y)) => Self::Num(x + y),
-            (Self::Str(x), Self::Str(y)) => Self::Str(x + y),
-            (Self::Nil, _) | (_, Self::Nil) => todo!(),
-            _ => todo!()
+        match (self, rhs) {
+            (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x + y)),
+            (Self::Str(x), Self::Str(y)) => Ok(Self::Str(x + &y)),
+            (s, r) => err!("Can't apply `+` operator {} between {}", s, r),
         }
     }
 }
 
 impl Add for &Literal {
-    type Output = Literal;
+    type Output = LiteralErr;
 
     fn add(self, rhs: Self) -> Self::Output {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => Num(x + y),
-            (Str(x), Str(y)) => Str(x.to_string() + y),
-            (Nil, _) | (_, Nil) => todo!(),
-            _ => todo!()
+            (Num(x), Num(y)) => Ok(Num(x + y)),
+            (Str(x), Str(y)) => Ok(Str(x.to_string() + y)),
+            (s, r) => err!("Can't apply `+` operator {} between {}", s, r),
         }
     }
 }
 
 impl Sub for Literal {
-    type Output = Self;
+    type Output = LiteralErr;
 
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
-            (Self::Num(x), Self::Num(y)) => Self::Num(x - y),
-            (Self::Nil, _) | (_, Self::Nil) => todo!(),
-            _ => todo!()
+            (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x - y)),
+            (s, r) => err!("Can't apply `-` operator {} between {}", s, r),
         }
     }
 }
 
 impl Sub for &Literal {
-    type Output = Literal;
+    type Output = LiteralErr;
 
     fn sub(self, rhs: Self) -> Self::Output {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => Num(x - y),
-            (Nil, _) | (_, Nil) => todo!(),
-            _ => todo!()
+            (Num(x), Num(y)) => Ok(Num(x - y)),
+            (s, r) => err!("Can't apply `-` operator {} between {}", s, r),
         }
     }
 }
 
 impl Mul for Literal {
-    type Output = Self;
+    type Output = LiteralErr;
 
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
-            (Self::Num(x), Self::Num(y)) => Self::Num(x * y),
-            (Self::Nil, _) | (_, Self::Nil) => todo!(),
-            _ => todo!()
+            (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x * y)),
+            (s, r) => err!("Can't apply `*` operator {} between {}", s, r),
         }
     }
 }
 
 impl Mul for &Literal {
-    type Output = Literal;
+    type Output = LiteralErr;
 
     fn mul(self, rhs: Self) -> Self::Output {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => Num(x * y),
-            (Nil, _) | (_, Nil) => todo!(),
-            _ => todo!()
+            (Num(x), Num(y)) => Ok(Num(x * y)),
+            (s, r) => err!("Can't apply `*` operator {} between {}", s, r),
         }
     }
 }
 
 impl Div for Literal {
-    type Output = Self;
+    type Output = Result<Self, String>;
 
     fn div(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
-            (Self::Num(x), Self::Num(y)) => Self::Num(x / y),
-            (Self::Nil, _) | (_, Self::Nil) => todo!(),
-            _ => todo!()
+            (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x / y)),
+            (s, r) => err!("Can't apply `/` operator {} between {}", s, r),
         }
     }
 }
 
 impl Div for &Literal {
-    type Output = Literal;
+    type Output = LiteralErr;
 
     fn div(self, rhs: Self) -> Self::Output {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => Num(x / y),
-            (Nil, _) | (_, Nil) => todo!(),
-            _ => todo!()
+            (Num(x), Num(y)) => Ok(Num(x / y)),
+            (s, r) => err!("Can't apply `/` operator {} between {}", s, r),
+        }
+    }
+}
+
+impl Neg for Literal {
+    type Output = LiteralErr;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            Self::Num(n) => Ok(Self::Num(-n)),
+            s => err!("Can't apply unary `-` operator on {}", s),
+        }
+    }
+}
+
+impl Neg for &Literal {
+    type Output = LiteralErr;
+
+    fn neg(self) -> Self::Output {
+        use Literal::*;
+
+        match self {
+            Num(n) => Ok(Num(-n)),
+            s => err!("Can't apply unary `-` operator on {}", s),
         }
     }
 }
