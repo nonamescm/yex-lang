@@ -23,31 +23,37 @@ impl VirtualMachine {
     pub fn run(&mut self, code: Vec<Instruction>) -> Literal {
         for intr in code {
             if let Some(v) = self.run_instruction(intr) {
-                return v;
+                return v.to_owned();
             }
         }
         Literal::Nil
     }
 
-    fn run_instruction(&mut self, intr: Instruction) -> Option<Literal> {
+    fn run_instruction(&mut self, intr: Instruction) -> Option<&Literal> {
         match intr {
             Instruction::Add(addr1, addr2, new_addr) => {
-                self.reg[new_addr] = self.reg[addr1] + self.reg[addr2];
+                self.reg[new_addr] = &self.reg[addr1] + &self.reg[addr2];
             }
             Instruction::Sub(addr1, addr2, new_addr) => {
-                self.reg[new_addr] = self.reg[addr1] - self.reg[addr2];
+                self.reg[new_addr] = &self.reg[addr1] - &self.reg[addr2];
             }
             Instruction::Mul(addr1, addr2, new_addr) => {
-                self.reg[new_addr] = self.reg[addr1] * self.reg[addr2];
+                self.reg[new_addr] = &self.reg[addr1] * &self.reg[addr2];
             }
             Instruction::Div(addr1, addr2, new_addr) => {
-                self.reg[new_addr] = self.reg[addr1] / self.reg[addr2];
+                self.reg[new_addr] = &self.reg[addr1] / &self.reg[addr2];
             }
             Instruction::Load(lit, reg) => {
                 self.reg[reg] = lit;
             }
-            Instruction::Ret(addr) => return Some(self.reg[addr]),
+            Instruction::Ret(addr) => return Some(&self.reg[addr]),
         };
         None
+    }
+}
+
+impl Default for VirtualMachine {
+    fn default() -> Self {
+        Self { reg: vec![Literal::Nil; 256].try_into().unwrap() }
     }
 }

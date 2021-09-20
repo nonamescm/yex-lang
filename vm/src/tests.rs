@@ -2,9 +2,7 @@
 fn test_add() {
     use crate::{Instruction, Literal, VirtualMachine};
 
-    let mut vm = VirtualMachine {
-        reg: [Literal::Num(0.0); 256],
-    };
+    let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
         Instruction::Load(Literal::Num(112.0), 40),
@@ -20,9 +18,7 @@ fn test_add() {
 fn test_sub() {
     use crate::{Instruction, Literal, VirtualMachine};
 
-    let mut vm = VirtualMachine {
-        reg: [Literal::Num(0.0); 256],
-    };
+    let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
         Instruction::Load(Literal::Num(112.0), 40),
@@ -38,9 +34,7 @@ fn test_sub() {
 fn test_mul() {
     use crate::{Instruction, Literal, VirtualMachine};
 
-    let mut vm = VirtualMachine {
-        reg: [Literal::Num(0.0); 256],
-    };
+    let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
         Instruction::Load(Literal::Num(112.0), 40),
@@ -56,9 +50,7 @@ fn test_mul() {
 fn test_div() {
     use crate::{Instruction, Literal, VirtualMachine};
 
-    let mut vm = VirtualMachine {
-        reg: [Literal::Num(0.0); 256],
-    };
+    let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
         Instruction::Load(Literal::Num(112.0), 40),
@@ -68,4 +60,20 @@ fn test_div() {
     ]);
 
     assert_eq!(test, Literal::Num(112.0 / 137.0))
+}
+
+#[test]
+fn test_string_concat() {
+    use crate::{Instruction, Literal, VirtualMachine};
+
+    let mut vm = VirtualMachine::default();
+
+    let test = vm.run(vec![
+        Instruction::Load(Literal::Str("Hello, ".to_string()), 40),
+        Instruction::Load(Literal::Str("World".to_string()), 255),
+        Instruction::Add(40, 255, 30),
+        Instruction::Ret(30),
+    ]);
+
+    assert_eq!(test, Literal::Str("Hello, World".to_string()));
 }
