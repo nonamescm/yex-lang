@@ -48,6 +48,9 @@ impl Lexer {
                 self.column += 1;
                 self.next();
             }
+            '#' => {
+                drop(self.take_while(|c| c != '\n'));
+            }
             _ => self.column += 1,
         };
         self.current()
