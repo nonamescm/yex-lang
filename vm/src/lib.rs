@@ -16,7 +16,6 @@ pub enum Instruction {
 
 pub struct VirtualMachine {
     stack: Vec<Literal>,
-    is_running: bool,
     line: usize,
     column: usize,
 }
@@ -81,7 +80,6 @@ impl VirtualMachine {
             }
             Instruction::Ret => return Some(self.pop()),
             Instruction::Halt => {
-                self.is_running = false;
                 self.stack = vec![];
             }
         };
@@ -93,7 +91,6 @@ impl Default for VirtualMachine {
     fn default() -> Self {
         Self {
             stack: vec![],
-            is_running: false,
             line: 1,
             column: 1,
         }
