@@ -66,7 +66,7 @@ impl Lexer {
         item
     }
 
-    fn get(&mut self) -> Tk {
+    pub fn get(&mut self) -> Tk {
         let tk = match self.current() {
             '+' => TokenType::Add,
             '-' => TokenType::Sub,
@@ -79,7 +79,7 @@ impl Lexer {
                 .parse::<f64>()
             {
                 Ok(n) => TokenType::Num(n),
-                Err(_) => ParseError::throw(self.line, self.column, format!("Can't parse number"))?,
+                Err(_) => ParseError::throw(self.line, self.column, "Can't parse number".into())?,
             },
             c => ParseError::throw(
                 self.line,
