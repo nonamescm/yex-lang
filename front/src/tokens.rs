@@ -5,9 +5,11 @@ pub enum TokenType {
     Sub,
     Mul,
     Div,
-    Neg,
     Lparen,
     Rparen,
+
+    // Reserved for parse errors
+    Err,
 }
 
 impl std::fmt::Display for TokenType {
@@ -19,9 +21,9 @@ impl std::fmt::Display for TokenType {
             Self::Sub => '-'.into(),
             Self::Mul => '*'.into(),
             Self::Div => '/'.into(),
-            Self::Neg => '~'.into(),
             Self::Lparen => '('.into(),
             Self::Rparen => ')'.into(),
+            Self::Err => unreachable!(),
         };
 
         write!(f, "{}", res)
@@ -35,3 +37,12 @@ pub struct Token {
     pub token: TokenType
 }
 
+impl Default for Token {
+    fn default() -> Self {
+        Self {
+            line: 0,
+            column: 0,
+            token: TokenType::Err,
+        }
+    }
+}
