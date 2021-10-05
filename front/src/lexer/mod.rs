@@ -11,7 +11,16 @@ pub struct Lexer {
 type Tk = Result<Token, ParseError>;
 
 impl Lexer {
+    pub fn new<T: Into<String>>(t: T) -> Self {
+        Self {
+            tokens: t.into().chars().collect(),
+            line: 1,
+            column: 1,
+            idx: 0,
+        }
+    }
     // Implemented for tests
+    #[cfg(test)]
     pub fn lex(tokens: Vec<char>) -> Vec<Tk> {
         let mut this = Self {
             line: 1,
@@ -67,7 +76,7 @@ impl Lexer {
         item
     }
 
-    pub fn get(&mut self) -> Tk {
+    fn get(&mut self) -> Tk {
         let tk = match self.current() {
             '+' => TokenType::Add,
             '-' => TokenType::Sub,
@@ -100,9 +109,8 @@ impl Lexer {
 impl Iterator for Lexer {
     type Item = Token;
     fn next(&mut self) -> Option<Self::Item> {
-        match self.get() {
-            Ok(c) => Some(c),
-            Err(..) => None,
-        }
+        let x = self.get().ok();
+        self.next();
+        x
     }
 }
