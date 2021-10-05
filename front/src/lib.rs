@@ -1,5 +1,5 @@
 mod lexer;
-mod compiler;
+pub mod compiler;
 mod tokens;
 mod error;
 mod tests;
