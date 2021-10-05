@@ -46,3 +46,13 @@ impl Default for Token {
         }
     }
 }
+
+impl Default for &Token {
+    fn default() -> Self {
+        &Token {
+            line: 0,
+            column: 0,
+            token: TokenType::Err,
+        }
+    }
+}

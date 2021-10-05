@@ -101,3 +101,13 @@ fn lex_test_2() {
         ]
     )
 }
+
+#[test]
+fn compiler_test() {
+    use crate::{compiler::Compiler, lexer::Lexer};
+    use vm::{Instruction::*, Literal::*};
+
+    let res = Compiler::compile(Lexer::new("-1"));
+
+    assert_eq!(res, Ok(vec![Push(Num(1.0)), Neg]))
+}
