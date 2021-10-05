@@ -3,6 +3,7 @@ mod literal;
 mod tests;
 pub use literal::Literal;
 
+#[derive(PartialEq, Debug)]
 pub enum Instruction {
     Add,
     Sub,
@@ -13,6 +14,14 @@ pub enum Instruction {
     Ret,
     Halt,
 }
+
+macro_rules! panic_vm {
+    ($($tt:tt)*) => {{
+        std::panic::set_hook(Box::new(|_| {}));
+        panic!($($tt)*)
+    }}
+}
+
 
 pub struct VirtualMachine {
     stack: Vec<Literal>,
@@ -41,39 +50,39 @@ impl VirtualMachine {
     fn try_do<E: std::fmt::Display>(&self, result: Result<Literal, E>) -> Literal {
         match result {
             Ok(l) => l,
-            Err(e) => panic!("[{}:{}] {}", self.line, self.column, e),
+            Err(e) => panic_vm!("[{}:{}] {}", self.line, self.column, e),
         }
     }
 
     fn run_instruction(&mut self, intr: Instruction) -> Option<Literal> {
         match intr {
             Instruction::Add => {
-                let second = self.pop();
-                let first = self.pop();
+                let right = self.pop();
+                let left = self.pop();
 
-                self.push(self.try_do(first + second));
+                self.push(self.try_do(left + right));
             }
             Instruction::Sub => {
-                let second = self.pop();
-                let first = self.pop();
+                let right = self.pop();
+                let left = self.pop();
 
-                self.push(self.try_do(first - second));
+                self.push(self.try_do(left - right));
             }
             Instruction::Mul => {
-                let second = self.pop();
-                let first = self.pop();
+                let right = self.pop();
+                let left = self.pop();
 
-                self.push(self.try_do(first * second));
+                self.push(self.try_do(left * right));
             }
             Instruction::Div => {
-                let second = self.pop();
-                let first = self.pop();
+                let right = self.pop();
+                let left = self.pop();
 
-                self.push(self.try_do(first / second));
+                self.push(self.try_do(left / right));
             }
             Instruction::Neg => {
-                let first = self.pop();
-                self.push(self.try_do(-first));
+                let left = self.pop();
+                self.push(self.try_do(-left));
             }
             Instruction::Push(lit) => {
                 self.push(lit);
