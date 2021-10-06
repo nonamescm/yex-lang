@@ -1,7 +1,7 @@
 use crate::{
     error::ParseError,
     lexer::Lexer,
-    tokens::{Token, TokenType},
+    tokens::{Token, TokenType as Tkt},
 };
 use std::iter::Peekable;
 use vm::{Instruction, Literal};
@@ -11,7 +11,7 @@ type ParseResult = std::result::Result<(), ParseError>;
 pub struct Compiler {
     lexer: Peekable<Lexer>,
     instructions: Vec<Instruction>,
-    current_token: Token,
+    current: Token,
 }
 
 impl Compiler {
@@ -19,11 +19,11 @@ impl Compiler {
         let mut this = Self {
             lexer: lexer.peekable(),
             instructions: vec![],
-            current_token: Token::default(),
+            current: Token::default(),
         };
-        this.next_token();
+        this.next();
 
-        this.unary()?;
+        this.expression()?;
 
         Ok(this.instructions)
     }
@@ -32,37 +32,103 @@ impl Compiler {
         self.instructions.push(intr)
     }
 
-    fn next_token(&mut self) -> &Token {
+    fn next(&mut self) -> &Token {
         let tk = self.lexer.next().unwrap_or_default();
-        self.current_token = tk;
-        &self.current_token
+        self.current = tk;
+        &self.current
+    }
+
+    fn consume(&self, token: Tkt, err: impl Into<String>) -> ParseResult {
+        if self.current.token != token {
+            self.throw(err)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn expression(&mut self) -> ParseResult {
+        self.term()
+    }
+
+    fn throw(&self, err: impl Into<String>) -> ParseResult {
+        ParseError::throw(self.current.line, self.current.column, err.into())
+    }
+
+    fn term(&mut self) -> ParseResult {
+        self.fact()?; // expands to a unary rule
+
+        while let Tkt::Add | Tkt::Sub = self.current.token {
+            let operator = match self.current.token {
+                Tkt::Add => Instruction::Add,
+                Tkt::Sub => Instruction::Sub,
+                _ => unreachable!(),
+            };
+            self.next();
+            self.fact()?;
+            self.emit(operator);
+        }
+
+        Ok(())
+    }
+
+    fn fact(&mut self) -> ParseResult {
+        self.unary()?; // expands to a unary rule
+
+        while let Tkt::Mul | Tkt::Div = self.current.token {
+            let operator = match self.current.token {
+                Tkt::Mul => Instruction::Mul,
+                Tkt::Div => Instruction::Div,
+                _ => unreachable!(),
+            };
+            self.next();
+            self.unary()?;
+            self.emit(operator);
+        }
+
+        Ok(())
     }
 
     fn unary(&mut self) -> ParseResult {
         use Instruction::*;
 
-        match self.current_token.token {
-            TokenType::Sub => {
-                self.next_token();
-                self.nary()?;
-                self.emit(Neg);
-            },
-            _ => self.nary()?,
-        };
+        if matches!(self.current.token, Tkt::Sub) {
+            let operator = match self.current.token {
+                Tkt::Sub => Neg,
+                _ => unreachable!(),
+            };
+            self.next();
+            self.unary()?; // emits the expression to be applied
+            self.emit(operator)
+        } else {
+            self.primary()?;
+            self.next();
+        }
 
         Ok(())
     }
 
-    fn nary(&mut self) -> ParseResult {
+    fn primary(&mut self) -> ParseResult {
         use {Instruction::*, Literal::*};
-        match self.current_token.token {
-            TokenType::Num(n) => self.emit(Push(Num(n))),
-            _ => ParseError::throw(
-                self.current_token.line,
-                self.current_token.column,
-                format!("Expected expression, found `{}`", self.current_token.token),
-            )?,
-        };
+
+        match self.current.token {
+            Tkt::Num(n) => self.emit(Push(Num(n))),
+            Tkt::Lparen => {
+                self.next();
+                self.expression()?;
+                self.consume(
+                    Tkt::Rparen,
+                    format!(
+                        "expected `)` to close the block, found `{}`",
+                        self.current.token
+                    ),
+                )?;
+            }
+            _ => self.throw(format!(
+                "expected expression, found `{}`",
+                self.current.token
+            ))?,
+        }
+
         Ok(())
     }
 }

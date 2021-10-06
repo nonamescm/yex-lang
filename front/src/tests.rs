@@ -107,7 +107,34 @@ fn compiler_test() {
     use crate::{compiler::Compiler, lexer::Lexer};
     use vm::{Instruction::*, Literal::*};
 
-    let res = Compiler::compile(Lexer::new("-1"));
+    let res = Compiler::compile(Lexer::new("-1 * 30"));
+    assert_eq!(res, Ok(vec![Push(Num(1.0)), Neg, Push(Num(30.0)), Mul]));
 
-    assert_eq!(res, Ok(vec![Push(Num(1.0)), Neg]))
+    let res = Compiler::compile(Lexer::new("2 * 4 + 4 / 2"));
+    assert_eq!(
+        res,
+        Ok(vec![
+            Push(Num(2.0)),
+            Push(Num(4.0)),
+            Mul,
+            Push(Num(4.0)),
+            Push(Num(2.0)),
+            Div,
+            Add
+        ])
+    );
+
+    let res = Compiler::compile(Lexer::new("(3 - 2) * (2 + 5)"));
+    assert_eq!(
+        res,
+        Ok(vec![
+            Push(Num(3.0)),
+            Push(Num(2.0)),
+            Sub,
+            Push(Num(2.0)),
+            Push(Num(5.0)),
+            Add,
+            Mul
+        ])
+    );
 }
