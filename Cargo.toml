@@ -1,11 +1,6 @@
-[package]
-name = "yex"
-version = "0.0.1"
-authors = ["nonamescm <snadragona12bionic@gmail.com>"]
-description = "generator-based programming language"
-
 [workspace]
 members = [
 	"vm",
 	"front",
+	"cli",
 ]

@@ -91,6 +91,7 @@ impl Lexer {
                 Ok(n) => TokenType::Num(n),
                 Err(_) => ParseError::throw(self.line, self.column, "Can't parse number".into())?,
             },
+            '\0' => TokenType::Eof,
             c => ParseError::throw(
                 self.line,
                 self.column,
@@ -107,10 +108,10 @@ impl Lexer {
 }
 
 impl Iterator for Lexer {
-    type Item = Token;
+    type Item = Result<Token, ParseError>;
     fn next(&mut self) -> Option<Self::Item> {
-        let x = self.get().ok();
+        let x = self.get();
         self.next();
-        x
+        Some(x)
     }
 }

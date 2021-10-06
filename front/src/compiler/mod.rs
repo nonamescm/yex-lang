@@ -19,9 +19,13 @@ impl Compiler {
         let mut this = Self {
             lexer: lexer.peekable(),
             instructions: vec![],
-            current: Token::default(),
+            current: Token {
+                line: 0,
+                column: 0,
+                token: Tkt::Eof,
+            },
         };
-        this.next();
+        this.next()?;
 
         this.expression()?;
 
@@ -32,10 +36,15 @@ impl Compiler {
         self.instructions.push(intr)
     }
 
-    fn next(&mut self) -> &Token {
-        let tk = self.lexer.next().unwrap_or_default();
-        self.current = tk;
-        &self.current
+    fn next(&mut self) -> ParseResult {
+        let tk = self.lexer.next();
+        self.current = tk.unwrap_or(Ok(Token {
+            line: 0,
+            column: 0,
+            token: Tkt::Eof,
+        }))?;
+
+        Ok(())
     }
 
     fn consume(&self, token: Tkt, err: impl Into<String>) -> ParseResult {
@@ -63,7 +72,7 @@ impl Compiler {
                 Tkt::Sub => Instruction::Sub,
                 _ => unreachable!(),
             };
-            self.next();
+            self.next()?;
             self.fact()?;
             self.emit(operator);
         }
@@ -80,7 +89,7 @@ impl Compiler {
                 Tkt::Div => Instruction::Div,
                 _ => unreachable!(),
             };
-            self.next();
+            self.next()?;
             self.unary()?;
             self.emit(operator);
         }
@@ -96,12 +105,12 @@ impl Compiler {
                 Tkt::Sub => Neg,
                 _ => unreachable!(),
             };
-            self.next();
+            self.next()?;
             self.unary()?; // emits the expression to be applied
             self.emit(operator)
         } else {
             self.primary()?;
-            self.next();
+            self.next()?;
         }
 
         Ok(())
@@ -113,7 +122,7 @@ impl Compiler {
         match self.current.token {
             Tkt::Num(n) => self.emit(Push(Num(n))),
             Tkt::Lparen => {
-                self.next();
+                self.next()?;
                 self.expression()?;
                 self.consume(
                     Tkt::Rparen,

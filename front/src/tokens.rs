@@ -8,8 +8,7 @@ pub enum TokenType {
     Lparen,
     Rparen,
 
-    // Reserved for parse errors
-    Err,
+    Eof,
 }
 
 impl std::fmt::Display for TokenType {
@@ -23,7 +22,7 @@ impl std::fmt::Display for TokenType {
             Self::Div => '/'.into(),
             Self::Lparen => '('.into(),
             Self::Rparen => ')'.into(),
-            Self::Err => unreachable!(),
+            Self::Eof => "<eof>".into(),
         };
 
         write!(f, "{}", res)
@@ -35,24 +34,4 @@ pub struct Token {
     pub line: usize,
     pub column: usize,
     pub token: TokenType
-}
-
-impl Default for Token {
-    fn default() -> Self {
-        Self {
-            line: 0,
-            column: 0,
-            token: TokenType::Err,
-        }
-    }
-}
-
-impl Default for &Token {
-    fn default() -> Self {
-        &Token {
-            line: 0,
-            column: 0,
-            token: TokenType::Err,
-        }
-    }
 }
