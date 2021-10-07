@@ -66,13 +66,15 @@ impl Compiler {
     fn bitwise(&mut self) -> ParseResult {
         self.term()?; // expands to a unary rule
 
-        while let Tkt::BitAnd | Tkt::BitOr | Tkt::BitRs | Tkt::BitLs | Tkt::BitXor = self.current.token {
+        while let Tkt::BitAnd | Tkt::BitOr | Tkt::Shr | Tkt::Shl | Tkt::BitXor =
+            self.current.token
+        {
             let operator = match self.current.token {
                 Tkt::BitAnd => Instruction::BitAnd,
                 Tkt::BitOr => Instruction::BitOr,
                 Tkt::BitXor => Instruction::Xor,
-                Tkt::BitRs => Instruction::Shr,
-                Tkt::BitLs => Instruction::Shl,
+                Tkt::Shr => Instruction::Shr,
+                Tkt::Shl => Instruction::Shl,
                 _ => unreachable!(),
             };
             self.next()?;

@@ -11,8 +11,8 @@ pub enum TokenType {
     BitOr,
     BitAnd,
     BitXor,
-    BitRs, // right-shift
-    BitLs, // left-shift
+    Shr, // right-shift
+    Shl, // left-shift
     Lparen,
     Rparen,
 
@@ -30,8 +30,8 @@ impl std::fmt::Display for TokenType {
             Self::BitAnd => "&&&".into(),
             Self::BitOr => "|||".into(),
             Self::BitXor => "^^^".into(),
-            Self::BitRs => ">>>".into(),
-            Self::BitLs => "<<<".into(),
+            Self::Shr => ">>>".into(),
+            Self::Shl => "<<<".into(),
             Self::Lparen => '('.into(),
             Self::Rparen => ')'.into(),
             Self::Eof => "<eof>".into(),

@@ -110,12 +110,12 @@ impl Lexer {
             '>' if self.peek_at(1) == '>' && self.peek_at(2) == '>' => {
                 self.next();
                 self.next();
-                TokenType::BitRs
+                TokenType::Shr
             }
             '<' if self.peek_at(1) == '<' && self.peek_at(2) == '<' => {
                 self.next();
                 self.next();
-                TokenType::BitLs
+                TokenType::Shl
             }
             '^' if self.peek_at(1) == '^' && self.peek_at(2) == '^' => {
                 self.next();
