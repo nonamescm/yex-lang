@@ -137,4 +137,18 @@ fn compiler_test() {
             Mul
         ])
     );
+
+    let res = Compiler::compile(Lexer::new("3 - 2 ^^^ 2 + 5"));
+    assert_eq!(
+        res,
+        Ok(vec![
+            Push(Num(3.0)),
+            Push(Num(2.0)),
+            Sub,
+            Push(Num(2.0)),
+            Push(Num(5.0)),
+            Add,
+            Xor,
+        ])
+    );
 }

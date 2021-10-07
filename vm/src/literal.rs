@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub, BitAnd, BitOr, BitXor, Shr, Shl};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
@@ -145,6 +145,158 @@ impl Neg for &Literal {
         match self {
             Num(n) => Ok(Num(-n)),
             s => err!("Can't apply unary `-` operator on {}", s),
+        }
+    }
+}
+
+impl BitXor for Literal {
+    type Output = LiteralErr;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        use Literal::*;
+
+        match (self, rhs) {
+            (Num(x), Num(y)) => {
+                Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64))
+            }
+            (x, y) => err!("Can't apply bitwise xor between `{}` and `{}`", x, y)
+        }
+    }
+}
+
+impl BitXor for &Literal {
+    type Output = LiteralErr;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        use Literal::*;
+
+        match (self, rhs) {
+            (Num(x), Num(y)) => {
+                Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64))
+            }
+            (x, y) => err!("Can't apply bitwise xor between `{}` and `{}`", x, y)
+        }
+    }
+}
+
+
+impl BitAnd for Literal {
+    type Output = LiteralErr;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        use Literal::*;
+
+        match (self, rhs) {
+            (Num(x), Num(y)) => {
+                Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64))
+            }
+            (x, y) => err!("Can't apply bitwise and between `{}` and `{}`", x, y)
+        }
+    }
+}
+
+impl BitAnd for &Literal {
+    type Output = LiteralErr;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        use Literal::*;
+
+        match (self, rhs) {
+            (Num(x), Num(y)) => {
+                Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64))
+            }
+            (x, y) => err!("Can't apply bitwise and between `{}` and `{}`", x, y)
+        }
+    }
+}
+
+
+impl BitOr for Literal {
+    type Output = LiteralErr;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        use Literal::*;
+
+        match (self, rhs) {
+            (Num(x), Num(y)) => {
+                Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64))
+            }
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
+        }
+    }
+}
+
+impl BitOr for &Literal {
+    type Output = LiteralErr;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        use Literal::*;
+
+        match (self, rhs) {
+            (Num(x), Num(y)) => {
+                Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64))
+            }
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
+        }
+    }
+}
+
+impl Shr for Literal {
+    type Output = LiteralErr;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        use Literal::*;
+
+        match (self, rhs) {
+            (Num(x), Num(y)) => {
+                Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64))
+            }
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
+        }
+    }
+}
+
+impl Shr for &Literal {
+    type Output = LiteralErr;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        use Literal::*;
+
+        match (self, rhs) {
+            (Num(x), Num(y)) => {
+                Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64))
+            }
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
+        }
+    }
+}
+
+impl Shl for Literal {
+    type Output = LiteralErr;
+
+    fn shl(self, rhs: Self) -> Self::Output {
+        use Literal::*;
+
+        match (self, rhs) {
+            (Num(x), Num(y)) => {
+                Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64))
+            }
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
+        }
+    }
+}
+
+impl Shl for &Literal {
+    type Output = LiteralErr;
+
+    fn shl(self, rhs: Self) -> Self::Output {
+        use Literal::*;
+
+        match (self, rhs) {
+            (Num(x), Num(y)) => {
+                Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64))
+            }
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
         }
     }
 }

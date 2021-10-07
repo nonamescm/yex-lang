@@ -56,11 +56,31 @@ impl Compiler {
     }
 
     fn expression(&mut self) -> ParseResult {
-        self.term()
+        self.bitwise()
     }
 
     fn throw(&self, err: impl Into<String>) -> ParseResult {
         ParseError::throw(self.current.line, self.current.column, err.into())
+    }
+
+    fn bitwise(&mut self) -> ParseResult {
+        self.term()?; // expands to a unary rule
+
+        while let Tkt::BitAnd | Tkt::BitOr | Tkt::BitRs | Tkt::BitLs | Tkt::BitXor = self.current.token {
+            let operator = match self.current.token {
+                Tkt::BitAnd => Instruction::BitAnd,
+                Tkt::BitOr => Instruction::BitOr,
+                Tkt::BitXor => Instruction::Xor,
+                Tkt::BitRs => Instruction::Shr,
+                Tkt::BitLs => Instruction::Shl,
+                _ => unreachable!(),
+            };
+            self.next()?;
+            self.term()?;
+            self.emit(operator);
+        }
+
+        Ok(())
     }
 
     fn term(&mut self) -> ParseResult {

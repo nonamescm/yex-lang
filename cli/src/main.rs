@@ -21,6 +21,9 @@ fn _main(_args: Vec<String>) -> i32 {
         match repl.readline("yex> ") {
             Ok(l) => {
                 repl.add_history_entry(l.as_str());
+                if l.trim() == "" {
+                    continue;
+                }
                 match compile(l) {
                     Ok(mut vec) => {
                         vec.push(vm::Instruction::Ret);

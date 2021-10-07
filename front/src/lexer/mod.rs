@@ -76,6 +76,10 @@ impl Lexer {
         item
     }
 
+    fn peek_at(&self, n: usize) -> char {
+        self.tokens[self.idx + n]
+    }
+
     fn get(&mut self) -> Tk {
         let tk = match self.current() {
             '+' => TokenType::Add,
@@ -84,14 +88,43 @@ impl Lexer {
             '*' => TokenType::Mul,
             '(' => TokenType::Lparen,
             ')' => TokenType::Rparen,
-            c if c.is_numeric() => match self
-                .take_while(|c| c.is_numeric() || c == '.')
-                .parse::<f64>()
-            {
-                Ok(n) => TokenType::Num(n),
-                Err(_) => ParseError::throw(self.line, self.column, "Can't parse number".into())?,
+            c if c.is_numeric() => {
+                let n = self.take_while(|c| c.is_numeric() || c == '.');
+                match n.parse::<f64>() {
+                    Ok(n) => TokenType::Num(n),
+                    Err(_) => ParseError::throw(self.line, self.column, format!("Can't parse number {}", n))?,
+                }
             },
+
+            // BitWise
+            '&' if self.peek_at(1) == '&' && self.peek_at(2) == '&' => {
+                self.next();
+                self.next();
+                TokenType::BitAnd
+            }
+            '|' if self.peek_at(1) == '|' && self.peek_at(2) == '|' => {
+                self.next();
+                self.next();
+                TokenType::BitOr
+            }
+            '>' if self.peek_at(1) == '>' && self.peek_at(2) == '>' => {
+                self.next();
+                self.next();
+                TokenType::BitRs
+            }
+            '<' if self.peek_at(1) == '<' && self.peek_at(2) == '<' => {
+                self.next();
+                self.next();
+                TokenType::BitLs
+            }
+            '^' if self.peek_at(1) == '^' && self.peek_at(2) == '^' => {
+                self.next();
+                self.next();
+                TokenType::BitXor
+            }
+
             '\0' => TokenType::Eof,
+
             c => ParseError::throw(
                 self.line,
                 self.column,

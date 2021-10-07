@@ -91,7 +91,86 @@ fn test_neg() {
     ]);
 
     assert_eq!(test, Literal::Num(-112.0))
+}
 
+#[test]
+fn test_xor() {
+    use crate::{Instruction, Literal, VirtualMachine};
+
+    let mut vm = VirtualMachine::default();
+
+    let test = vm.run(vec![
+        Instruction::Push(Literal::Num(112.0)),
+        Instruction::Push(Literal::Num(317.0)),
+        Instruction::Xor,
+        Instruction::Ret,
+    ]);
+
+    assert_eq!(test, Literal::Num((112 ^ 317) as f64))
+}
+
+#[test]
+fn test_bitand() {
+    use crate::{Instruction, Literal, VirtualMachine};
+
+    let mut vm = VirtualMachine::default();
+
+    let test = vm.run(vec![
+        Instruction::Push(Literal::Num(112.0)),
+        Instruction::Push(Literal::Num(317.0)),
+        Instruction::BitAnd,
+        Instruction::Ret,
+    ]);
+
+    assert_eq!(test, Literal::Num((112 & 317) as f64))
+}
+
+#[test]
+fn test_bitor() {
+    use crate::{Instruction, Literal, VirtualMachine};
+
+    let mut vm = VirtualMachine::default();
+
+    let test = vm.run(vec![
+        Instruction::Push(Literal::Num(112.0)),
+        Instruction::Push(Literal::Num(317.0)),
+        Instruction::BitOr,
+        Instruction::Ret,
+    ]);
+
+    assert_eq!(test, Literal::Num((112 | 317) as f64))
+}
+
+#[test]
+fn test_shr() {
+    use crate::{Instruction, Literal, VirtualMachine};
+
+    let mut vm = VirtualMachine::default();
+
+    let test = vm.run(vec![
+        Instruction::Push(Literal::Num(12.0)),
+        Instruction::Push(Literal::Num(17.0)),
+        Instruction::Shr,
+        Instruction::Ret,
+    ]);
+
+    assert_eq!(test, Literal::Num((12_i64 >> 17_i64) as f64))
+}
+
+#[test]
+fn test_shl() {
+    use crate::{Instruction, Literal, VirtualMachine};
+
+    let mut vm = VirtualMachine::default();
+
+    let test = vm.run(vec![
+        Instruction::Push(Literal::Num(12.0)),
+        Instruction::Push(Literal::Num(17.0)),
+        Instruction::Shl,
+        Instruction::Ret,
+    ]);
+
+    assert_eq!(test, Literal::Num((12_i64 << 17_i64) as f64))
 }
 
 #[test]

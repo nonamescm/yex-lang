@@ -10,6 +10,11 @@ pub enum Instruction {
     Mul,
     Div,
     Neg,
+    Xor,
+    Shr,
+    Shl,
+    BitAnd,
+    BitOr,
     Push(Literal),
     Ret,
     Halt,
@@ -87,6 +92,33 @@ impl VirtualMachine {
             Instruction::Push(lit) => {
                 self.push(lit);
             }
+
+            Instruction::Xor => {
+                let right = self.pop();
+                let left = self.pop();
+                self.push(self.try_do(left ^ right))
+            }
+            Instruction::BitAnd => {
+                let right = self.pop();
+                let left = self.pop();
+                self.push(self.try_do(left & right))
+            }
+            Instruction::BitOr => {
+                let right = self.pop();
+                let left = self.pop();
+                self.push(self.try_do(left | right))
+            }
+            Instruction::Shr => {
+                let right = self.pop();
+                let left = self.pop();
+                self.push(self.try_do(left >> right))
+            }
+            Instruction::Shl => {
+                let right = self.pop();
+                let left = self.pop();
+                self.push(self.try_do(left << right))
+            }
+
             Instruction::Ret => return Some(self.pop()),
             Instruction::Halt => {
                 self.stack = vec![];

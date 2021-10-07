@@ -1,10 +1,18 @@
 #[derive(Debug, PartialEq)]
 pub enum TokenType {
     Num(f64),
+    // logical operators
     Add,
     Sub,
     Mul,
     Div,
+
+    // bitwise
+    BitOr,
+    BitAnd,
+    BitXor,
+    BitRs, // right-shift
+    BitLs, // left-shift
     Lparen,
     Rparen,
 
@@ -13,13 +21,17 @@ pub enum TokenType {
 
 impl std::fmt::Display for TokenType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-
         let res = match self {
             Self::Num(n) => n.to_string(),
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
             Self::Mul => '*'.into(),
             Self::Div => '/'.into(),
+            Self::BitAnd => "&&&".into(),
+            Self::BitOr => "|||".into(),
+            Self::BitXor => "^^^".into(),
+            Self::BitRs => ">>>".into(),
+            Self::BitLs => "<<<".into(),
             Self::Lparen => '('.into(),
             Self::Rparen => ')'.into(),
             Self::Eof => "<eof>".into(),
@@ -33,5 +45,5 @@ impl std::fmt::Display for TokenType {
 pub struct Token {
     pub line: usize,
     pub column: usize,
-    pub token: TokenType
+    pub token: TokenType,
 }
