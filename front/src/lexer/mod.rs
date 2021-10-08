@@ -89,6 +89,10 @@ impl Lexer {
             '*' => TokenType::Mul,
             '(' => TokenType::Lparen,
             ')' => TokenType::Rparen,
+            ':' => {
+                self.next();
+                TokenType::Sym(self.take_while(|c| !(c.is_whitespace() || c == '\0'))?)
+            }
             '"' => {
                 self.next();
                 let a = TokenType::Str(self.take_while(|c| c != '"')?);

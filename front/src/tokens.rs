@@ -2,6 +2,7 @@
 pub enum TokenType {
     Num(f64),
     Str(String),
+    Sym(String),
 
     // logical operators
     Add,
@@ -35,6 +36,7 @@ impl std::fmt::Display for TokenType {
         let res = match self {
             Self::Num(n) => n.to_string(),
             Self::Str(s) => "\"".to_owned() + s + "\"",
+            Self::Sym(s) => ":".to_owned() + s,
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
             Self::Mul => '*'.into(),

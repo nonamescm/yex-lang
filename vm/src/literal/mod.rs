@@ -1,9 +1,12 @@
 use std::ops::{Add, Div, Mul, Neg, Sub, BitAnd, BitOr, BitXor, Shr, Shl};
+pub mod symbol;
+use symbol::Symbol;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
     Num(f64),
     Str(String),
+    Sym(Symbol),
     Nil,
 }
 
@@ -21,6 +24,7 @@ impl std::fmt::Display for Literal {
         let tk = match self {
             Nil => "nil".to_string(),
             Str(s) => "\"".to_owned() + s + "\"",
+            Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
         };
         write!(f, "{}", tk)

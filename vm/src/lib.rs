@@ -1,7 +1,7 @@
 mod literal;
 #[cfg(test)]
 mod tests;
-pub use literal::Literal;
+pub use literal::{Literal, symbol};
 
 #[derive(PartialEq, Debug)]
 pub enum Instruction {

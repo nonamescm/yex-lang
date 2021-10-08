@@ -4,7 +4,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 use std::iter::Peekable;
-use vm::{Instruction, Literal};
+use vm::{Instruction, Literal, symbol::Symbol};
 
 type ParseResult = std::result::Result<(), ParseError>;
 
@@ -153,6 +153,7 @@ impl Compiler {
         match tk {
             Tkt::Num(n) => self.emit(Push(Num(n))),
             Tkt::Str(s) => self.emit(Push(Str(s))),
+            Tkt::Sym(s) => self.emit(Push(Sym(Symbol::new(s)))),
             Tkt::Lparen => {
                 self.next()?;
                 self.expression()?;
