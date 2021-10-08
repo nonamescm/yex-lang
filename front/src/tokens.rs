@@ -9,6 +9,7 @@ pub enum TokenType {
     Sub,
     Mul,
     Div,
+    Eq,
 
     // bitwise
     BitOr,
@@ -41,6 +42,7 @@ impl std::fmt::Display for TokenType {
             Self::Sub => '-'.into(),
             Self::Mul => '*'.into(),
             Self::Div => '/'.into(),
+            Self::Eq => '='.into(),
             Self::BitAnd => "&&&".into(),
             Self::BitOr => "|||".into(),
             Self::BitXor => "^^^".into(),

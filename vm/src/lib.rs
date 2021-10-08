@@ -1,7 +1,8 @@
 mod literal;
 #[cfg(test)]
 mod tests;
-pub use literal::{Literal, symbol};
+use literal::symbol::Symbol;
+pub use literal::{symbol, Literal};
 
 #[derive(PartialEq, Debug)]
 pub enum Instruction {
@@ -15,6 +16,7 @@ pub enum Instruction {
     Shl,
     BitAnd,
     BitOr,
+    Eq,
     Push(Literal),
     Ret,
     Halt,
@@ -27,7 +29,6 @@ macro_rules! panic_vm {
         panic!()
     }}
 }
-
 
 pub struct VirtualMachine {
     stack: Vec<Literal>,
@@ -118,6 +119,15 @@ impl VirtualMachine {
                 let right = self.pop();
                 let left = self.pop();
                 self.push(self.try_do(left << right))
+            }
+            Instruction::Eq => {
+                let right = self.pop();
+                let left = self.pop();
+
+                self.push(match left == right {
+                    true => Literal::Sym(Symbol::new("true")),
+                    false => Literal::Sym(Symbol::new("false")),
+                })
             }
 
             Instruction::Ret => return Some(self.pop()),

@@ -66,11 +66,27 @@ impl Compiler {
     }
 
     fn expression(&mut self) -> ParseResult {
-        self.bitwise()
+        self.equality()
     }
 
     fn throw(&self, err: impl Into<String>) -> ParseResult {
         ParseError::throw(self.current.line, self.current.column, err.into())
+    }
+
+    fn equality(&mut self) -> ParseResult {
+        self.bitwise()?;
+
+        while let Tkt::Eq = self.current.token {
+            let operator = match self.current.token {
+                Tkt::Eq => Instruction::Eq,
+                _ => unreachable!(),
+            };
+            self.next()?;
+            self.bitwise()?;
+            self.emit(operator);
+        }
+
+        Ok(())
     }
 
     fn bitwise(&mut self) -> ParseResult {

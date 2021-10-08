@@ -93,6 +93,7 @@ impl Lexer {
                 self.next();
                 TokenType::Sym(self.take_while(|c| !(c.is_whitespace() || c == '\0'))?)
             }
+            '=' => TokenType::Eq,
             '"' => {
                 self.next();
                 let a = TokenType::Str(self.take_while(|c| c != '"')?);
