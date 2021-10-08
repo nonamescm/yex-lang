@@ -3,6 +3,8 @@ pub enum TokenType {
     Num(f64),
     Str(String),
     Sym(String),
+    True,
+    False,
 
     // logical operators
     Add,
@@ -10,6 +12,7 @@ pub enum TokenType {
     Mul,
     Div,
     Eq,
+    Not,
 
     // bitwise
     BitOr,
@@ -38,11 +41,14 @@ impl std::fmt::Display for TokenType {
             Self::Num(n) => n.to_string(),
             Self::Str(s) => "\"".to_owned() + s + "\"",
             Self::Sym(s) => ":".to_owned() + s,
+            Self::True => "true".to_string(),
+            Self::False => "false".to_string(),
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
             Self::Mul => '*'.into(),
             Self::Div => '/'.into(),
             Self::Eq => '='.into(),
+            Self::Not => '~'.into(),
             Self::BitAnd => "&&&".into(),
             Self::BitOr => "|||".into(),
             Self::BitXor => "^^^".into(),

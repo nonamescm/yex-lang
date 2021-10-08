@@ -11,6 +11,7 @@ pub enum Instruction {
     Mul,
     Div,
     Neg,
+    Not,
     Xor,
     Shr,
     Shl,
@@ -128,6 +129,11 @@ impl VirtualMachine {
                     true => Literal::Sym(Symbol::new("true")),
                     false => Literal::Sym(Symbol::new("false")),
                 })
+            }
+
+            Instruction::Not => {
+                let left = self.pop();
+                self.push(self.try_do(!left))
             }
 
             Instruction::Ret => return Some(self.pop()),

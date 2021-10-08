@@ -4,7 +4,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Symbol {
     string: String,
     hash: u64,
@@ -13,6 +13,12 @@ pub struct Symbol {
 impl std::cmp::PartialEq for Symbol {
     fn eq(&self, rhs: &Self) -> bool {
         rhs.hash == rhs.hash
+    }
+}
+
+impl std::cmp::PartialEq<bool> for Symbol {
+    fn eq(&self, rhs: &bool) -> bool {
+        (self == &Self::sym_true()) == *rhs
     }
 }
 
@@ -32,6 +38,16 @@ impl Symbol {
         string.hash(&mut hash);
         let hash = hash.finish();
 
-        Self { string, hash }
+        let a = Self { string, hash };
+        println!("{:?}", a);
+        a
+    }
+
+    pub fn sym_true() -> Self {
+        Self::new("true")
+    }
+
+    pub fn sym_false() -> Self {
+        Self::new("false")
     }
 }

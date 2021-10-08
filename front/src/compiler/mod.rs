@@ -147,9 +147,10 @@ impl Compiler {
     fn unary(&mut self) -> ParseResult {
         use Instruction::*;
 
-        if matches!(self.current.token, Tkt::Sub) {
+        if matches!(self.current.token, Tkt::Sub | Tkt::Not) {
             let operator = match self.current.token {
                 Tkt::Sub => Neg,
+                Tkt::Not => Not,
                 _ => unreachable!(),
             };
             self.next()?;
@@ -170,6 +171,8 @@ impl Compiler {
             Tkt::Num(n) => self.emit(Push(Num(n))),
             Tkt::Str(s) => self.emit(Push(Str(s))),
             Tkt::Sym(s) => self.emit(Push(Sym(Symbol::new(s)))),
+            Tkt::True => self.emit(Push(Bool(true))),
+            Tkt::False => self.emit(Push(Bool(false))),
             Tkt::Lparen => {
                 self.next()?;
                 self.expression()?;

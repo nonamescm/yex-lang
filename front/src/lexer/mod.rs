@@ -91,9 +91,20 @@ impl Lexer {
             ')' => TokenType::Rparen,
             ':' => {
                 self.next();
-                TokenType::Sym(self.take_while(|c| !(c.is_whitespace() || c == '\0'))?)
+                let sym = self.take_while(|c| c.is_alphanumeric())?;
+                match sym.as_str() {
+                    "true" => TokenType::True,
+                    "false" => TokenType::False,
+                    "\0" => ParseError::throw(
+                        self.line,
+                        self.column,
+                        "expected symbol string after `:`, found <eof>".into(),
+                    )?,
+                    _ => TokenType::Sym(sym),
+                }
             }
             '=' => TokenType::Eq,
+            '~' => TokenType::Not,
             '"' => {
                 self.next();
                 let a = TokenType::Str(self.take_while(|c| c != '"')?);
@@ -145,7 +156,7 @@ impl Lexer {
 
             c if c.is_whitespace() => {
                 self.next();
-                return self.get()
+                return self.get();
             }
 
             c => ParseError::throw(

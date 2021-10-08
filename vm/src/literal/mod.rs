@@ -1,12 +1,13 @@
-use std::ops::{Add, Div, Mul, Neg, Sub, BitAnd, BitOr, BitXor, Shr, Shl};
+use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub};
 pub mod symbol;
 use symbol::Symbol;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Literal {
     Num(f64),
     Str(String),
     Sym(Symbol),
+    Bool(bool),
     Nil,
 }
 
@@ -26,6 +27,7 @@ impl std::fmt::Display for Literal {
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
+            Bool(b) => b.to_string(),
         };
         write!(f, "{}", tk)
     }
@@ -153,6 +155,43 @@ impl Neg for &Literal {
     }
 }
 
+impl Not for Literal {
+    type Output = LiteralErr;
+
+    fn not(self) -> Self::Output {
+        use Literal::*;
+
+        match self {
+            Bool(true) => Ok(Literal::Bool(false)),
+            Bool(false) => Ok(Literal::Bool(true)),
+            Sym(_) => Ok(Literal::Bool(false)),
+            Str(s) if s == "" => Ok(Literal::Bool(true)),
+            Str(_) => Ok(Literal::Bool(false)),
+            Num(n) if n == 0.0 => Ok(Literal::Bool(true)),
+            Num(_) => Ok(Literal::Bool(false)),
+            Nil => Ok(Literal::Bool(true)),
+        }
+    }
+}
+
+impl Not for &Literal {
+    type Output = LiteralErr;
+
+    fn not(self) -> Self::Output {
+        use Literal::*;
+
+        match self {
+            Bool(true) => Ok(Literal::Bool(false)),
+            Bool(false) => Ok(Literal::Bool(true)),
+            Sym(_) => Ok(Literal::Bool(false)),
+            Str(s) if s == "" => Ok(Literal::Bool(true)),
+            Str(_) => Ok(Literal::Bool(false)),
+            Num(n) if *n == 0.0 => Ok(Literal::Bool(true)),
+            Num(_) => Ok(Literal::Bool(false)),
+            Nil => Ok(Literal::Bool(true)),
+        }
+    }
+}
 impl BitXor for Literal {
     type Output = LiteralErr;
 
@@ -160,10 +199,8 @@ impl BitXor for Literal {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => {
-                Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64))
-            }
-            (x, y) => err!("Can't apply bitwise xor between `{}` and `{}`", x, y)
+            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
+            (x, y) => err!("Can't apply bitwise xor between `{}` and `{}`", x, y),
         }
     }
 }
@@ -175,14 +212,11 @@ impl BitXor for &Literal {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => {
-                Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64))
-            }
-            (x, y) => err!("Can't apply bitwise xor between `{}` and `{}`", x, y)
+            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
+            (x, y) => err!("Can't apply bitwise xor between `{}` and `{}`", x, y),
         }
     }
 }
-
 
 impl BitAnd for Literal {
     type Output = LiteralErr;
@@ -191,10 +225,8 @@ impl BitAnd for Literal {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => {
-                Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64))
-            }
-            (x, y) => err!("Can't apply bitwise and between `{}` and `{}`", x, y)
+            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
+            (x, y) => err!("Can't apply bitwise and between `{}` and `{}`", x, y),
         }
     }
 }
@@ -206,14 +238,11 @@ impl BitAnd for &Literal {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => {
-                Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64))
-            }
-            (x, y) => err!("Can't apply bitwise and between `{}` and `{}`", x, y)
+            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
+            (x, y) => err!("Can't apply bitwise and between `{}` and `{}`", x, y),
         }
     }
 }
-
 
 impl BitOr for Literal {
     type Output = LiteralErr;
@@ -222,10 +251,8 @@ impl BitOr for Literal {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => {
-                Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64))
-            }
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
+            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
         }
     }
 }
@@ -237,10 +264,8 @@ impl BitOr for &Literal {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => {
-                Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64))
-            }
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
+            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
         }
     }
 }
@@ -252,10 +277,8 @@ impl Shr for Literal {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => {
-                Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64))
-            }
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
+            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
         }
     }
 }
@@ -267,10 +290,8 @@ impl Shr for &Literal {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => {
-                Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64))
-            }
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
+            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
         }
     }
 }
@@ -282,10 +303,8 @@ impl Shl for Literal {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => {
-                Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64))
-            }
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
+            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
         }
     }
 }
@@ -297,10 +316,8 @@ impl Shl for &Literal {
         use Literal::*;
 
         match (self, rhs) {
-            (Num(x), Num(y)) => {
-                Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64))
-            }
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y)
+            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
+            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
         }
     }
 }
