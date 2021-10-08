@@ -1,7 +1,6 @@
 mod literal;
 #[cfg(test)]
 mod tests;
-use literal::symbol::Symbol;
 pub use literal::{symbol, Literal};
 
 #[derive(PartialEq, Debug)]
@@ -125,10 +124,7 @@ impl VirtualMachine {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push(match left == right {
-                    true => Literal::Sym(Symbol::new("true")),
-                    false => Literal::Sym(Symbol::new("false")),
-                })
+                self.push(Literal::Bool(left == right))
             }
 
             Instruction::Not => {
