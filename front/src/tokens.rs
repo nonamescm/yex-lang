@@ -24,6 +24,12 @@ pub enum TokenType {
     Eof,
 }
 
+impl Default for TokenType {
+    fn default() -> Self {
+        Self::Eof
+    }
+}
+
 impl std::fmt::Display for TokenType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let res = match self {

@@ -149,8 +149,8 @@ impl Compiler {
 
     fn primary(&mut self) -> ParseResult {
         use {Instruction::*, Literal::*};
-        let tk = std::mem::take(&mut self.current);
-        match tk.token {
+        let tk = std::mem::take(&mut self.current.token);
+        match tk {
             Tkt::Num(n) => self.emit(Push(Num(n))),
             Tkt::Str(s) => self.emit(Push(Str(s))),
             Tkt::Lparen => {
@@ -164,7 +164,7 @@ impl Compiler {
                     ),
                 )?;
             }
-            _ => self.throw(format!("expected expression, found `{}`", tk.token,))?,
+            _ => self.throw(format!("expected expression, found `{}`", tk))?,
         }
 
         Ok(())
