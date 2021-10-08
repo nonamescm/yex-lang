@@ -54,26 +54,27 @@ impl Lexer {
                 self.column = 1;
                 self.line += 1;
             }
-            c if c.is_whitespace() => {
-                self.column += 1;
-                self.next();
-            }
-            '#' => {
-                drop(self.take_while(|c| c != '\n'));
-            }
             _ => self.column += 1,
         };
         self.current()
     }
 
-    fn take_while(&mut self, cond: fn(char) -> bool) -> String {
-        let mut item = String::from(self.tokens[self.idx]);
+    fn take_while(&mut self, cond: fn(char) -> bool) -> Result<String, ParseError> {
+        let mut item = String::from(self.get_char(self.idx));
 
         while cond(self.get_char(self.idx + 1)) {
+            if self.get_char(self.idx + 1) == '\0' {
+                ParseError::throw(
+                    self.line,
+                    self.column,
+                    "Unclosed delimiter opened here".into(),
+                )?;
+            }
+
             self.next();
             item.push(self.current());
         }
-        item
+        Ok(item)
     }
 
     fn peek_at(&self, n: usize) -> char {
@@ -88,13 +89,23 @@ impl Lexer {
             '*' => TokenType::Mul,
             '(' => TokenType::Lparen,
             ')' => TokenType::Rparen,
+            '"' => {
+                self.next();
+                let a = TokenType::Str(self.take_while(|c| c != '"')?);
+                self.next();
+                a
+            }
             c if c.is_numeric() => {
-                let n = self.take_while(|c| c.is_numeric() || c == '.');
+                let n = self.take_while(|c| c.is_numeric() || c == '.')?;
                 match n.parse::<f64>() {
                     Ok(n) => TokenType::Num(n),
-                    Err(_) => ParseError::throw(self.line, self.column, format!("Can't parse number {}", n))?,
+                    Err(_) => ParseError::throw(
+                        self.line,
+                        self.column,
+                        format!("Can't parse number {}", n),
+                    )?,
                 }
-            },
+            }
 
             // BitWise
             '&' if self.peek_at(1) == '&' && self.peek_at(2) == '&' => {
@@ -123,7 +134,14 @@ impl Lexer {
                 TokenType::BitXor
             }
 
+            ';' => TokenType::Semicolon,
+
             '\0' => TokenType::Eof,
+
+            c if c.is_whitespace() => {
+                self.next();
+                return self.get()
+            }
 
             c => ParseError::throw(
                 self.line,

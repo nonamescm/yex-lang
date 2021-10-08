@@ -20,7 +20,7 @@ impl std::fmt::Display for Literal {
         use Literal::*;
         let tk = match self {
             Nil => "nil".to_string(),
-            Str(s) => s.to_string(),
+            Str(s) => "\"".to_owned() + s + "\"",
             Num(n) => n.to_string(),
         };
         write!(f, "{}", tk)
@@ -34,7 +34,7 @@ impl Add for Literal {
         match (self, rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x + y)),
             (Self::Str(x), Self::Str(y)) => Ok(Self::Str(x + &y)),
-            (s, r) => err!("Can't apply `+` operator {} between {}", s, r),
+            (s, r) => err!("Can't apply `+` operator between {} and {}", s, r),
         }
     }
 }
@@ -48,7 +48,7 @@ impl Add for &Literal {
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x + y)),
             (Str(x), Str(y)) => Ok(Str(x.to_string() + y)),
-            (s, r) => err!("Can't apply `+` operator {} between {}", s, r),
+            (s, r) => err!("Can't apply `+` operator between {} and {}", s, r),
         }
     }
 }
@@ -59,7 +59,7 @@ impl Sub for Literal {
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x - y)),
-            (s, r) => err!("Can't apply `-` operator {} between {}", s, r),
+            (s, r) => err!("Can't apply `-` operator between {} and {}", s, r),
         }
     }
 }
@@ -72,7 +72,7 @@ impl Sub for &Literal {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x - y)),
-            (s, r) => err!("Can't apply `-` operator {} between {}", s, r),
+            (s, r) => err!("Can't apply `-` operator between {} and {}", s, r),
         }
     }
 }
@@ -83,7 +83,7 @@ impl Mul for Literal {
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x * y)),
-            (s, r) => err!("Can't apply `*` operator {} between {}", s, r),
+            (s, r) => err!("Can't apply `*` operator between {} and {}", s, r),
         }
     }
 }
@@ -96,7 +96,7 @@ impl Mul for &Literal {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x * y)),
-            (s, r) => err!("Can't apply `*` operator {} between {}", s, r),
+            (s, r) => err!("Can't apply `*` operator between {} and {}", s, r),
         }
     }
 }
@@ -107,7 +107,7 @@ impl Div for Literal {
     fn div(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x / y)),
-            (s, r) => err!("Can't apply `/` operator {} between {}", s, r),
+            (s, r) => err!("Can't apply `/` operator between {} and {}", s, r),
         }
     }
 }
@@ -120,7 +120,7 @@ impl Div for &Literal {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x / y)),
-            (s, r) => err!("Can't apply `/` operator {} between {}", s, r),
+            (s, r) => err!("Can't apply `/` operator between {} and {}", s, r),
         }
     }
 }

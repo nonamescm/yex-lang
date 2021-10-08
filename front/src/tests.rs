@@ -103,6 +103,33 @@ fn lex_test_2() {
 }
 
 #[test]
+fn lex_test_3() {
+    use crate::lexer::Lexer;
+    use crate::tokens::{Token, TokenType::*};
+
+    assert_eq!(
+        Lexer::lex(r#""Hello, " + "World""#.chars().collect()),
+        vec![
+            Ok(Token {
+                line: 1,
+                column: 9,
+                token: Str("Hello, ".into())
+            }),
+            Ok(Token {
+                line: 1,
+                column: 11,
+                token: Add
+            }),
+            Ok(Token {
+                line: 1,
+                column: 19,
+                token: Str("World".into())
+            })
+        ]
+    )
+}
+
+#[test]
 fn compiler_test() {
     use crate::{compiler::Compiler, lexer::Lexer};
     use vm::{Instruction::*, Literal::*};

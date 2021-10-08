@@ -25,9 +25,19 @@ impl Compiler {
                 token: Tkt::Eof,
             },
         };
-        this.next()?;
-
-        this.expression()?;
+        while {
+            this.next()?;
+            this.current.token != Tkt::Eof
+        } {
+            this.expression()?;
+            this.consume(
+                vec![Tkt::Semicolon, Tkt::Eof],
+                format!(
+                    "expected `;` after expression, found `{}`",
+                    this.current.token
+                ),
+            )?;
+        }
 
         Ok(this.instructions)
     }
@@ -47,8 +57,8 @@ impl Compiler {
         Ok(())
     }
 
-    fn consume(&self, token: Tkt, err: impl Into<String>) -> ParseResult {
-        if self.current.token != token {
+    fn consume(&self, token: Vec<Tkt>, err: impl Into<String>) -> ParseResult {
+        if !token.contains(&self.current.token) {
             self.throw(err)
         } else {
             Ok(())
@@ -66,8 +76,7 @@ impl Compiler {
     fn bitwise(&mut self) -> ParseResult {
         self.term()?; // expands to a unary rule
 
-        while let Tkt::BitAnd | Tkt::BitOr | Tkt::Shr | Tkt::Shl | Tkt::BitXor =
-            self.current.token
+        while let Tkt::BitAnd | Tkt::BitOr | Tkt::Shr | Tkt::Shl | Tkt::BitXor = self.current.token
         {
             let operator = match self.current.token {
                 Tkt::BitAnd => Instruction::BitAnd,
@@ -140,24 +149,22 @@ impl Compiler {
 
     fn primary(&mut self) -> ParseResult {
         use {Instruction::*, Literal::*};
-
-        match self.current.token {
+        let tk = std::mem::take(&mut self.current);
+        match tk.token {
             Tkt::Num(n) => self.emit(Push(Num(n))),
+            Tkt::Str(s) => self.emit(Push(Str(s))),
             Tkt::Lparen => {
                 self.next()?;
                 self.expression()?;
                 self.consume(
-                    Tkt::Rparen,
+                    vec![Tkt::Rparen],
                     format!(
                         "expected `)` to close the block, found `{}`",
                         self.current.token
                     ),
                 )?;
             }
-            _ => self.throw(format!(
-                "expected expression, found `{}`",
-                self.current.token
-            ))?,
+            _ => self.throw(format!("expected expression, found `{}`", tk.token,))?,
         }
 
         Ok(())

@@ -22,8 +22,9 @@ pub enum Instruction {
 
 macro_rules! panic_vm {
     ($($tt:tt)*) => {{
+        eprintln!($($tt)*);
         std::panic::set_hook(Box::new(|_| {}));
-        panic!($($tt)*)
+        panic!()
     }}
 }
 
