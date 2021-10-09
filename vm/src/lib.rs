@@ -1,7 +1,9 @@
 mod literal;
 #[cfg(test)]
 mod tests;
+use crate::symbol::Symbol;
 pub use literal::{symbol, Literal};
+use std::{collections::HashMap, rc::Rc};
 
 #[derive(PartialEq, Debug)]
 pub enum Instruction {
@@ -18,6 +20,8 @@ pub enum Instruction {
     BitOr,
     Eq,
     Push(Literal),
+    Load(Symbol), // loads a variable
+    Save(Symbol), // saves value to variable
     Ret,
     Halt,
 }
@@ -31,26 +35,27 @@ macro_rules! panic_vm {
 }
 
 pub struct VirtualMachine {
-    stack: Vec<Literal>,
+    stack: Vec<Rc<Literal>>,
     line: usize,
     column: usize,
+    vars: HashMap<Symbol, Rc<Literal>>,
 }
 
 impl VirtualMachine {
     pub fn run(&mut self, code: Vec<Instruction>) -> Literal {
         for intr in code {
             if let Some(v) = self.run_instruction(intr) {
-                return v;
+                return (*v).clone();
             }
         }
         Literal::Nil
     }
 
-    fn pop(&mut self) -> Literal {
-        self.stack.pop().unwrap_or(Literal::Nil)
+    fn pop(&mut self) -> Rc<Literal> {
+        self.stack.pop().unwrap_or(Rc::new(Literal::Nil))
     }
 
-    fn push(&mut self, literal: Literal) {
+    fn push(&mut self, literal: Rc<Literal>) {
         self.stack.push(literal)
     }
 
@@ -61,75 +66,87 @@ impl VirtualMachine {
         }
     }
 
-    fn run_instruction(&mut self, intr: Instruction) -> Option<Literal> {
+    fn run_instruction(&mut self, intr: Instruction) -> Option<Rc<Literal>> {
         match intr {
             Instruction::Add => {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push(self.try_do(left + right));
+                self.push(Rc::new(self.try_do(&*left + &*right)));
             }
             Instruction::Sub => {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push(self.try_do(left - right));
+                self.push(Rc::new(self.try_do(&*left - &*right)));
             }
             Instruction::Mul => {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push(self.try_do(left * right));
+                self.push(Rc::new(self.try_do(&*left * &*right)));
             }
             Instruction::Div => {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push(self.try_do(left / right));
+                self.push(Rc::new(self.try_do(&*left / &*right)));
             }
             Instruction::Neg => {
                 let left = self.pop();
-                self.push(self.try_do(-left));
+                self.push(Rc::new(self.try_do(-&*left)));
             }
             Instruction::Push(lit) => {
-                self.push(lit);
+                self.push(Rc::new(lit));
             }
 
             Instruction::Xor => {
                 let right = self.pop();
                 let left = self.pop();
-                self.push(self.try_do(left ^ right))
+                self.push(Rc::new(self.try_do(&*left ^ &*right)))
             }
             Instruction::BitAnd => {
                 let right = self.pop();
                 let left = self.pop();
-                self.push(self.try_do(left & right))
+                self.push(Rc::new(self.try_do(&*left & &*right)))
             }
             Instruction::BitOr => {
                 let right = self.pop();
                 let left = self.pop();
-                self.push(self.try_do(left | right))
+                self.push(Rc::new(self.try_do(&*left | &*right)))
             }
             Instruction::Shr => {
                 let right = self.pop();
                 let left = self.pop();
-                self.push(self.try_do(left >> right))
+                self.push(Rc::new(self.try_do(&*left >> &*right)))
             }
             Instruction::Shl => {
                 let right = self.pop();
                 let left = self.pop();
-                self.push(self.try_do(left << right))
+                self.push(Rc::new(self.try_do(&*left << &*right)))
             }
             Instruction::Eq => {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push(Literal::Bool(left == right))
+                self.push(Rc::new(Literal::Bool(left == right)))
             }
 
             Instruction::Not => {
                 let left = self.pop();
-                self.push(self.try_do(!left))
+                self.push(Rc::new(self.try_do(!&*left)))
+            }
+            Instruction::Load(s) => {
+                let val = self
+                    .vars
+                    .get(&s)
+                    .cloned()
+                    .unwrap_or_else(|| Rc::new(Literal::Nil));
+                self.push(val)
+            }
+            Instruction::Save(s) => {
+                let val = self.pop();
+                self.vars.insert(s, val);
             }
 
             Instruction::Ret => return Some(self.pop()),
@@ -147,6 +164,7 @@ impl Default for VirtualMachine {
             stack: vec![],
             line: 1,
             column: 1,
+            vars: HashMap::new(),
         }
     }
 }

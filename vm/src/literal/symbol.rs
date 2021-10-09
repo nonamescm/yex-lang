@@ -4,10 +4,16 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Symbol {
     string: String,
     hash: u64,
+}
+
+impl Hash for Symbol {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64(self.hash)
+    }
 }
 
 impl std::cmp::PartialEq for Symbol {
@@ -15,6 +21,8 @@ impl std::cmp::PartialEq for Symbol {
         self.hash == rhs.hash
     }
 }
+
+impl Eq for Symbol {}
 
 impl std::fmt::Display for Symbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

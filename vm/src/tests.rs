@@ -1,7 +1,7 @@
+use crate::{Instruction, Literal, VirtualMachine, symbol::Symbol};
+
 #[test]
 fn test_add() {
-    use crate::{Instruction, Literal, VirtualMachine};
-
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
@@ -16,8 +16,6 @@ fn test_add() {
 
 #[test]
 fn test_sub() {
-    use crate::{Instruction, Literal, VirtualMachine};
-
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
@@ -32,8 +30,6 @@ fn test_sub() {
 
 #[test]
 fn test_mul() {
-    use crate::{Instruction, Literal, VirtualMachine};
-
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
@@ -48,8 +44,6 @@ fn test_mul() {
 
 #[test]
 fn test_div() {
-    use crate::{Instruction, Literal, VirtualMachine};
-
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
@@ -64,8 +58,6 @@ fn test_div() {
 
 #[test]
 fn test_string_concat() {
-    use crate::{Instruction, Literal, VirtualMachine};
-
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
@@ -80,8 +72,6 @@ fn test_string_concat() {
 
 #[test]
 fn test_neg() {
-    use crate::{Instruction, Literal, VirtualMachine};
-
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
@@ -95,8 +85,6 @@ fn test_neg() {
 
 #[test]
 fn test_xor() {
-    use crate::{Instruction, Literal, VirtualMachine};
-
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
@@ -111,7 +99,7 @@ fn test_xor() {
 
 #[test]
 fn test_bitand() {
-    use crate::{Instruction, Literal, VirtualMachine};
+
 
     let mut vm = VirtualMachine::default();
 
@@ -127,8 +115,6 @@ fn test_bitand() {
 
 #[test]
 fn test_bitor() {
-    use crate::{Instruction, Literal, VirtualMachine};
-
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
@@ -143,8 +129,6 @@ fn test_bitor() {
 
 #[test]
 fn test_shr() {
-    use crate::{Instruction, Literal, VirtualMachine};
-
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
@@ -159,8 +143,6 @@ fn test_shr() {
 
 #[test]
 fn test_shl() {
-    use crate::{Instruction, Literal, VirtualMachine};
-
     let mut vm = VirtualMachine::default();
 
     let test = vm.run(vec![
@@ -174,10 +156,22 @@ fn test_shl() {
 }
 
 #[test]
+fn test_vars() {
+    let mut vm = VirtualMachine::default();
+
+    let test = vm.run(vec![
+        Instruction::Push(Literal::Str("Hi".into())),
+        Instruction::Save(Symbol::new("test")),
+        Instruction::Load(Symbol::new("test")),
+        Instruction::Ret,
+    ]);
+
+    assert_eq!(test, Literal::Str("Hi".into()))
+}
+
+#[test]
 #[should_panic]
 fn should_panic_string_add_number() {
-    use crate::{Instruction, Literal, VirtualMachine};
-
     let mut vm = VirtualMachine::default();
 
     vm.run(vec![
