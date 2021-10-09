@@ -95,6 +95,7 @@ impl Lexer {
                 match sym.as_str() {
                     "true" => TokenType::True,
                     "false" => TokenType::False,
+                    "nil" => TokenType::Nil,
                     "\0" => ParseError::throw(
                         self.line,
                         self.column,

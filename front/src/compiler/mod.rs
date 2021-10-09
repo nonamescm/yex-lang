@@ -6,7 +6,7 @@ use crate::{
 use std::iter::Peekable;
 use vm::{Instruction, Literal, symbol::Symbol};
 
-type ParseResult = std::result::Result<(), ParseError>;
+type ParseResult = Result<(), ParseError>;
 
 pub struct Compiler {
     lexer: Peekable<Lexer>,
@@ -173,6 +173,7 @@ impl Compiler {
             Tkt::Sym(s) => self.emit(Push(Sym(Symbol::new(s)))),
             Tkt::True => self.emit(Push(Bool(true))),
             Tkt::False => self.emit(Push(Bool(false))),
+            Tkt::Nil => self.emit(Push(Nil)),
             Tkt::Lparen => {
                 self.next()?;
                 self.expression()?;

@@ -5,6 +5,7 @@ pub enum TokenType {
     Sym(String),
     True,
     False,
+    Nil,
 
     // logical operators
     Add,
@@ -43,6 +44,7 @@ impl std::fmt::Display for TokenType {
             Self::Sym(s) => ":".to_owned() + s,
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),
+            Self::Nil => "nil".into(),
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
             Self::Mul => '*'.into(),
