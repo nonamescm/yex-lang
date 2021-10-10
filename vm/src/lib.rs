@@ -52,7 +52,7 @@ impl VirtualMachine {
     }
 
     fn pop(&mut self) -> Rc<Literal> {
-        self.stack.pop().unwrap_or(Rc::new(Literal::Nil))
+        self.stack.pop().unwrap_or_else(|| Rc::new(Literal::Nil))
     }
 
     fn push(&mut self, literal: Rc<Literal>) {
