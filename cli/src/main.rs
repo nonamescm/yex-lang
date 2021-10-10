@@ -1,21 +1,10 @@
 use front::compile;
-use rustyline::{error::ReadlineError, Editor};
-use std::env;
+use rustyline::{Editor, error::ReadlineError};
 use vm::VirtualMachine;
 
-fn tempfile() -> Option<String> {
-    let mut dir = env::temp_dir();
-    dir.push(".yex_history");
-    Some(dir.to_str()?.to_string())
-}
-
-fn _main(_args: Vec<String>) -> i32 {
+fn start(_args: Vec<String>) -> i32 {
     let mut vm = VirtualMachine::default();
     let mut repl = Editor::<()>::new();
-    let history = tempfile();
-    if let Some(f) = history {
-        repl.load_history(&f).ok();
-    }
 
     loop {
         match repl.readline("yex> ") {
@@ -52,5 +41,5 @@ fn _main(_args: Vec<String>) -> i32 {
 fn main() {
     use std::{env::args, process::exit};
 
-    exit(_main(args().collect()))
+    exit(start(args().collect()))
 }
