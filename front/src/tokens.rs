@@ -1,8 +1,9 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenType {
     Num(f64),
     Str(String),
     Sym(String),
+    Var(String),
     True,
     False,
     Nil,
@@ -14,6 +15,7 @@ pub enum TokenType {
     Div,
     Eq,
     Not,
+    Assign,
 
     // bitwise
     BitOr,
@@ -42,6 +44,7 @@ impl std::fmt::Display for TokenType {
             Self::Num(n) => n.to_string(),
             Self::Str(s) => "\"".to_owned() + s + "\"",
             Self::Sym(s) => ":".to_owned() + s,
+            Self::Var(v) => v.into(),
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),
             Self::Nil => "nil".into(),
@@ -51,6 +54,7 @@ impl std::fmt::Display for TokenType {
             Self::Div => '/'.into(),
             Self::Eq => '='.into(),
             Self::Not => '~'.into(),
+            Self::Assign => "<-".into(),
             Self::BitAnd => "&&&".into(),
             Self::BitOr => "|||".into(),
             Self::BitXor => "^^^".into(),

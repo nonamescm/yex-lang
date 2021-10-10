@@ -87,6 +87,10 @@ impl Lexer {
             '-' => TokenType::Sub,
             '/' => TokenType::Div,
             '*' => TokenType::Mul,
+            '<' if self.peek_at(1) == '-' => {
+                self.next();
+                TokenType::Assign
+            }
             '(' => TokenType::Lparen,
             ')' => TokenType::Rparen,
             ':' => {
@@ -122,6 +126,9 @@ impl Lexer {
                         format!("Can't parse number {}", n),
                     )?,
                 }
+            }
+            c if c.is_alphabetic() || c == '_' => {
+                TokenType::Var(self.take_while(|c| c.is_alphanumeric() || c == '_')?)
             }
 
             // BitWise

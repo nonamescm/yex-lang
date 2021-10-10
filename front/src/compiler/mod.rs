@@ -3,8 +3,8 @@ use crate::{
     lexer::Lexer,
     tokens::{Token, TokenType as Tkt},
 };
-use std::iter::Peekable;
-use vm::{Instruction, Literal, symbol::Symbol};
+use std::{iter::Peekable, mem::take};
+use vm::{symbol::Symbol, Instruction, Literal};
 
 type ParseResult = Result<(), ParseError>;
 
@@ -66,11 +66,31 @@ impl Compiler {
     }
 
     fn expression(&mut self) -> ParseResult {
-        self.equality()
+        self.assign()
     }
 
     fn throw(&self, err: impl Into<String>) -> ParseResult {
         ParseError::throw(self.current.line, self.current.column, err.into())
+    }
+
+    fn assign(&mut self) -> ParseResult {
+        if let Tkt::Var(val) = self.current.token.clone() {
+            if let Some(Ok(Token {
+                token: Tkt::Assign, ..
+            })) = self.lexer.peek()
+            {
+                self.next()?;
+                self.next()?;
+                self.equality()?;
+                self.emit(Instruction::Save(Symbol::new(val)))
+            } else {
+                self.equality()?;
+            }
+        } else {
+            self.equality()?;
+        }
+
+        Ok(())
     }
 
     fn equality(&mut self) -> ParseResult {
@@ -166,13 +186,14 @@ impl Compiler {
 
     fn primary(&mut self) -> ParseResult {
         use {Instruction::*, Literal::*};
-        let tk = std::mem::take(&mut self.current.token);
+        let tk = take(&mut self.current.token);
         match tk {
             Tkt::Num(n) => self.emit(Push(Num(n))),
             Tkt::Str(s) => self.emit(Push(Str(s))),
             Tkt::Sym(s) => self.emit(Push(Sym(Symbol::new(s)))),
             Tkt::True => self.emit(Push(Bool(true))),
             Tkt::False => self.emit(Push(Bool(false))),
+            Tkt::Var(v) => self.emit(Load(Symbol::new(v))),
             Tkt::Nil => self.emit(Push(Nil)),
             Tkt::Lparen => {
                 self.next()?;
