@@ -132,7 +132,7 @@ fn lex_test_3() {
 #[test]
 fn compiler_test() {
     use crate::{compiler::Compiler, lexer::Lexer};
-    use vm::{Instruction::*, Literal::*};
+    use vm::{Instruction::*, Literal::*, symbol::Symbol};
 
     let res = Compiler::compile(Lexer::new("-1 * 30"));
     assert_eq!(res, Ok(vec![Push(Num(1.0)), Neg, Push(Num(30.0)), Mul]));
@@ -176,6 +176,16 @@ fn compiler_test() {
             Push(Num(5.0)),
             Add,
             Xor,
+        ])
+    );
+
+    let res = Compiler::compile(Lexer::new("a + b"));
+    assert_eq!(
+        res,
+        Ok(vec![
+            Load(Symbol::new('a')),
+            Load(Symbol::new('b')),
+            Add,
         ])
     );
 }
