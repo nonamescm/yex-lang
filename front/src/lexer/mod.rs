@@ -87,9 +87,9 @@ impl Lexer {
             '-' => TokenType::Sub,
             '/' => TokenType::Div,
             '*' => TokenType::Mul,
-            '<' if self.peek_at(1) == '-' => {
+            '=' if self.peek_at(1) == '=' => {
                 self.next();
-                TokenType::Assign
+                TokenType::Eq
             }
             '(' => TokenType::Lparen,
             ')' => TokenType::Rparen,
@@ -108,7 +108,7 @@ impl Lexer {
                     _ => TokenType::Sym(sym),
                 }
             }
-            '=' => TokenType::Eq,
+            '=' => TokenType::Assign,
             '~' => TokenType::Not,
             '"' => {
                 self.next();
