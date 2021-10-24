@@ -1,6 +1,8 @@
 use crate::error::ParseError;
 use crate::tokens::{Token, TokenType};
 
+const EOF: char = '\0';
+
 pub struct Lexer {
     line: usize,
     column: usize,
@@ -31,7 +33,7 @@ impl Lexer {
 
         let mut reslt = Vec::new();
 
-        while this.current() != '\0' {
+        while this.current() != EOF {
             reslt.push(this.get());
             this.next();
         }
@@ -40,7 +42,7 @@ impl Lexer {
     }
 
     fn get_char(&self, idx: usize) -> char {
-        *self.tokens.get(idx).unwrap_or(&'\0')
+        *self.tokens.get(idx).unwrap_or(&EOF)
     }
 
     fn current(&self) -> char {
@@ -78,7 +80,7 @@ impl Lexer {
     }
 
     fn peek_at(&self, n: usize) -> char {
-        self.tokens[self.idx + n]
+        *self.tokens.get(self.idx + n).unwrap_or(&EOF)
     }
 
     fn get(&mut self) -> Tk {
@@ -160,7 +162,7 @@ impl Lexer {
 
             ';' => TokenType::Semicolon,
 
-            '\0' => TokenType::Eof,
+            EOF => TokenType::Eof,
 
             c if c.is_whitespace() => {
                 self.next();
