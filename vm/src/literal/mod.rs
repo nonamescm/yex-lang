@@ -3,7 +3,7 @@ pub mod symbol;
 use symbol::Symbol;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Literal {
+pub enum Constant {
     Num(f64),
     Str(String),
     Sym(Symbol),
@@ -11,7 +11,13 @@ pub enum Literal {
     Nil,
 }
 
-type LiteralErr = Result<Literal, String>;
+impl Default for Constant {
+    fn default() -> Self {
+        Self::Nil
+    }
+}
+
+type ConstantErr = Result<Constant, String>;
 
 macro_rules! err {
     ($($tt: tt),+) => {
@@ -19,9 +25,9 @@ macro_rules! err {
     }
 }
 
-impl std::fmt::Display for Literal {
+impl std::fmt::Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use Literal::*;
+        use Constant::*;
         let tk = match self {
             Nil => "nil".to_string(),
             Str(s) => "\"".to_owned() + s + "\"",
@@ -33,7 +39,7 @@ impl std::fmt::Display for Literal {
     }
 }
 
-impl Add for Literal {
+impl Add for Constant {
     type Output = Result<Self, String>;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -45,11 +51,11 @@ impl Add for Literal {
     }
 }
 
-impl Add for &Literal {
-    type Output = LiteralErr;
+impl Add for &Constant {
+    type Output = ConstantErr;
 
     fn add(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x + y)),
@@ -59,8 +65,8 @@ impl Add for &Literal {
     }
 }
 
-impl Sub for Literal {
-    type Output = LiteralErr;
+impl Sub for Constant {
+    type Output = ConstantErr;
 
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
@@ -70,11 +76,11 @@ impl Sub for Literal {
     }
 }
 
-impl Sub for &Literal {
-    type Output = LiteralErr;
+impl Sub for &Constant {
+    type Output = ConstantErr;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x - y)),
@@ -83,8 +89,8 @@ impl Sub for &Literal {
     }
 }
 
-impl Mul for Literal {
-    type Output = LiteralErr;
+impl Mul for Constant {
+    type Output = ConstantErr;
 
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
@@ -94,11 +100,11 @@ impl Mul for Literal {
     }
 }
 
-impl Mul for &Literal {
-    type Output = LiteralErr;
+impl Mul for &Constant {
+    type Output = ConstantErr;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x * y)),
@@ -107,7 +113,7 @@ impl Mul for &Literal {
     }
 }
 
-impl Div for Literal {
+impl Div for Constant {
     type Output = Result<Self, String>;
 
     fn div(self, rhs: Self) -> Self::Output {
@@ -118,11 +124,11 @@ impl Div for Literal {
     }
 }
 
-impl Div for &Literal {
-    type Output = LiteralErr;
+impl Div for &Constant {
+    type Output = ConstantErr;
 
     fn div(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x / y)),
@@ -131,8 +137,8 @@ impl Div for &Literal {
     }
 }
 
-impl Neg for Literal {
-    type Output = LiteralErr;
+impl Neg for Constant {
+    type Output = ConstantErr;
 
     fn neg(self) -> Self::Output {
         match self {
@@ -142,11 +148,11 @@ impl Neg for Literal {
     }
 }
 
-impl Neg for &Literal {
-    type Output = LiteralErr;
+impl Neg for &Constant {
+    type Output = ConstantErr;
 
     fn neg(self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match self {
             Num(n) => Ok(Num(-n)),
@@ -155,48 +161,48 @@ impl Neg for &Literal {
     }
 }
 
-impl Not for Literal {
-    type Output = LiteralErr;
+impl Not for Constant {
+    type Output = ConstantErr;
 
     fn not(self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match self {
-            Bool(true) => Ok(Literal::Bool(false)),
-            Bool(false) => Ok(Literal::Bool(true)),
-            Sym(_) => Ok(Literal::Bool(false)),
-            Str(s) if s.is_empty() => Ok(Literal::Bool(true)),
-            Str(_) => Ok(Literal::Bool(false)),
-            Num(n) if n == 0.0 => Ok(Literal::Bool(true)),
-            Num(_) => Ok(Literal::Bool(false)),
-            Nil => Ok(Literal::Bool(true)),
+            Bool(true) => Ok(Constant::Bool(false)),
+            Bool(false) => Ok(Constant::Bool(true)),
+            Sym(_) => Ok(Constant::Bool(false)),
+            Str(s) if s.is_empty() => Ok(Constant::Bool(true)),
+            Str(_) => Ok(Constant::Bool(false)),
+            Num(n) if n == 0.0 => Ok(Constant::Bool(true)),
+            Num(_) => Ok(Constant::Bool(false)),
+            Nil => Ok(Constant::Bool(true)),
         }
     }
 }
 
-impl Not for &Literal {
-    type Output = LiteralErr;
+impl Not for &Constant {
+    type Output = ConstantErr;
 
     fn not(self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match self {
-            Bool(true) => Ok(Literal::Bool(false)),
-            Bool(false) => Ok(Literal::Bool(true)),
-            Sym(_) => Ok(Literal::Bool(false)),
-            Str(s) if s.is_empty() => Ok(Literal::Bool(true)),
-            Str(_) => Ok(Literal::Bool(false)),
-            Num(n) if *n == 0.0 => Ok(Literal::Bool(true)),
-            Num(_) => Ok(Literal::Bool(false)),
-            Nil => Ok(Literal::Bool(true)),
+            Bool(true) => Ok(Constant::Bool(false)),
+            Bool(false) => Ok(Constant::Bool(true)),
+            Sym(_) => Ok(Constant::Bool(false)),
+            Str(s) if s.is_empty() => Ok(Constant::Bool(true)),
+            Str(_) => Ok(Constant::Bool(false)),
+            Num(n) if *n == 0.0 => Ok(Constant::Bool(true)),
+            Num(_) => Ok(Constant::Bool(false)),
+            Nil => Ok(Constant::Bool(true)),
         }
     }
 }
-impl BitXor for Literal {
-    type Output = LiteralErr;
+impl BitXor for Constant {
+    type Output = ConstantErr;
 
     fn bitxor(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
@@ -205,11 +211,11 @@ impl BitXor for Literal {
     }
 }
 
-impl BitXor for &Literal {
-    type Output = LiteralErr;
+impl BitXor for &Constant {
+    type Output = ConstantErr;
 
     fn bitxor(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
@@ -218,11 +224,11 @@ impl BitXor for &Literal {
     }
 }
 
-impl BitAnd for Literal {
-    type Output = LiteralErr;
+impl BitAnd for Constant {
+    type Output = ConstantErr;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
@@ -231,11 +237,11 @@ impl BitAnd for Literal {
     }
 }
 
-impl BitAnd for &Literal {
-    type Output = LiteralErr;
+impl BitAnd for &Constant {
+    type Output = ConstantErr;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
@@ -244,11 +250,11 @@ impl BitAnd for &Literal {
     }
 }
 
-impl BitOr for Literal {
-    type Output = LiteralErr;
+impl BitOr for Constant {
+    type Output = ConstantErr;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
@@ -257,11 +263,11 @@ impl BitOr for Literal {
     }
 }
 
-impl BitOr for &Literal {
-    type Output = LiteralErr;
+impl BitOr for &Constant {
+    type Output = ConstantErr;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
@@ -270,11 +276,11 @@ impl BitOr for &Literal {
     }
 }
 
-impl Shr for Literal {
-    type Output = LiteralErr;
+impl Shr for Constant {
+    type Output = ConstantErr;
 
     fn shr(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
@@ -283,11 +289,11 @@ impl Shr for Literal {
     }
 }
 
-impl Shr for &Literal {
-    type Output = LiteralErr;
+impl Shr for &Constant {
+    type Output = ConstantErr;
 
     fn shr(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
@@ -296,11 +302,11 @@ impl Shr for &Literal {
     }
 }
 
-impl Shl for Literal {
-    type Output = LiteralErr;
+impl Shl for Constant {
+    type Output = ConstantErr;
 
     fn shl(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
@@ -309,11 +315,11 @@ impl Shl for Literal {
     }
 }
 
-impl Shl for &Literal {
-    type Output = LiteralErr;
+impl Shl for &Constant {
+    type Output = ConstantErr;
 
     fn shl(self, rhs: Self) -> Self::Output {
-        use Literal::*;
+        use Constant::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),

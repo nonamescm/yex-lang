@@ -4,20 +4,22 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 use std::{iter::Peekable, mem::take};
-use vm::{symbol::Symbol, Instruction, Literal};
+use vm::{Symbol, OpCode, Constant, Bytecode};
 
 type ParseResult = Result<(), ParseError>;
 
 pub struct Compiler {
     lexer: Peekable<Lexer>,
-    instructions: Vec<Instruction>,
+    instructions: Vec<OpCode>,
+    constants: Vec<Constant>,
     current: Token,
 }
 
 impl Compiler {
-    pub fn compile(lexer: Lexer) -> Result<Vec<Instruction>, ParseError> {
+    pub fn compile(lexer: Lexer) -> Result<Bytecode, ParseError> {
         let mut this = Self {
             lexer: lexer.peekable(),
+            constants: vec![],
             instructions: vec![],
             current: Token {
                 line: 0,
@@ -31,7 +33,7 @@ impl Compiler {
         } {
             this.expression()?;
             this.consume(
-                vec![Tkt::Semicolon, Tkt::Eof],
+                &[Tkt::Semicolon, Tkt::Eof],
                 format!(
                     "expected `;` after expression, found `{}`",
                     this.current.token
@@ -39,11 +41,18 @@ impl Compiler {
             )?;
         }
 
-        Ok(this.instructions)
+        Ok(Bytecode {
+            instructions: this.instructions,
+            constants: this.constants,
+        })
     }
 
-    fn emit(&mut self, intr: Instruction) {
+    fn emit(&mut self, intr: OpCode) {
         self.instructions.push(intr)
+    }
+
+    fn emit_const(&mut self, constant: Constant) {
+        self.constants.push(constant)
     }
 
     fn next(&mut self) -> ParseResult {
@@ -57,7 +66,7 @@ impl Compiler {
         Ok(())
     }
 
-    fn consume(&self, token: Vec<Tkt>, err: impl Into<String>) -> ParseResult {
+    fn consume(&self, token: &[Tkt], err: impl Into<String>) -> ParseResult {
         if !token.contains(&self.current.token) {
             self.throw(err)
         } else {
@@ -82,7 +91,8 @@ impl Compiler {
                 self.next()?;
                 self.next()?;
                 self.equality()?;
-                self.emit(Instruction::Save(Symbol::new(val)))
+                self.emit(OpCode::Save);
+                self.emit_const(Constant::Sym(Symbol::new(val)));
             } else {
                 self.equality()?;
             }
@@ -98,7 +108,7 @@ impl Compiler {
 
         while let Tkt::Eq = self.current.token {
             let operator = match self.current.token {
-                Tkt::Eq => Instruction::Eq,
+                Tkt::Eq => OpCode::Eq,
                 _ => unreachable!(),
             };
             self.next()?;
@@ -115,11 +125,11 @@ impl Compiler {
         while let Tkt::BitAnd | Tkt::BitOr | Tkt::Shr | Tkt::Shl | Tkt::BitXor = self.current.token
         {
             let operator = match self.current.token {
-                Tkt::BitAnd => Instruction::BitAnd,
-                Tkt::BitOr => Instruction::BitOr,
-                Tkt::BitXor => Instruction::Xor,
-                Tkt::Shr => Instruction::Shr,
-                Tkt::Shl => Instruction::Shl,
+                Tkt::BitAnd => OpCode::BitAnd,
+                Tkt::BitOr => OpCode::BitOr,
+                Tkt::BitXor => OpCode::Xor,
+                Tkt::Shr => OpCode::Shr,
+                Tkt::Shl => OpCode::Shl,
                 _ => unreachable!(),
             };
             self.next()?;
@@ -135,8 +145,8 @@ impl Compiler {
 
         while let Tkt::Add | Tkt::Sub = self.current.token {
             let operator = match self.current.token {
-                Tkt::Add => Instruction::Add,
-                Tkt::Sub => Instruction::Sub,
+                Tkt::Add => OpCode::Add,
+                Tkt::Sub => OpCode::Sub,
                 _ => unreachable!(),
             };
             self.next()?;
@@ -152,8 +162,8 @@ impl Compiler {
 
         while let Tkt::Mul | Tkt::Div = self.current.token {
             let operator = match self.current.token {
-                Tkt::Mul => Instruction::Mul,
-                Tkt::Div => Instruction::Div,
+                Tkt::Mul => OpCode::Mul,
+                Tkt::Div => OpCode::Div,
                 _ => unreachable!(),
             };
             self.next()?;
@@ -165,7 +175,7 @@ impl Compiler {
     }
 
     fn unary(&mut self) -> ParseResult {
-        use Instruction::*;
+        use OpCode::*;
 
         if matches!(self.current.token, Tkt::Sub | Tkt::Not) {
             let operator = match self.current.token {
@@ -185,21 +195,31 @@ impl Compiler {
     }
 
     fn primary(&mut self) -> ParseResult {
-        use {Instruction::*, Literal::*};
+        macro_rules! push {
+            ($($tt:tt)+) => {{
+                self.emit(Push);
+                self.emit_const($($tt)+)
+            }}
+        }
+
+        use {OpCode::*, Constant::*};
         let tk = take(&mut self.current.token);
         match tk {
-            Tkt::Num(n) => self.emit(Push(Num(n))),
-            Tkt::Str(s) => self.emit(Push(Str(s))),
-            Tkt::Sym(s) => self.emit(Push(Sym(Symbol::new(s)))),
-            Tkt::True => self.emit(Push(Bool(true))),
-            Tkt::False => self.emit(Push(Bool(false))),
-            Tkt::Var(v) => self.emit(Load(Symbol::new(v))),
-            Tkt::Nil => self.emit(Push(Nil)),
+            Tkt::Num(n) => push!(Num(n)),
+            Tkt::Str(s) => push!(Str(s)),
+            Tkt::Sym(s) => push!(Sym(Symbol::new(s))),
+            Tkt::True => push!(Bool(true)),
+            Tkt::False => push!(Bool(false)),
+            Tkt::Var(v) => {
+                self.emit(Load);
+                self.emit_const(Sym(Symbol::new(v)))
+            },
+            Tkt::Nil => push!(Nil),
             Tkt::Lparen => {
                 self.next()?;
                 self.expression()?;
                 self.consume(
-                    vec![Tkt::Rparen],
+                    &[Tkt::Rparen],
                     format!(
                         "expected `)` to close the block, found `{}`",
                         self.current.token

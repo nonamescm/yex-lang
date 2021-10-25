@@ -1,5 +1,5 @@
 use front::compile;
-use rustyline::{Editor, error::ReadlineError};
+use rustyline::{error::ReadlineError, Editor};
 use vm::VirtualMachine;
 
 fn start(_args: Vec<String>) -> i32 {
@@ -14,9 +14,16 @@ fn start(_args: Vec<String>) -> i32 {
                     continue;
                 }
                 match compile(l) {
-                    Ok(mut vec) => {
-                        vec.push(vm::Instruction::Ret);
-                        println!("{}", vm.run(vec))
+                    Ok(mut bytecode) => {
+                        bytecode.instructions.push(vm::OpCode::Ret);
+
+                        #[cfg(debug_assertions)]
+                        eprintln!(
+                            "instructions: {:?}\nconstants: {:?}",
+                            bytecode.instructions, bytecode.constants
+                        );
+
+                        println!("{}", vm.run(bytecode))
                     }
                     Err(e) => println!("{}", e),
                 }
@@ -31,10 +38,13 @@ fn start(_args: Vec<String>) -> i32 {
 
             Err(e) => {
                 println!("error reading line");
+
                 #[cfg(debug_assertions)]
-                println!("Error: {}", e);
+                eprintln!("Error: {}", e);
             }
         }
+        vm.reset_ip();
+        vm.reset_cp();
     }
 }
 
