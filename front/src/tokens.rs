@@ -3,7 +3,7 @@ pub enum TokenType {
     // Literals
     Num(f64),
     Str(String),
-    Sym(String),
+    Sym(vm::Symbol),
     Var(String),
     True,
     False,
@@ -52,7 +52,7 @@ impl std::fmt::Display for TokenType {
         let res = match self {
             Self::Num(n) => n.to_string(),
             Self::Str(s) => "\"".to_owned() + s + "\"",
-            Self::Sym(s) => ":".to_owned() + s,
+            Self::Sym(s) => format!(":{}", s),
             Self::Var(v) => v.into(),
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),

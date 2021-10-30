@@ -252,25 +252,47 @@ impl Compiler {
 
     fn primary(&mut self) -> ParseResult {
         macro_rules! push {
-            ($($tt:tt)+) => {{
+            ($type: tt, $item: expr) => {{
+                if let Some(idx) = self.constants.iter().position(|c| match c {
+                    $type(ref s) => s == &$item,
+                    _ => false,
+                }) {
+                    self.emit(Push(idx))
+                } else {
+                    self.emit(Push(self.constants.len()));
+                    self.emit_const($type($item))
+                }
+            }};
+
+            ($type: expr) => {{
                 self.emit(Push(self.constants.len()));
-                self.emit_const($($tt)+)
-            }}
+                self.emit_const($type)
+            }};
         }
 
         use {Constant::*, OpCode::*};
-        let tk = take(&mut self.current.token);
-        match tk {
-            Tkt::Num(n) => push!(Num(n)),
-            Tkt::Str(s) => push!(Str(s)),
-            Tkt::Sym(s) => push!(Sym(Symbol::new(s))),
-            Tkt::True => push!(Bool(true)),
-            Tkt::False => push!(Bool(false)),
+        match take(&mut self.current.token) {
+            Tkt::Num(n) => push!(Num, n),
+            Tkt::Str(str) => push!(Str(str)),
+            Tkt::Sym(sym) => push!(Sym, sym), // don't allow for duplicated symbols
+            Tkt::True => push!(Bool, true),
+            Tkt::False => push!(Bool, false),
             Tkt::Var(v) => {
-                self.emit(Load(self.constants.len()));
-                self.emit_const(Val(Symbol::new(v)))
+                let v = Symbol::new(v);
+
+                if let Some(idx) = self
+                    .constants
+                    .iter()
+                    .position(|c| matches!(c, Val(ref s) if s == &v))
+                {
+                    self.emit(Load(idx))
+                } else {
+                    self.emit(Load(self.constants.len()));
+                    self.emit_const(Val(v))
+                }
             }
             Tkt::Nil => push!(Nil),
+
             Tkt::Lparen => {
                 self.next()?;
                 self.expression()?;
@@ -282,7 +304,7 @@ impl Compiler {
                     ),
                 )?;
             }
-            _ => self.throw(format!("expected expression, found `{}`", tk))?,
+            tk => self.throw(format!("expected expression, found `{}`", tk))?,
         }
 
         Ok(())

@@ -107,7 +107,7 @@ impl Lexer {
                         self.column,
                         "expected symbol string after `:`, found <eof>".into(),
                     )?,
-                    _ => TokenType::Sym(sym),
+                    _ => TokenType::Sym(vm::Symbol::new(sym)),
                 }
             }
             '=' => TokenType::Assign,
