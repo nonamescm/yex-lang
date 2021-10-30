@@ -2,13 +2,20 @@ use std::{hint::unreachable_unchecked, ops::{Add, BitAnd, BitOr, BitXor, Div, Mu
 pub mod symbol;
 use symbol::Symbol;
 
+/// Immediate values that can be consumed
 #[derive(Debug, PartialEq, Clone)]
 pub enum Constant {
+    /// float-precision numbers
     Num(f64),
+    /// Strings
     Str(String),
+    /// erlang-like atoms
     Sym(Symbol),
+    /// Variables
     Val(Symbol),
+    /// Booleans
     Bool(bool),
+    /// null
     Nil,
 }
 

@@ -1,4 +1,7 @@
 #![feature(option_result_unwrap_unchecked)]
+#![deny(missing_docs)]
+//! Virtual Machine implementation for the yex programming language
+
 mod literal;
 #[cfg(test)]
 mod tests;
@@ -22,43 +25,96 @@ macro_rules! panic {
     }
 }
 
+/// OpCodes for the virtualMachine
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum OpCode {
+    /// Stops the virtual machine
     Halt,
+
+    /// Push a value by it's index on the constant table on-to the stack
     Push(usize), // pointer to constant table
-    Pop,         // pop's stack (needed for execution)
-    Load(usize), // loads a variable
-    Save(usize), // saves value to variable
-    Drop(usize), // deletes a variable
-    Jmf(usize),  // jump if false
+
+    /// Pop a value from the stack
+    Pop,
+
+    /// Read a value from a variable, receives the index of the variable name in the constant table as
+    /// argument
+    Load(usize),
+
+    /// Save a value to a variable, receives the index of the variable name in the constant table as
+    /// argument
+    Save(usize),
+
+    /// Drops a variable, receives the index of the variable name in the constant table as argument
+    Drop(usize),
+
+    /// Jump if the value on the stack top is false
+    Jmf(usize),
+
+    /// Unconditional jump
     Jmp(usize),
 
+    /// Add the two values on the stack top
     Add,
+
+    /// Subtract the two values on the stack top
     Sub,
+
+    /// Multiplicate the two values on the stack top
     Mul,
+
+    /// Divide the two values on the stack top
     Div,
+
+    /// Negates the value on the stack top
     Neg,
+
+    /// Apply a unary not to the stack top
     Not,
+
+    /// Apply a xor operation on the two values on the stack top
     Xor,
+
+    /// Apply shift-right operation on the two values on the stack top
     Shr,
+
+    /// Apply shift-left operation on the two values on the stack top
     Shl,
+
+    /// Apply bit-and operation on the two values on the stack top
     BitAnd,
+
+    /// Apply bit-or operation on the two values on the stack top
     BitOr,
+
+    /// Check if the two values on the stack tops are equal
     Eq,
 }
 
+/// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,
+/// make it possible to be used for error handling
 #[derive(Clone, Copy)]
 pub struct OpCodeMetadata {
+    /// Source's code line
     pub line: usize,
+    /// Source's code column
     pub column: usize,
+
+    /// Actual opcode
     pub opcode: OpCode,
 }
 
+/// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
+/// be loaded
 pub struct Bytecode {
+    /// the instructions, made of [`crate::OpCodeMetadata`]
     pub instructions: Vec<OpCodeMetadata>,
+    /// the constants to be loaded
     pub constants: Vec<Constant>,
 }
 
+/// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
+/// model
 pub struct VirtualMachine {
     bytecode: Bytecode,
     ip: usize, // instruction pointer
@@ -68,16 +124,19 @@ pub struct VirtualMachine {
 }
 
 impl VirtualMachine {
+    /// Reset the instruction pointer and the stack
     pub fn reset(&mut self) {
         self.ip = 0;
         self.stack = [NIL; 512];
         self.stack_ptr = 0;
     }
 
+    /// Pop's the last value on the stack
     pub fn pop_last(&self) -> &Constant {
         &self.stack[self.stack_ptr - 1]
     }
 
+    /// Executes a given set of bytecode instructions
     pub fn run(&mut self, bytecode: Bytecode) -> Constant {
         self.ip = 0;
         self.bytecode = bytecode;

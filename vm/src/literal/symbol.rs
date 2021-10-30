@@ -4,6 +4,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+/// Symbol struct, contains the symbol string and a pre-hashed value for faster comparison
 #[derive(Debug, Clone)]
 pub struct Symbol {
     string: String,
@@ -33,6 +34,7 @@ impl std::fmt::Display for Symbol {
 }
 
 impl Symbol {
+    /// Creates a new symbol
     pub fn new<T: Into<String>>(str: T) -> Self {
         let string = str.into();
 
