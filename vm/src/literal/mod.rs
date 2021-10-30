@@ -33,9 +33,9 @@ macro_rules! err {
     }
 }
 
-impl Into<bool> for Constant {
-    fn into(self) -> bool {
-        match !self {
+impl From<Constant> for bool {
+    fn from(o: Constant) -> Self {
+        match !o {
             Constant::Bool(true) => false,
             Constant::Bool(false) => true,
             _ => unsafe {

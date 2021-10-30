@@ -6,7 +6,7 @@ mod literal;
 #[cfg(test)]
 mod tests;
 pub use crate::literal::{symbol::Symbol, Constant};
-use std::{collections::HashMap, mem};
+use std::{collections::HashMap, hint::unreachable_unchecked, mem};
 
 const STACK_SIZE: usize = 512;
 const NIL: Constant = Constant::Nil;
@@ -182,11 +182,11 @@ impl VirtualMachine {
                     let val = self.get_val(n);
 
                     if self.variables.contains_key(&val) {
-                        panic!("Can't shadow value")
+                        panic!("Can't shadow value");
                     } else {
                         let value = self.pop();
-                        self.variables.insert(val, value)
-                    };
+                        self.variables.insert(val, value);
+                    }
                 }
 
                 Load(n) => {
@@ -266,7 +266,9 @@ impl VirtualMachine {
     fn get_val(&self, idx: usize) -> Symbol {
         match &self.bytecode.constants[idx] {
             Constant::Val(v) => v.clone(),
-            _ => unreachable!(),
+            _ => unsafe {
+                unreachable_unchecked()
+            },
         }
     }
 

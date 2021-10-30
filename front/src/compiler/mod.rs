@@ -138,7 +138,7 @@ impl Compiler {
                 format!("Expected `=` after name, found {}", self.current.token),
             )?;
             self.expression()?;
-            self.emit_const(Constant::Val(Symbol::new(name.clone())));
+            self.emit_const(Constant::Val(Symbol::new(name)));
             let idx = self.constants.len() - 1;
             self.emit(OpCode::Save(idx));
 
