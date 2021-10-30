@@ -1,33 +1,36 @@
 #![feature(option_result_unwrap_unchecked)]
 #[cfg(test)]
 mod tests;
-
 mod literal;
 pub use crate::literal::{symbol::Symbol, Constant};
+use std::{mem, collections::HashMap};
 
 const STACK_SIZE: usize = 512;
 const NIL: Constant = Constant::Nil;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum OpCode {
-    Halt = 0x00,
-    Push = 0x01,
-    Load = 0x02, // loads a variable
-    Save = 0x03, // saves value to variable
-    Ret = 0x04,
+    Halt,
+    Push(usize), // pointer to constant table
+    Pop,         // pop's stack (needed for execution)
+    Load(usize), // loads a variable
+    Save(usize), // saves value to variable
+    Drop(usize), // deletes a variable
+    Jmf(usize),  // jump if false
+    Jmp(usize),
 
-    Add = 0x10,
-    Sub = 0x11,
-    Mul = 0x12,
-    Div = 0x13,
-    Neg = 0x14,
-    Not = 0x15,
-    Xor = 0x16,
-    Shr = 0x17,
-    Shl = 0x18,
-    BitAnd = 0x19,
-    BitOr = 0x20,
-    Eq = 0x21,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Neg,
+    Not,
+    Xor,
+    Shr,
+    Shl,
+    BitAnd,
+    BitOr,
+    Eq,
 }
 
 pub struct Bytecode {
@@ -38,18 +41,20 @@ pub struct Bytecode {
 pub struct VirtualMachine {
     bytecode: Bytecode,
     ip: usize, // instruction pointer
-    cp: usize, // constant pointer
     stack: [Constant; STACK_SIZE],
     stack_ptr: usize,
+    variables: HashMap<Symbol, Constant>,
 }
 
 impl VirtualMachine {
-    pub fn reset_ip(&mut self) {
+    pub fn reset(&mut self) {
         self.ip = 0;
+        self.stack = [NIL; 512];
+        self.stack_ptr = 0;
     }
 
-    pub fn reset_cp(&mut self) {
-        self.cp = 0;
+    pub fn pop_last(&self) -> &Constant {
+        &self.stack[self.stack_ptr - 1]
     }
 
     pub fn run(&mut self, bytecode: Bytecode) -> Constant {
@@ -73,23 +78,58 @@ impl VirtualMachine {
         }
 
         'main: while self.ip < self.bytecode.instructions.len() {
-            #[cfg(debug_assertions)]
-            eprintln!("{:?}", self.stack);
-
-            let inst = self.ip;
+            let inst_ip = self.ip;
+            let inst = self.bytecode.instructions[inst_ip];
             self.ip += 1;
 
             use OpCode::*;
-            match self.bytecode.instructions[inst] {
+            match inst {
                 Halt => break 'main,
-                Push => {
-                    self.cp += 1;
-                    let val = self.bytecode.constants[self.cp - 1].clone();
+                Push(n) => {
+                    let val = self.bytecode.constants[n].clone();
                     self.push(val)
                 }
-                Save => todo!(),
-                Load => todo!(),
-                Ret => return (self.pop()).clone(),
+                Pop => {
+                    self.pop();
+                }
+                Save(n) => {
+                    let val = match self.bytecode.constants[n].clone() {
+                        Constant::Val(v) => v,
+                        _ => unreachable!(),
+                    };
+
+                    if self.variables.contains_key(&val) {
+                        panic!("Can't shadow value")
+                    } else {
+                        let value = self.pop();
+                        self.variables.insert(val, value)
+                    };
+                },
+                Load(n) => {
+                    let val = match self.bytecode.constants[n].clone() {
+                        Constant::Val(v) => v,
+                        _ => unreachable!(),
+                    };
+                    self.push(self.variables.get(&val).unwrap_or(&NIL).clone());
+                },
+                Drop(n) => {
+                    let val = match self.bytecode.constants[n].clone() {
+                        Constant::Val(v) => v,
+                        _ => unreachable!(),
+                    };
+
+                    self.variables.remove(&val);
+                },
+                Jmf(offset) => {
+                    if Into::<bool>::into(!self.pop()) {
+                        self.ip = offset;
+                        continue;
+                    }
+                }
+                Jmp(offset) => {
+                    self.ip = offset;
+                    continue;
+                }
 
                 Add => binop!(+),
                 Sub => binop!(-),
@@ -108,8 +148,14 @@ impl VirtualMachine {
                 }
 
                 Neg => unaop!(-),
-                Not => unaop!(!),
+                Not => {
+                    let right = self.pop();
+                    self.push(!right)
+                }
             }
+
+            #[cfg(debug_assertions)]
+            eprintln!("STACK: {:?}\nINSTRUCTION: {:?}\nSTACK_PTR: {}\n", self.stack, inst, self.stack_ptr);
         }
 
         Constant::Nil
@@ -121,9 +167,8 @@ impl VirtualMachine {
     }
 
     fn pop(&mut self) -> Constant {
-        let val = std::mem::replace(&mut self.stack[self.stack_ptr - 1], Constant::Nil);
         self.stack_ptr -= 1;
-        val
+        mem::replace(&mut self.stack[self.stack_ptr], Constant::Nil)
     }
 
     fn try_do(&self, res: Result<Constant, impl std::fmt::Display>) -> Constant {
@@ -142,9 +187,9 @@ impl Default for VirtualMachine {
                 constants: vec![],
             },
             ip: 0,
-            cp: 0,
-            stack: [NIL; 512],
+            stack: [NIL; STACK_SIZE],
             stack_ptr: 0,
+            variables: HashMap::new(),
         }
     }
 }

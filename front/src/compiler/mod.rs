@@ -4,7 +4,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 use std::{iter::Peekable, mem::take};
-use vm::{Symbol, OpCode, Constant, Bytecode};
+use vm::{Bytecode, Constant, OpCode, Symbol};
 
 type ParseResult = Result<(), ParseError>;
 
@@ -13,6 +13,7 @@ pub struct Compiler {
     instructions: Vec<OpCode>,
     constants: Vec<Constant>,
     current: Token,
+    compiled_opcodes: usize,
 }
 
 impl Compiler {
@@ -26,6 +27,7 @@ impl Compiler {
                 column: 0,
                 token: Tkt::Eof,
             },
+            compiled_opcodes: 0,
         };
         while {
             this.next()?;
@@ -48,7 +50,8 @@ impl Compiler {
     }
 
     fn emit(&mut self, intr: OpCode) {
-        self.instructions.push(intr)
+        self.instructions.push(intr);
+        self.compiled_opcodes += 1;
     }
 
     fn emit_const(&mut self, constant: Constant) {
@@ -66,36 +69,85 @@ impl Compiler {
         Ok(())
     }
 
-    fn consume(&self, token: &[Tkt], err: impl Into<String>) -> ParseResult {
+    fn consume(&mut self, token: &[Tkt], err: impl Into<String>) -> ParseResult {
         if !token.contains(&self.current.token) {
             self.throw(err)
         } else {
-            Ok(())
+            self.next()
         }
     }
 
     fn expression(&mut self) -> ParseResult {
-        self.assign()
+        match self.current.token {
+            Tkt::If => self.condition(),
+            Tkt::Val => self.assign_val(),
+            _ => self.equality(),
+        }
     }
 
     fn throw(&self, err: impl Into<String>) -> ParseResult {
         ParseError::throw(self.current.line, self.current.column, err.into())
     }
 
-    fn assign(&mut self) -> ParseResult {
-        if let Tkt::Var(val) = self.current.token.clone() {
-            if let Some(Ok(Token {
-                token: Tkt::Assign, ..
-            })) = self.lexer.peek()
-            {
-                self.next()?;
-                self.next()?;
-                self.equality()?;
-                self.emit(OpCode::Save);
-                self.emit_const(Constant::Sym(Symbol::new(val)));
-            } else {
-                self.equality()?;
-            }
+    fn condition(&mut self) -> ParseResult {
+        assert_eq!(self.current.token, Tkt::If); // security check
+        self.next()?; // skips the if token
+
+        self.expression()?; // compiles the condition
+        self.consume(
+            &[Tkt::Do],
+            format!(
+                "expected `do` after condition, found {}",
+                &self.current.token
+            ),
+        )?; // checks for do
+
+        let then_jump_ip = self.compiled_opcodes;
+        self.emit(OpCode::Jmf(0));
+
+        self.expression()?; // compiles the if branch
+
+        let else_jump_ip = self.compiled_opcodes;
+        self.emit(OpCode::Jmp(0));
+
+        self.instructions[then_jump_ip] = OpCode::Jmf(self.compiled_opcodes);
+
+        self.consume(&[Tkt::Else], "Expected `else` after if")?;
+        self.expression()?; // compiles the else branch
+        self.consume(&[Tkt::End], "expected `end` to close the else block")?;
+        self.instructions[else_jump_ip] = OpCode::Jmp(self.compiled_opcodes);
+
+        Ok(())
+    }
+
+    fn assign_val(&mut self) -> ParseResult {
+        if let Tkt::Val = self.current.token {
+            self.next()?;
+            let name = match std::mem::take(&mut self.current.token) {
+                Tkt::Var(v) => v,
+                o => return self.throw(format!("Expected variable name after `val`, found {}", o)),
+            };
+            self.next()?;
+
+            self.consume(
+                &[Tkt::Assign],
+                format!("Expected `=` after name, found {}", self.current.token),
+            )?;
+            self.expression()?;
+            self.emit_const(Constant::Val(Symbol::new(name.clone())));
+            let idx = self.constants.len() - 1;
+            self.emit(OpCode::Save(idx));
+
+            self.consume(
+                &[Tkt::In],
+                format!(
+                    "Expected `in` after val expression, found {}",
+                    self.current.token
+                ),
+            )?;
+            self.expression()?;
+
+            self.emit(OpCode::Drop(idx));
         } else {
             self.equality()?;
         }
@@ -197,12 +249,12 @@ impl Compiler {
     fn primary(&mut self) -> ParseResult {
         macro_rules! push {
             ($($tt:tt)+) => {{
-                self.emit(Push);
+                self.emit(Push(self.constants.len()));
                 self.emit_const($($tt)+)
             }}
         }
 
-        use {OpCode::*, Constant::*};
+        use {Constant::*, OpCode::*};
         let tk = take(&mut self.current.token);
         match tk {
             Tkt::Num(n) => push!(Num(n)),
@@ -211,9 +263,9 @@ impl Compiler {
             Tkt::True => push!(Bool(true)),
             Tkt::False => push!(Bool(false)),
             Tkt::Var(v) => {
-                self.emit(Load);
-                self.emit_const(Sym(Symbol::new(v)))
-            },
+                self.emit(Load(self.constants.len()));
+                self.emit_const(Val(Symbol::new(v)))
+            }
             Tkt::Nil => push!(Nil),
             Tkt::Lparen => {
                 self.next()?;

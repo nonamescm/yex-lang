@@ -1,5 +1,6 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenType {
+    // Literals
     Num(f64),
     Str(String),
     Sym(String),
@@ -7,6 +8,14 @@ pub enum TokenType {
     True,
     False,
     Nil,
+
+    // Keywords
+    If,
+    Else,
+    Do,
+    End,
+    Val,
+    In,
 
     // logical operators
     Add,
@@ -48,6 +57,14 @@ impl std::fmt::Display for TokenType {
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),
             Self::Nil => "nil".into(),
+
+            Self::If => "if".into(),
+            Self::Else => "else".into(),
+            Self::Do => "do".into(),
+            Self::End => "end".into(),
+            Self::Val => "val".into(),
+            Self::In => "in".into(),
+
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
             Self::Mul => '*'.into(),
@@ -67,6 +84,18 @@ impl std::fmt::Display for TokenType {
         };
 
         write!(f, "{}", res)
+    }
+}
+
+pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
+    match word.as_ref() {
+        "if" => Some(TokenType::If),
+        "else" => Some(TokenType::Else),
+        "do" => Some(TokenType::Do),
+        "end" => Some(TokenType::End),
+        "val" => Some(TokenType::Val),
+        "in" => Some(TokenType::In),
+        _ => None,
     }
 }
 

@@ -5,6 +5,7 @@ use vm::VirtualMachine;
 fn start(_args: Vec<String>) -> i32 {
     let mut vm = VirtualMachine::default();
     let mut repl = Editor::<()>::new();
+    repl.load_history("/tmp/.yex_history").ok();
 
     loop {
         match repl.readline("yex> ") {
@@ -14,16 +15,15 @@ fn start(_args: Vec<String>) -> i32 {
                     continue;
                 }
                 match compile(l) {
-                    Ok(mut bytecode) => {
-                        bytecode.instructions.push(vm::OpCode::Ret);
-
+                    Ok(bytecode) => {
                         #[cfg(debug_assertions)]
                         eprintln!(
                             "instructions: {:?}\nconstants: {:?}",
                             bytecode.instructions, bytecode.constants
                         );
+                        vm.run(bytecode);
 
-                        println!("{}", vm.run(bytecode))
+                        println!("{}", vm.pop_last())
                     }
                     Err(e) => println!("{}", e),
                 }
@@ -43,8 +43,7 @@ fn start(_args: Vec<String>) -> i32 {
                 eprintln!("Error: {}", e);
             }
         }
-        vm.reset_ip();
-        vm.reset_cp();
+        vm.reset();
     }
 }
 

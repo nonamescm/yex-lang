@@ -4,13 +4,10 @@ use crate::{Bytecode, Constant, OpCode, VirtualMachine};
 fn test_ops() {
     let mut vm = VirtualMachine::default();
 
-    let res = vm.run(Bytecode {
-        instructions: vec![OpCode::Push, OpCode::Push, OpCode::Add, OpCode::Ret]
-            .into_iter()
-            .map(|c| c as u8)
-            .collect(),
+    vm.run(Bytecode {
+        instructions: vec![OpCode::Push(0), OpCode::Push(1), OpCode::Add],
         constants: vec![Constant::Num(1.0), Constant::Num(1.0)],
     });
 
-    assert_eq!(res, Constant::Num(2.0))
+    assert_eq!(vm.pop_last(), &Constant::Num(2.0))
 }

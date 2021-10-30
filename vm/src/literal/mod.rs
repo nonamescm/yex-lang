@@ -1,4 +1,4 @@
-use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub};
+use std::{hint::unreachable_unchecked, ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub}};
 pub mod symbol;
 use symbol::Symbol;
 
@@ -7,6 +7,7 @@ pub enum Constant {
     Num(f64),
     Str(String),
     Sym(Symbol),
+    Val(Symbol),
     Bool(bool),
     Nil,
 }
@@ -25,13 +26,25 @@ macro_rules! err {
     }
 }
 
+impl Into<bool> for Constant {
+    fn into(self) -> bool {
+        match !self {
+            Constant::Bool(true) => false,
+            Constant::Bool(false) => true,
+            _ => unsafe {
+                unreachable_unchecked()
+            }
+        }
+    }
+}
+
 impl std::fmt::Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Constant::*;
         let tk = match self {
             Nil => "nil".to_string(),
             Str(s) => "\"".to_owned() + s + "\"",
-            Sym(s) => format!("{}", s),
+            Sym(s) | Val(s) => format!("{}", s),
             Num(n) => n.to_string(),
             Bool(b) => b.to_string(),
         };
@@ -162,20 +175,21 @@ impl Neg for &Constant {
 }
 
 impl Not for Constant {
-    type Output = ConstantErr;
+    type Output = Constant;
 
     fn not(self) -> Self::Output {
         use Constant::*;
 
         match self {
-            Bool(true) => Ok(Constant::Bool(false)),
-            Bool(false) => Ok(Constant::Bool(true)),
-            Sym(_) => Ok(Constant::Bool(false)),
-            Str(s) if s.is_empty() => Ok(Constant::Bool(true)),
-            Str(_) => Ok(Constant::Bool(false)),
-            Num(n) if n == 0.0 => Ok(Constant::Bool(true)),
-            Num(_) => Ok(Constant::Bool(false)),
-            Nil => Ok(Constant::Bool(true)),
+            Bool(true) => Constant::Bool(false),
+            Bool(false) => Constant::Bool(true),
+            Sym(_) => Constant::Bool(false),
+            Str(s) if s.is_empty() => Constant::Bool(true),
+            Str(_) => Constant::Bool(false),
+            Num(n) if n == 0.0 => Constant::Bool(true),
+            Num(_) => Constant::Bool(false),
+            Nil => Constant::Bool(true),
+            _ => unreachable!(),
         }
     }
 }
@@ -195,6 +209,7 @@ impl Not for &Constant {
             Num(n) if *n == 0.0 => Ok(Constant::Bool(true)),
             Num(_) => Ok(Constant::Bool(false)),
             Nil => Ok(Constant::Bool(true)),
+            _ => unreachable!(),
         }
     }
 }

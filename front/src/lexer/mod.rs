@@ -1,5 +1,5 @@
 use crate::error::ParseError;
-use crate::tokens::{Token, TokenType};
+use crate::tokens::{fetch_keyword, Token, TokenType};
 
 const EOF: char = '\0';
 
@@ -130,7 +130,12 @@ impl Lexer {
                 }
             }
             c if c.is_alphabetic() || c == '_' => {
-                TokenType::Var(self.take_while(|c| c.is_alphanumeric() || c == '_')?)
+                let tk = self.take_while(|c| c.is_alphanumeric() || c == '_')?;
+                if let Some(tk) = fetch_keyword(&tk) {
+                    tk
+                } else {
+                    TokenType::Var(tk)
+                }
             }
 
             // BitWise
