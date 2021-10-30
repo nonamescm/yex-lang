@@ -8,6 +8,20 @@ use std::{collections::HashMap, mem};
 const STACK_SIZE: usize = 512;
 const NIL: Constant = Constant::Nil;
 
+static mut LINE: usize = 1;
+static mut COLUMN: usize = 1;
+
+macro_rules! panic {
+    ($($tt:tt)+) => {
+        unsafe {
+            let msg = format!($($tt)+);
+            std::eprintln!("[{}:{}] {}", LINE, COLUMN, msg);
+            std::panic::set_hook(Box::new(|_| {}));
+            std::panic!()
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum OpCode {
     Halt,
@@ -33,8 +47,15 @@ pub enum OpCode {
     Eq,
 }
 
+#[derive(Clone, Copy)]
+pub struct OpCodeMetadata {
+    pub line: usize,
+    pub column: usize,
+    pub opcode: OpCode,
+}
+
 pub struct Bytecode {
-    pub instructions: Vec<OpCode>,
+    pub instructions: Vec<OpCodeMetadata>,
     pub constants: Vec<Constant>,
 }
 
@@ -82,8 +103,13 @@ impl VirtualMachine {
             let inst = self.bytecode.instructions[inst_ip];
             self.ip += 1;
 
+            unsafe {
+                LINE = inst.line;
+                COLUMN = inst.column;
+            }
+
             use OpCode::*;
-            match inst {
+            match inst.opcode {
                 Halt => break 'main,
                 Push(n) => {
                     let val = self.bytecode.constants[n].clone();
@@ -160,7 +186,7 @@ impl VirtualMachine {
                     .rev()
                     .skip_while(|it| *it == &NIL)
                     .collect::<Vec<&Constant>>(),
-                inst,
+                inst.opcode,
                 self.stack_ptr
             );
         }

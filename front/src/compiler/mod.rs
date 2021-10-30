@@ -4,13 +4,13 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 use std::{iter::Peekable, mem::take};
-use vm::{Bytecode, Constant, OpCode, Symbol};
+use vm::{Bytecode, Constant, OpCode, OpCodeMetadata, Symbol};
 
 type ParseResult = Result<(), ParseError>;
 
 pub struct Compiler {
     lexer: Peekable<Lexer>,
-    instructions: Vec<OpCode>,
+    instructions: Vec<OpCodeMetadata>,
     constants: Vec<Constant>,
     current: Token,
     compiled_opcodes: usize,
@@ -50,7 +50,11 @@ impl Compiler {
     }
 
     fn emit(&mut self, intr: OpCode) {
-        self.instructions.push(intr);
+        self.instructions.push(OpCodeMetadata {
+            line: self.current.line,
+            column: self.current.column,
+            opcode: intr,
+        });
         self.compiled_opcodes += 1;
     }
 
@@ -110,12 +114,12 @@ impl Compiler {
         let else_jump_ip = self.compiled_opcodes;
         self.emit(OpCode::Jmp(0));
 
-        self.instructions[then_jump_ip] = OpCode::Jmf(self.compiled_opcodes);
+        self.instructions[then_jump_ip].opcode = OpCode::Jmf(self.compiled_opcodes);
 
         self.consume(&[Tkt::Else], "Expected `else` after if")?;
         self.expression()?; // compiles the else branch
         self.consume(&[Tkt::End], "expected `end` to close the else block")?;
-        self.instructions[else_jump_ip] = OpCode::Jmp(self.compiled_opcodes);
+        self.instructions[else_jump_ip].opcode = OpCode::Jmp(self.compiled_opcodes);
 
         Ok(())
     }

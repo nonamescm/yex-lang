@@ -95,6 +95,9 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "end" => Some(TokenType::End),
         "val" => Some(TokenType::Val),
         "in" => Some(TokenType::In),
+        "true" => Some(TokenType::True),
+        "false" => Some(TokenType::False),
+        "nil" => Some(TokenType::Nil),
         _ => None,
     }
 }
