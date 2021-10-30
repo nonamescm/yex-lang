@@ -1,9 +1,9 @@
 #![feature(option_result_unwrap_unchecked)]
+mod literal;
 #[cfg(test)]
 mod tests;
-mod literal;
 pub use crate::literal::{symbol::Symbol, Constant};
-use std::{mem, collections::HashMap};
+use std::{collections::HashMap, mem};
 
 const STACK_SIZE: usize = 512;
 const NIL: Constant = Constant::Nil;
@@ -92,11 +92,9 @@ impl VirtualMachine {
                 Pop => {
                     self.pop();
                 }
+
                 Save(n) => {
-                    let val = match self.bytecode.constants[n].clone() {
-                        Constant::Val(v) => v,
-                        _ => unreachable!(),
-                    };
+                    let val = self.get_val(n);
 
                     if self.variables.contains_key(&val) {
                         panic!("Can't shadow value")
@@ -104,22 +102,22 @@ impl VirtualMachine {
                         let value = self.pop();
                         self.variables.insert(val, value)
                     };
-                },
+                }
+
                 Load(n) => {
-                    let val = match self.bytecode.constants[n].clone() {
-                        Constant::Val(v) => v,
-                        _ => unreachable!(),
-                    };
-                    self.push(self.variables.get(&val).unwrap_or(&NIL).clone());
-                },
+                    let val = self.get_val(n);
+
+                    self.push(match self.variables.get(&val) {
+                        Some(v) => v.clone(),
+                        None => panic!("unknown variable {}", val),
+                    });
+                }
+
                 Drop(n) => {
-                    let val = match self.bytecode.constants[n].clone() {
-                        Constant::Val(v) => v,
-                        _ => unreachable!(),
-                    };
+                    let val = self.get_val(n);
 
                     self.variables.remove(&val);
-                },
+                }
                 Jmf(offset) => {
                     if Into::<bool>::into(!self.pop()) {
                         self.ip = offset;
@@ -155,7 +153,16 @@ impl VirtualMachine {
             }
 
             #[cfg(debug_assertions)]
-            eprintln!("STACK: {:?}\nINSTRUCTION: {:?}\nSTACK_PTR: {}\n", self.stack, inst, self.stack_ptr);
+            eprintln!(
+                "STACK: {:?}\nINSTRUCTION: {:?}\nSTACK_PTR: {}\n",
+                self.stack
+                    .iter()
+                    .rev()
+                    .skip_while(|it| *it == &NIL)
+                    .collect::<Vec<&Constant>>(),
+                inst,
+                self.stack_ptr
+            );
         }
 
         Constant::Nil
@@ -169,6 +176,13 @@ impl VirtualMachine {
     fn pop(&mut self) -> Constant {
         self.stack_ptr -= 1;
         mem::replace(&mut self.stack[self.stack_ptr], Constant::Nil)
+    }
+
+    fn get_val(&self, idx: usize) -> Symbol {
+        match &self.bytecode.constants[idx] {
+            Constant::Val(v) => v.clone(),
+            _ => unreachable!(),
+        }
     }
 
     fn try_do(&self, res: Result<Constant, impl std::fmt::Display>) -> Constant {
