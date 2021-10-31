@@ -95,9 +95,9 @@ impl Lexer {
             }
             '(' => TokenType::Lparen,
             ')' => TokenType::Rparen,
-            ':' => {
+            ':' if !self.peek_at(1).is_whitespace() => {
                 self.next();
-                let sym = self.take_while(|c| c.is_alphanumeric())?;
+                let sym = self.take_while(|c| c.is_alphanumeric() || c == '_')?;
                 match sym.as_str() {
                     "true" => TokenType::True,
                     "false" => TokenType::False,
