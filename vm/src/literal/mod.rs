@@ -229,7 +229,7 @@ impl BitXor for Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise xor between `{}` and `{}`", x, y),
+            (x, y) => err!("Can't apply bitwise `^` between {} and {}", x, y),
         }
     }
 }
@@ -242,7 +242,7 @@ impl BitXor for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise xor between `{}` and `{}`", x, y),
+            (x, y) => err!("Can't apply bitwise `^` between {} and {}", x, y),
         }
     }
 }
@@ -255,7 +255,7 @@ impl BitAnd for Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise and between `{}` and `{}`", x, y),
+            (x, y) => err!("Can't apply bitwise `&` between {} and {}", x, y),
         }
     }
 }
@@ -268,7 +268,7 @@ impl BitAnd for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise and between `{}` and `{}`", x, y),
+            (x, y) => err!("Can't apply bitwise `&` between {} and {}", x, y),
         }
     }
 }
@@ -281,7 +281,7 @@ impl BitOr for Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
+            (x, y) => err!("Can't apply bitwise `|` between {} and {}", x, y),
         }
     }
 }
@@ -294,7 +294,7 @@ impl BitOr for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
+            (x, y) => err!("Can't apply bitwise `|` between {} and {}", x, y),
         }
     }
 }
@@ -307,7 +307,7 @@ impl Shr for Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
+            (x, y) => err!("Can't apply bitwise `>>` between {} and {}", x, y),
         }
     }
 }
@@ -320,7 +320,7 @@ impl Shr for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
+            (x, y) => err!("Can't apply bitwise `>>` between {} and {}", x, y),
         }
     }
 }
@@ -333,7 +333,7 @@ impl Shl for Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
+            (x, y) => err!("Can't apply bitwise `<<` between {} and {}", x, y),
         }
     }
 }
@@ -346,7 +346,7 @@ impl Shl for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise or between `{}` and `{}`", x, y),
+            (x, y) => err!("Can't apply bitwise `<<` between {} and {}", x, y),
         }
     }
 }
