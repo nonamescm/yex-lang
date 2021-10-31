@@ -1,5 +1,4 @@
 use std::{
-    collections::hash_map::DefaultHasher,
     fmt::Formatter,
     hash::{Hash, Hasher},
 };
@@ -33,12 +32,32 @@ impl std::fmt::Display for Symbol {
     }
 }
 
+struct FnvHasher(u64);
+impl Default for FnvHasher {
+    fn default() -> Self {
+        Self(0xcbf29ce484222325)
+    }
+}
+
+impl Hasher for FnvHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        for byte in bytes.iter() {
+            self.0 ^= *byte as u64;
+            self.0 = self.0.wrapping_mul(16777619);
+        }
+    }
+}
+
 impl Symbol {
     /// Creates a new symbol
     pub fn new<T: Into<String>>(str: T) -> Self {
         let string = str.into();
 
-        let mut hash = DefaultHasher::new();
+        let mut hash = FnvHasher::default();
         string.hash(&mut hash);
         let hash = hash.finish();
 
