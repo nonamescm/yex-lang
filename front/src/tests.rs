@@ -1,3 +1,6 @@
+#[cfg(test)]
+use vm::{Bytecode, OpCodeMetadata, OpCode, Constant, Symbol};
+
 #[test]
 fn lex_test() {
     use crate::lexer::Lexer;
@@ -100,4 +103,54 @@ fn lex_test_2() {
             })
         ]
     )
+}
+
+#[test]
+fn test_compiler() {
+    use crate::compile;
+
+    let bytecode = compile("val oi = 10 in oi * 20").expect("Should be a valid syntax");
+
+    assert_eq!(
+        bytecode,
+        Bytecode {
+            instructions: vec![
+                OpCodeMetadata {
+                    line: 1,
+                    column: 11,
+                    opcode: OpCode::Push(0)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 14,
+                    opcode: OpCode::Save(1)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 17,
+                    opcode: OpCode::Load(1)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 22,
+                    opcode: OpCode::Push(2)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 23,
+                    opcode: OpCode::Mul
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 23,
+                    opcode: OpCode::Drop(1)
+                }
+            ],
+            constants: vec![
+                Constant::Num(10.0),
+                Constant::Val(Symbol::new("oi")),
+                Constant::Num(20.0)
+            ]
+        }
+    );
 }

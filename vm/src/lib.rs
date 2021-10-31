@@ -26,7 +26,7 @@ macro_rules! panic {
 }
 
 /// OpCodes for the virtualMachine
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum OpCode {
     /// Stops the virtual machine
     Halt,
@@ -93,7 +93,7 @@ pub enum OpCode {
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,
 /// make it possible to be used for error handling
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OpCodeMetadata {
     /// Source's code line
     pub line: usize,
@@ -106,6 +106,7 @@ pub struct OpCodeMetadata {
 
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
+#[derive(Debug, PartialEq)]
 pub struct Bytecode {
     /// the instructions, made of [`crate::OpCodeMetadata`]
     pub instructions: Vec<OpCodeMetadata>,
