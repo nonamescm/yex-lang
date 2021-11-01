@@ -1,5 +1,5 @@
 #[cfg(test)]
-use vm::{Bytecode, OpCodeMetadata, OpCode, Constant, Symbol};
+use vm::{Bytecode, Constant, OpCode, OpCodeMetadata, Symbol};
 
 #[test]
 fn lex_test() {

@@ -267,9 +267,7 @@ impl VirtualMachine {
     fn get_val(&self, idx: usize) -> Symbol {
         match &self.bytecode.constants[idx] {
             Constant::Val(v) => v.clone(),
-            _ => unsafe {
-                unreachable_unchecked()
-            },
+            _ => unsafe { unreachable_unchecked() },
         }
     }
 
