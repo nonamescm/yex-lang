@@ -47,12 +47,7 @@ impl Compiler {
             )?;
         }
 
-        Ok((
-            Bytecode {
-                instructions: this.instructions,
-            },
-            this.constants,
-        ))
+        Ok((this.instructions, this.constants))
     }
 
     fn emit(&mut self, intr: OpCode) {
@@ -125,7 +120,7 @@ impl Compiler {
 
         self.emit_const(Constant::Fun {
             arity,
-            body: Bytecode { instructions: body },
+            body,
         });
 
         Ok(())

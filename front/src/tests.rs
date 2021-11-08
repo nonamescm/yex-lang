@@ -1,5 +1,5 @@
 #[cfg(test)]
-use vm::{Bytecode, Constant, OpCode, OpCodeMetadata, Symbol};
+use vm::{Constant, OpCode, OpCodeMetadata, Symbol};
 
 #[test]
 fn lex_test() {
@@ -113,8 +113,8 @@ fn test_compiler() {
 
     assert_eq!(
         bytecode,
-        Bytecode {
-            instructions: vec![
+        (
+            vec![
                 OpCodeMetadata {
                     line: 1,
                     column: 11,
@@ -146,11 +146,11 @@ fn test_compiler() {
                     opcode: OpCode::Drop(1)
                 }
             ],
-            constants: vec![
+            vec![
                 Constant::Num(10.0),
                 Constant::Val(Symbol::new("oi")),
                 Constant::Num(20.0)
             ]
-        }
+        )
     );
 }

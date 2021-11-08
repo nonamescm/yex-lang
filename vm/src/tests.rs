@@ -1,4 +1,13 @@
-use crate::{Bytecode, Constant, OpCode, OpCodeMetadata, VirtualMachine};
+use crate::{Constant, OpCode, OpCodeMetadata, VirtualMachine};
+
+macro_rules! vecm {
+    ($($tt:tt)*) => {
+        vec![$($tt)*]
+            .into_iter()
+            .map(metadata_nil)
+            .collect()
+    }
+}
 
 fn metadata_nil(op: OpCode) -> OpCodeMetadata {
     OpCodeMetadata {
@@ -14,47 +23,23 @@ fn test_ops() {
 
     let mut vm = VirtualMachine::default();
 
-    vm.run(Bytecode {
-        instructions: vec![Push(0), Push(0), Add]
-            .into_iter()
-            .map(metadata_nil)
-            .collect(),
-        constants: vec![Constant::Num(1.0)],
-    });
+    vm.set_consts(vec![Constant::Num(1.0)]);
+
+    vm.run(vecm![Push(0), Push(0), Add]);
     assert_eq!(vm.pop_last(), &Constant::Num(2.0));
-
     vm.reset();
 
-    vm.run(Bytecode {
-        instructions: vec![Push(0), Push(0), Sub]
-            .into_iter()
-            .map(metadata_nil)
-            .collect(),
-        constants: vec![Constant::Num(1.0)],
-    });
+    vm.run(vecm![Push(0), Push(0), Sub]);
     assert_eq!(vm.pop_last(), &Constant::Num(0.0));
-
     vm.reset();
 
-    vm.run(Bytecode {
-        instructions: vec![Push(0), Push(0), Mul]
-            .into_iter()
-            .map(metadata_nil)
-            .collect(),
-        constants: vec![Constant::Num(2.0)],
-    });
+    vm.set_consts(vec![Constant::Num(2.0)]);
+
+    vm.run(vecm![Push(0), Push(0), Mul]);
     assert_eq!(vm.pop_last(), &Constant::Num(4.0));
-
     vm.reset();
 
-    vm.run(Bytecode {
-        instructions: vec![Push(0), Push(0), Div]
-            .into_iter()
-            .map(metadata_nil)
-            .collect(),
-        constants: vec![Constant::Num(2.0)],
-    });
+    vm.run(vecm![Push(0), Push(0), Div]);
     assert_eq!(vm.pop_last(), &Constant::Num(1.0));
-
     vm.reset();
 }

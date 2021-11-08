@@ -19,11 +19,7 @@ fn start(_args: Vec<String>) -> i32 {
                         #[cfg(debug_assertions)]
                         eprintln!(
                             "instructions: {:#?}\nconstants: {:#?}\n",
-                            bytecode
-                                .instructions
-                                .iter()
-                                .map(|c| c.opcode)
-                                .collect::<Vec<_>>(),
+                            bytecode.iter().map(|c| c.opcode).collect::<Vec<_>>(),
                             constants
                         );
                         vm.set_consts(constants);

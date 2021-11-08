@@ -106,11 +106,7 @@ pub struct OpCodeMetadata {
 
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
-#[derive(Debug, PartialEq, Clone)]
-pub struct Bytecode {
-    /// the instructions, made of [`crate::OpCodeMetadata`]
-    pub instructions: Vec<OpCodeMetadata>,
-}
+pub type Bytecode = Vec<OpCodeMetadata>;
 
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
@@ -129,7 +125,6 @@ impl VirtualMachine {
         self.ip = 0;
         self.stack = [NIL; 512];
         self.stack_ptr = 0;
-        self.constants = vec![];
     }
 
     /// sets the constants for execution
@@ -163,9 +158,9 @@ impl VirtualMachine {
             }};
         }
 
-        'main: while self.ip < self.bytecode.instructions.len() {
+        'main: while self.ip < self.bytecode.len() {
             let inst_ip = self.ip;
-            let inst = self.bytecode.instructions[inst_ip];
+            let inst = self.bytecode[inst_ip];
             self.ip += 1;
 
             unsafe {
@@ -288,9 +283,7 @@ impl Default for VirtualMachine {
     fn default() -> Self {
         Self {
             constants: vec![],
-            bytecode: Bytecode {
-                instructions: vec![],
-            },
+            bytecode: vec![],
             ip: 0,
             stack: [NIL; STACK_SIZE],
             stack_ptr: 0,
