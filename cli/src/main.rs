@@ -18,7 +18,7 @@ fn start(_args: Vec<String>) -> i32 {
                     Ok((bytecode, constants)) => {
                         #[cfg(debug_assertions)]
                         eprintln!(
-                            "instructions: {:?}\nconstants: {:?}\n",
+                            "instructions: {:#?}\nconstants: {:#?}\n",
                             bytecode
                                 .instructions
                                 .iter()

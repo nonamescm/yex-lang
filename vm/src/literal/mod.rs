@@ -5,6 +5,8 @@ use std::{
 pub mod symbol;
 use symbol::Symbol;
 
+use crate::Bytecode;
+
 /// Immediate values that can be consumed
 #[derive(Debug, PartialEq, Clone)]
 pub enum Constant {
@@ -18,6 +20,13 @@ pub enum Constant {
     Val(Symbol),
     /// Booleans
     Bool(bool),
+    /// Functions
+    Fun {
+        /// the number of arguments the function receives
+        arity: usize,
+        /// the function body
+        body: Bytecode,
+    },
     /// null
     Nil,
 }
@@ -50,6 +59,7 @@ impl std::fmt::Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Constant::*;
         let tk = match self {
+            Fun { arity, .. } => format!("<fun ({})>", arity),
             Nil => "nil".to_string(),
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) | Val(s) => format!("{}", s),

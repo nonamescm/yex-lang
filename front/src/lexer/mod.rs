@@ -86,6 +86,10 @@ impl Lexer {
     fn get(&mut self) -> Tk {
         let tk = match self.current() {
             '+' => TokenType::Add,
+            '-' if self.peek_at(1) == '>' => {
+                self.next();
+                TokenType::Arrow
+            }
             '-' => TokenType::Sub,
             '/' => TokenType::Div,
             '*' => TokenType::Mul,
@@ -134,7 +138,7 @@ impl Lexer {
                 if let Some(tk) = fetch_keyword(&tk) {
                     tk
                 } else {
-                    TokenType::Var(tk)
+                    TokenType::Idnt(tk)
                 }
             }
 

@@ -4,7 +4,7 @@ pub enum TokenType {
     Num(f64),
     Str(String),
     Sym(vm::Symbol),
-    Var(String),
+    Idnt(String),
     True,
     False,
     Nil,
@@ -16,6 +16,7 @@ pub enum TokenType {
     End,
     Val,
     In,
+    Fun,
 
     // logical operators
     Add,
@@ -37,6 +38,7 @@ pub enum TokenType {
 
     // Symbol
     Semicolon,
+    Arrow,
 
     Eof,
 }
@@ -53,7 +55,7 @@ impl std::fmt::Display for TokenType {
             Self::Num(n) => n.to_string(),
             Self::Str(s) => "\"".to_owned() + s + "\"",
             Self::Sym(s) => format!(":{}", s),
-            Self::Var(v) => v.into(),
+            Self::Idnt(v) => v.into(),
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),
             Self::Nil => "nil".into(),
@@ -64,6 +66,7 @@ impl std::fmt::Display for TokenType {
             Self::End => "end".into(),
             Self::Val => "val".into(),
             Self::In => "in".into(),
+            Self::Fun => "fun".into(),
 
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
@@ -79,6 +82,7 @@ impl std::fmt::Display for TokenType {
             Self::Shl => "<<<".into(),
             Self::Lparen => '('.into(),
             Self::Rparen => ')'.into(),
+            Self::Arrow => "->".into(),
             Self::Semicolon => ';'.into(),
             Self::Eof => "<eof>".into(),
         };
@@ -98,6 +102,7 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "true" => Some(TokenType::True),
         "false" => Some(TokenType::False),
         "nil" => Some(TokenType::Nil),
+        "fun" => Some(TokenType::Fun),
         _ => None,
     }
 }

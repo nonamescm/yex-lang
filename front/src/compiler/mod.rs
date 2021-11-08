@@ -14,6 +14,8 @@ pub struct Compiler {
     constants: Vec<Constant>,
     current: Token,
     compiled_opcodes: usize,
+    emit_proxy_mode: bool,
+    proxy: Option<Vec<OpCodeMetadata>>,
 }
 
 impl Compiler {
@@ -28,6 +30,8 @@ impl Compiler {
                 token: Tkt::Eof,
             },
             compiled_opcodes: 0,
+            emit_proxy_mode: false,
+            proxy: None,
         };
         while {
             this.next()?;
@@ -52,12 +56,22 @@ impl Compiler {
     }
 
     fn emit(&mut self, intr: OpCode) {
-        self.instructions.push(OpCodeMetadata {
+        let op = OpCodeMetadata {
             line: self.current.line,
             column: self.current.column,
             opcode: intr,
-        });
+        };
+
         self.compiled_opcodes += 1;
+
+        if self.emit_proxy_mode {
+            match &mut self.proxy {
+                None => self.proxy = Some(vec![op]),
+                Some(prx) => (*prx).push(op),
+            }
+        } else {
+            self.instructions.push(op)
+        }
     }
 
     fn emit_const(&mut self, constant: Constant) {
@@ -87,8 +101,34 @@ impl Compiler {
         match self.current.token {
             Tkt::If => self.condition(),
             Tkt::Val => self.assign_val(),
+            Tkt::Fun => self.function(),
             _ => self.equality(),
         }
+    }
+
+    fn function(&mut self) -> ParseResult {
+        assert_eq!(self.current.token, Tkt::Fun); // security check
+        self.next()?;
+
+        let mut arity: usize = 0;
+
+        while let Tkt::Idnt(_) = self.current.token {
+            arity += 1;
+            self.next()?;
+        }
+        self.consume(&[Tkt::Arrow], "Expected `->` after argument list")?;
+
+        self.emit_proxy_mode = true;
+        self.expression()?;
+        let body = std::mem::take(&mut self.proxy).unwrap();
+        self.emit_proxy_mode = false;
+
+        self.emit_const(Constant::Fun {
+            arity,
+            body: Bytecode { instructions: body },
+        });
+
+        Ok(())
     }
 
     fn throw(&self, err: impl Into<String>) -> ParseResult {
@@ -127,36 +167,34 @@ impl Compiler {
     }
 
     fn assign_val(&mut self) -> ParseResult {
-        if let Tkt::Val = self.current.token {
-            self.next()?;
-            let name = match std::mem::take(&mut self.current.token) {
-                Tkt::Var(v) => v,
-                o => return self.throw(format!("Expected variable name after `val`, found {}", o)),
-            };
-            self.next()?;
+        assert_eq!(self.current.token, Tkt::Val); // security check
+        self.next()?; // skips the val token
 
-            self.consume(
-                &[Tkt::Assign],
-                format!("Expected `=` after name, found {}", self.current.token),
-            )?;
-            self.expression()?;
-            self.emit_const(Constant::Val(Symbol::new(name)));
-            let idx = self.constants.len() - 1;
-            self.emit(OpCode::Save(idx));
+        let name = match std::mem::take(&mut self.current.token) {
+            Tkt::Idnt(v) => v,
+            o => return self.throw(format!("Expected variable name after `val`, found {}", o)),
+        };
+        self.next()?;
 
-            self.consume(
-                &[Tkt::In],
-                format!(
-                    "Expected `in` after val expression, found {}",
-                    self.current.token
-                ),
-            )?;
-            self.expression()?;
+        self.consume(
+            &[Tkt::Assign],
+            format!("Expected `=` after name, found {}", self.current.token),
+        )?;
+        self.expression()?;
+        self.emit_const(Constant::Val(Symbol::new(name)));
+        let idx = self.constants.len() - 1;
+        self.emit(OpCode::Save(idx));
 
-            self.emit(OpCode::Drop(idx));
-        } else {
-            self.equality()?;
-        }
+        self.consume(
+            &[Tkt::In],
+            format!(
+                "Expected `in` after val expression, found {}",
+                self.current.token
+            ),
+        )?;
+        self.expression()?;
+
+        self.emit(OpCode::Drop(idx));
 
         Ok(())
     }
@@ -279,7 +317,7 @@ impl Compiler {
             Tkt::Sym(sym) => push!(Sym, sym), // don't allow for duplicated symbols
             Tkt::True => push!(Bool, true),
             Tkt::False => push!(Bool, false),
-            Tkt::Var(v) => {
+            Tkt::Idnt(v) => {
                 let v = Symbol::new(v);
 
                 if let Some(idx) = self

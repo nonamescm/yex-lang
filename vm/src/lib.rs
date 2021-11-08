@@ -106,7 +106,7 @@ pub struct OpCodeMetadata {
 
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Bytecode {
     /// the instructions, made of [`crate::OpCodeMetadata`]
     pub instructions: Vec<OpCodeMetadata>,
