@@ -17,7 +17,7 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    pub fn compile(lexer: Lexer) -> Result<Bytecode, ParseError> {
+    pub fn compile(lexer: Lexer) -> Result<(Bytecode, Vec<Constant>), ParseError> {
         let mut this = Self {
             lexer: lexer.peekable(),
             constants: vec![],
@@ -43,10 +43,12 @@ impl Compiler {
             )?;
         }
 
-        Ok(Bytecode {
-            instructions: this.instructions,
-            constants: this.constants,
-        })
+        Ok((
+            Bytecode {
+                instructions: this.instructions,
+            },
+            this.constants,
+        ))
     }
 
     fn emit(&mut self, intr: OpCode) {

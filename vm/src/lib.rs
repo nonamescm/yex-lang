@@ -110,13 +110,12 @@ pub struct OpCodeMetadata {
 pub struct Bytecode {
     /// the instructions, made of [`crate::OpCodeMetadata`]
     pub instructions: Vec<OpCodeMetadata>,
-    /// the constants to be loaded
-    pub constants: Vec<Constant>,
 }
 
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
 pub struct VirtualMachine {
+    constants: Vec<Constant>,
     bytecode: Bytecode,
     ip: usize, // instruction pointer
     stack: [Constant; STACK_SIZE],
@@ -130,6 +129,12 @@ impl VirtualMachine {
         self.ip = 0;
         self.stack = [NIL; 512];
         self.stack_ptr = 0;
+        self.constants = vec![];
+    }
+
+    /// sets the constants for execution
+    pub fn set_consts(&mut self, constants: Vec<Constant>) {
+        self.constants = constants;
     }
 
     /// Pop's the last value on the stack
@@ -172,7 +177,7 @@ impl VirtualMachine {
             match inst.opcode {
                 Halt => break 'main,
                 Push(n) => {
-                    let val = self.bytecode.constants[n].clone();
+                    let val = self.constants[n].clone();
                     self.push(val)
                 }
                 Pop => {
@@ -265,7 +270,7 @@ impl VirtualMachine {
     }
 
     fn get_val(&self, idx: usize) -> Symbol {
-        match &self.bytecode.constants[idx] {
+        match &self.constants[idx] {
             Constant::Val(v) => v.clone(),
             _ => unsafe { unreachable_unchecked() },
         }
@@ -282,9 +287,9 @@ impl VirtualMachine {
 impl Default for VirtualMachine {
     fn default() -> Self {
         Self {
+            constants: vec![],
             bytecode: Bytecode {
                 instructions: vec![],
-                constants: vec![],
             },
             ip: 0,
             stack: [NIL; STACK_SIZE],

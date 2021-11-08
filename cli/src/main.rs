@@ -15,7 +15,7 @@ fn start(_args: Vec<String>) -> i32 {
                     continue;
                 }
                 match compile(l) {
-                    Ok(bytecode) => {
+                    Ok((bytecode, constants)) => {
                         #[cfg(debug_assertions)]
                         eprintln!(
                             "instructions: {:?}\nconstants: {:?}\n",
@@ -24,8 +24,9 @@ fn start(_args: Vec<String>) -> i32 {
                                 .iter()
                                 .map(|c| c.opcode)
                                 .collect::<Vec<_>>(),
-                            bytecode.constants
+                            constants
                         );
+                        vm.set_consts(constants);
                         vm.run(bytecode);
 
                         println!("{}", vm.pop_last())
