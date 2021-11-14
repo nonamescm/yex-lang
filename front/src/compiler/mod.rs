@@ -14,8 +14,7 @@ pub struct Compiler {
     constants: Vec<Constant>,
     current: Token,
     compiled_opcodes: usize,
-    emit_proxy_mode: bool,
-    proxy: Option<Vec<OpCodeMetadata>>,
+    proxies: Vec<Vec<OpCodeMetadata>>,
 }
 
 impl Compiler {
@@ -30,8 +29,7 @@ impl Compiler {
                 token: Tkt::Eof,
             },
             compiled_opcodes: 0,
-            emit_proxy_mode: false,
-            proxy: None,
+            proxies: vec![],
         };
         while {
             this.next()?;
@@ -59,18 +57,36 @@ impl Compiler {
 
         self.compiled_opcodes += 1;
 
-        if self.emit_proxy_mode {
-            match &mut self.proxy {
-                None => self.proxy = Some(vec![op]),
-                Some(prx) => (*prx).push(op),
-            }
-        } else {
+        if self.proxies.len() == 0 {
             self.instructions.push(op)
+        } else {
+            let idx = self.proxies.len() - 1;
+            self.proxies[idx].push(op)
         }
     }
 
-    fn emit_const(&mut self, constant: Constant) {
-        self.constants.push(constant)
+    fn emit_const_push(&mut self, constant: Constant) {
+        if let Some(idx) = self.constants.iter().position(|c| match c {
+            c if c == &constant => true,
+            _ => false,
+        }) {
+            self.emit(OpCode::Push(idx))
+        } else {
+            self.emit(OpCode::Push(self.constants.len()));
+            self.constants.push(constant)
+        }
+    }
+
+    fn emit_const(&mut self, constant: Constant) -> usize {
+        if let Some(idx) = self.constants.iter().position(|c| match c {
+            c if c == &constant => true,
+            _ => false,
+        }) {
+            idx
+        } else {
+            self.constants.push(constant);
+            self.constants.len() - 1
+        }
     }
 
     fn next(&mut self) -> ParseResult {
@@ -105,23 +121,16 @@ impl Compiler {
         assert_eq!(self.current.token, Tkt::Fun); // security check
         self.next()?;
 
-        let mut arity: usize = 0;
+        (!matches!(self.current.token, Tkt::Idnt(_))).then(|| self.throw("Expected argument name"));
+        self.next()?;
 
-        while let Tkt::Idnt(_) = self.current.token {
-            arity += 1;
-            self.next()?;
-        }
-        self.consume(&[Tkt::Arrow], "Expected `->` after argument list")?;
+        self.consume(&[Tkt::Arrow], "Expected `->` after argument")?;
 
-        self.emit_proxy_mode = true;
+        self.proxies.push(vec![]);
         self.expression()?;
-        let body = std::mem::take(&mut self.proxy).unwrap();
-        self.emit_proxy_mode = false;
+        let body = self.proxies.pop().unwrap();
 
-        self.emit_const(Constant::Fun {
-            arity,
-            body,
-        });
+        self.emit_const_push(Constant::Fun(body));
 
         Ok(())
     }
@@ -165,7 +174,7 @@ impl Compiler {
         assert_eq!(self.current.token, Tkt::Val); // security check
         self.next()?; // skips the val token
 
-        let name = match std::mem::take(&mut self.current.token) {
+        let name = match take(&mut self.current.token) {
             Tkt::Idnt(v) => v,
             o => return self.throw(format!("Expected variable name after `val`, found {}", o)),
         };
@@ -176,8 +185,7 @@ impl Compiler {
             format!("Expected `=` after name, found {}", self.current.token),
         )?;
         self.expression()?;
-        self.emit_const(Constant::Val(Symbol::new(name)));
-        let idx = self.constants.len() - 1;
+        let idx = self.emit_const(Constant::Val(Symbol::new(name)));
         self.emit(OpCode::Save(idx));
 
         self.consume(
@@ -287,31 +295,18 @@ impl Compiler {
 
     fn primary(&mut self) -> ParseResult {
         macro_rules! push {
-            ($type: tt, $item: expr) => {{
-                if let Some(idx) = self.constants.iter().position(|c| match c {
-                    $type(ref s) => s == &$item,
-                    _ => false,
-                }) {
-                    self.emit(Push(idx))
-                } else {
-                    self.emit(Push(self.constants.len()));
-                    self.emit_const($type($item))
-                }
-            }};
-
             ($type: expr) => {{
-                self.emit(Push(self.constants.len()));
-                self.emit_const($type)
+                self.emit_const_push($type)
             }};
         }
 
         use {Constant::*, OpCode::*};
         match take(&mut self.current.token) {
-            Tkt::Num(n) => push!(Num, n),
+            Tkt::Num(n) => push!(Num(n)),
             Tkt::Str(str) => push!(Str(str)),
-            Tkt::Sym(sym) => push!(Sym, sym), // don't allow for duplicated symbols
-            Tkt::True => push!(Bool, true),
-            Tkt::False => push!(Bool, false),
+            Tkt::Sym(sym) => push!(Sym(sym)), // don't allow for duplicated symbols
+            Tkt::True => push!(Bool(true)),
+            Tkt::False => push!(Bool(false)),
             Tkt::Idnt(v) => {
                 let v = Symbol::new(v);
 
@@ -323,7 +318,7 @@ impl Compiler {
                     self.emit(Load(idx))
                 } else {
                     self.emit(Load(self.constants.len()));
-                    self.emit_const(Val(v))
+                    self.emit_const(Val(v));
                 }
             }
             Tkt::Nil => push!(Nil),

@@ -54,6 +54,9 @@ pub enum OpCode {
     /// Unconditional jump
     Jmp(usize),
 
+    /// Calls the value on the top of the stack
+    Call,
+
     /// Add the two values on the stack top
     Add,
 
@@ -213,6 +216,14 @@ impl VirtualMachine {
                 Jmp(offset) => {
                     self.ip = offset;
                     continue;
+                }
+
+                Call => {
+                    let fun = self.pop();
+                    self.run(match fun {
+                        Constant::Fun(body) => body,
+                        _ => todo!("Better error message"),
+                    });
                 }
 
                 Add => binop!(+),
