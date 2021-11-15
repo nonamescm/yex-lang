@@ -130,9 +130,8 @@ impl Compiler {
 
         self.proxies.push((vec![], 0));
 
-        let mut idx = 0x0;
         if let Tkt::Idnt(id) = take(&mut self.current.token) {
-            idx = self.emit_const(Constant::Val(Symbol::new(id)));
+            let idx = self.emit_const(Constant::Val(Symbol::new(id)));
             self.emit(OpCode::Save(idx));
         }
 
@@ -141,7 +140,6 @@ impl Compiler {
         self.consume(&[Tkt::Arrow], "Expected `->` after argument")?;
 
         self.expression()?;
-        self.emit(OpCode::Drop(idx));
         let (body, _) = self.proxies.pop().unwrap();
 
         self.emit_const_push(Constant::Fun(body));

@@ -31,6 +31,16 @@ struct Env {
 }
 
 impl Env {
+    pub fn nsc(&mut self) {
+        let old = mem::replace(self, Env::new(None));
+        *self = Env::new(Some(Box::new(old)));
+    }
+
+    pub fn esc(&mut self) {
+        let over = mem::replace(&mut self.over, None);
+        *self = *over.unwrap();
+    }
+
     pub fn new(over: Option<Box<Env>>) -> Self {
         Self {
             current: HashMap::new(),
@@ -262,14 +272,11 @@ impl VirtualMachine {
                 }
 
                 Nsc => {
-                    let old = mem::replace(&mut self.variables, Env::new(None));
-
-                    self.variables = Env::new(Some(Box::new(old)));
+                    self.variables.nsc()
                 }
 
                 Esc => {
-                    let over = mem::replace(&mut self.variables.over, None);
-                    self.variables = *over.unwrap();
+                    self.variables.esc()
                 }
 
                 Call => {
@@ -277,10 +284,14 @@ impl VirtualMachine {
                     let fun = self.pop();
                     self.push(arg);
 
+                    self.variables.nsc();
+
                     self.run(match fun {
                         Constant::Fun(body) => body,
-                        _ => todo!("Better error message"),
+                        o => panic!("Can't call {}", o),
                     });
+
+                    self.variables.esc();
                 }
 
                 Cnll(fun) => {
