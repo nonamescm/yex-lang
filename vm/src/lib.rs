@@ -97,6 +97,9 @@ pub enum OpCode {
     /// Calls the value on the top of the stack
     Call,
 
+    /// Calls a native rust function
+    Cnll(fn(Constant) -> Constant),
+
     /// Add the two values on the stack top
     Add,
 
@@ -280,6 +283,11 @@ impl VirtualMachine {
                     });
                 }
 
+                Cnll(fun) => {
+                    let ret = fun(self.pop());
+                    self.push(ret)
+                }
+
                 Add => binop!(+),
                 Sub => binop!(-),
                 Mul => binop!(*),
@@ -348,13 +356,37 @@ impl VirtualMachine {
 
 impl Default for VirtualMachine {
     fn default() -> Self {
+        let mut prelude = Env::new(None);
+        prelude.insert(
+            Symbol::new("puts"),
+            Constant::Fun(vec![OpCodeMetadata {
+                line: 0,
+                column: 0,
+                opcode: OpCode::Cnll(|c| {
+                    println!("{}", c);
+                    Constant::Nil
+                }),
+            }]),
+        );
+
+        prelude.insert(
+            Symbol::new("print"),
+            Constant::Fun(vec![OpCodeMetadata {
+                line: 0,
+                column: 0,
+                opcode: OpCode::Cnll(|c| {
+                    print!("{}", c);
+                    Constant::Nil
+                }),
+            }]),
+        );
         Self {
             constants: vec![],
             bytecode: vec![],
             ip: 0,
             stack: [NIL; STACK_SIZE],
             stack_ptr: 0,
-            variables: Env::new(None),
+            variables: prelude,
         }
     }
 }
