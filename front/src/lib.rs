@@ -10,6 +10,8 @@ use compiler::Compiler;
 use lexer::Lexer;
 
 /// Compiles a given string into yex bytecode
-pub fn compile<T: Into<String>>(str: T) -> Result<(vm::Bytecode, Vec<vm::Constant>), error::ParseError> {
+pub fn compile<T: Into<String>>(
+    str: T,
+) -> Result<(vm::Bytecode, Vec<vm::Constant>), error::ParseError> {
     Compiler::compile(Lexer::new(str))
 }
