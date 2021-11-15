@@ -1,4 +1,4 @@
-# Yexz
+# Yex
 
 ## Contents:
 
