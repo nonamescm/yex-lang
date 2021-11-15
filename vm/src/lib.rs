@@ -202,6 +202,8 @@ impl VirtualMachine {
         }
 
         'main: while self.ip < self.bytecode.len() {
+            self.debug_stack();
+
             let inst_ip = self.ip;
             let inst = self.bytecode[inst_ip];
             self.ip += 1;
@@ -300,21 +302,23 @@ impl VirtualMachine {
                     self.push(!right)
                 }
             }
-
-            #[cfg(debug_assertions)]
-            eprintln!(
-                "STACK: {:?}\nINSTRUCTION: {:?}\nSTACK_PTR: {}\n",
-                self.stack
-                    .iter()
-                    .rev()
-                    .skip_while(|it| *it == &NIL)
-                    .collect::<Vec<&Constant>>(),
-                inst.opcode,
-                self.stack_ptr
-            );
         }
 
         Constant::Nil
+    }
+
+    fn debug_stack(&self) {
+        #[cfg(debug_assertions)]
+        eprintln!(
+            "STACK: {:?}\nINSTRUCTION: {:?}\nSTACK_PTR: {}\n",
+            self.stack
+                .iter()
+                .rev()
+                .skip_while(|it| *it == &NIL)
+                .collect::<Vec<&Constant>>(),
+            self.bytecode[self.ip].opcode,
+            self.stack_ptr
+        );
     }
 
     fn push(&mut self, constant: Constant) {
