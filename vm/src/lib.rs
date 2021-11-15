@@ -25,6 +25,40 @@ macro_rules! panic {
     }
 }
 
+struct Env {
+    current: HashMap<Symbol, Constant>,
+    pub over: Option<Box<Env>>,
+}
+
+impl Env {
+    pub fn new(over: Option<Box<Env>>) -> Self {
+        Self {
+            current: HashMap::new(),
+            over,
+        }
+    }
+
+    pub fn insert(&mut self, key: Symbol, value: Constant) -> Option<()> {
+        self.current.insert(key, value);
+        Some(())
+    }
+
+    pub fn get(&mut self, key: &Symbol) -> Option<Constant> {
+        if let Some(v) = self.current.get(key) {
+            Some(v.clone())
+        } else {
+            match &mut self.over {
+                Some(sup) => sup.get(key),
+                None => None,
+            }
+        }
+    }
+
+    pub fn remove(&mut self, key: &Symbol) {
+        self.current.remove(key);
+    }
+}
+
 /// OpCodes for the virtualMachine
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum OpCode {
@@ -53,6 +87,12 @@ pub enum OpCode {
 
     /// Unconditional jump
     Jmp(usize),
+
+    /// Creates a new scope
+    Nsc,
+
+    /// Ends a scope
+    Esc,
 
     /// Calls the value on the top of the stack
     Call,
@@ -119,7 +159,7 @@ pub struct VirtualMachine {
     ip: usize, // instruction pointer
     stack: [Constant; STACK_SIZE],
     stack_ptr: usize,
-    variables: HashMap<Symbol, Constant>,
+    variables: Env,
 }
 
 impl VirtualMachine {
@@ -185,21 +225,19 @@ impl VirtualMachine {
                 Save(n) => {
                     let val = self.get_val(n);
 
-                    if self.variables.contains_key(&val) {
-                        panic!("Can't shadow value");
-                    } else {
-                        let value = self.pop();
-                        self.variables.insert(val, value);
-                    }
+                    let value = self.pop();
+                    self.variables.insert(val, value);
                 }
 
                 Load(n) => {
                     let val = self.get_val(n);
 
-                    self.push(match self.variables.get(&val) {
+                    let val = match self.variables.get(&val) {
                         Some(v) => v.clone(),
                         None => panic!("unknown variable {}", val),
-                    });
+                    };
+
+                    self.push(val);
                 }
 
                 Drop(n) => {
@@ -218,8 +256,22 @@ impl VirtualMachine {
                     continue;
                 }
 
+                Nsc => {
+                    let old = mem::replace(&mut self.variables, Env::new(None));
+
+                    self.variables = Env::new(Some(Box::new(old)));
+                }
+
+                Esc => {
+                    let over = mem::replace(&mut self.variables.over, None);
+                    self.variables = *over.unwrap();
+                }
+
                 Call => {
+                    let arg = self.pop();
                     let fun = self.pop();
+                    self.push(arg);
+
                     self.run(match fun {
                         Constant::Fun(body) => body,
                         _ => todo!("Better error message"),
@@ -298,7 +350,7 @@ impl Default for VirtualMachine {
             ip: 0,
             stack: [NIL; STACK_SIZE],
             stack_ptr: 0,
-            variables: HashMap::new(),
+            variables: Env::new(None),
         }
     }
 }

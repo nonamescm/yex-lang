@@ -10,11 +10,9 @@ type ParseResult = Result<(), ParseError>;
 
 pub struct Compiler {
     lexer: Peekable<Lexer>,
-    instructions: Vec<OpCodeMetadata>,
     constants: Vec<Constant>,
     current: Token,
-    compiled_opcodes: usize,
-    proxies: Vec<Vec<OpCodeMetadata>>,
+    proxies: Vec<(Vec<OpCodeMetadata>, usize)>,
 }
 
 impl Compiler {
@@ -22,14 +20,12 @@ impl Compiler {
         let mut this = Self {
             lexer: lexer.peekable(),
             constants: vec![],
-            instructions: vec![],
             current: Token {
                 line: 0,
                 column: 0,
                 token: Tkt::Eof,
             },
-            compiled_opcodes: 0,
-            proxies: vec![],
+            proxies: vec![(vec![], 0)],
         };
         while {
             this.next()?;
@@ -39,13 +35,17 @@ impl Compiler {
             this.consume(
                 &[Tkt::Semicolon, Tkt::Eof],
                 format!(
-                    "expected `;` after expression, found `{}`",
+                    "expected `;` or <eof> after expression, found `{}`",
                     this.current.token
                 ),
             )?;
         }
 
-        Ok((this.instructions, this.constants))
+        Ok((this.proxies.pop().unwrap().0, this.constants))
+    }
+
+    fn compiled_opcodes(&self) -> usize {
+        self.proxies.last().unwrap().1
     }
 
     fn emit(&mut self, intr: OpCode) {
@@ -55,21 +55,18 @@ impl Compiler {
             opcode: intr,
         };
 
-        self.compiled_opcodes += 1;
+        let (proxy, compiled) = self.proxies.last_mut().unwrap();
+        proxy.push(op);
+        *compiled += 1;
+    }
 
-        if self.proxies.len() == 0 {
-            self.instructions.push(op)
-        } else {
-            let idx = self.proxies.len() - 1;
-            self.proxies[idx].push(op)
-        }
+    fn emit_patch(&mut self, intr: OpCode, idx: usize) {
+        let (proxy, _) = self.proxies.last_mut().unwrap();
+        proxy[idx].opcode = intr;
     }
 
     fn emit_const_push(&mut self, constant: Constant) {
-        if let Some(idx) = self.constants.iter().position(|c| match c {
-            c if c == &constant => true,
-            _ => false,
-        }) {
+        if let Some(idx) = self.constants.iter().position(|c| c == &constant) {
             self.emit(OpCode::Push(idx))
         } else {
             self.emit(OpCode::Push(self.constants.len()));
@@ -78,10 +75,7 @@ impl Compiler {
     }
 
     fn emit_const(&mut self, constant: Constant) -> usize {
-        if let Some(idx) = self.constants.iter().position(|c| match c {
-            c if c == &constant => true,
-            _ => false,
-        }) {
+        if let Some(idx) = self.constants.iter().position(|c| c == &constant) {
             idx
         } else {
             self.constants.push(constant);
@@ -100,12 +94,23 @@ impl Compiler {
         Ok(())
     }
 
-    fn consume(&mut self, token: &[Tkt], err: impl Into<String>) -> ParseResult {
+    fn assert(&mut self, token: &[Tkt], err: impl Into<String>) -> ParseResult {
         if !token.contains(&self.current.token) {
             self.throw(err)
         } else {
-            self.next()
+            Ok(())
         }
+    }
+
+    fn consume(&mut self, token: &[Tkt], err: impl Into<String>) -> ParseResult {
+        self.assert(token, err)?;
+        self.next()?;
+
+        Ok(())
+    }
+
+    fn throw(&self, err: impl Into<String>) -> ParseResult {
+        ParseError::throw(self.current.line, self.current.column, err.into())
     }
 
     fn expression(&mut self) -> ParseResult {
@@ -123,10 +128,11 @@ impl Compiler {
 
         (!matches!(self.current.token, Tkt::Idnt(_))).then(|| self.throw("Expected argument name"));
 
-        self.proxies.push(vec![]);
+        self.proxies.push((vec![], 0));
 
+        let mut idx = 0x0;
         if let Tkt::Idnt(id) = take(&mut self.current.token) {
-            let idx = self.emit_const(Constant::Val(Symbol::new(id)));
+            idx = self.emit_const(Constant::Val(Symbol::new(id)));
             self.emit(OpCode::Save(idx));
         }
 
@@ -135,15 +141,12 @@ impl Compiler {
         self.consume(&[Tkt::Arrow], "Expected `->` after argument")?;
 
         self.expression()?;
-        let body = self.proxies.pop().unwrap();
+        self.emit(OpCode::Drop(idx));
+        let (body, _) = self.proxies.pop().unwrap();
 
         self.emit_const_push(Constant::Fun(body));
 
         Ok(())
-    }
-
-    fn throw(&self, err: impl Into<String>) -> ParseResult {
-        ParseError::throw(self.current.line, self.current.column, err.into())
     }
 
     fn condition(&mut self) -> ParseResult {
@@ -159,20 +162,24 @@ impl Compiler {
             ),
         )?; // checks for do
 
-        let then_jump_ip = self.compiled_opcodes;
+        self.emit(OpCode::Nsc); // creates a new scope
+
+        let then_jump_ip = self.compiled_opcodes();
         self.emit(OpCode::Jmf(0));
 
         self.expression()?; // compiles the if branch
 
-        let else_jump_ip = self.compiled_opcodes;
+        let else_jump_ip = self.compiled_opcodes();
         self.emit(OpCode::Jmp(0));
 
-        self.instructions[then_jump_ip].opcode = OpCode::Jmf(self.compiled_opcodes);
+        self.emit_patch(OpCode::Jmf(self.compiled_opcodes()), then_jump_ip);
 
         self.consume(&[Tkt::Else], "Expected `else` after if")?;
         self.expression()?; // compiles the else branch
         self.consume(&[Tkt::End], "expected `end` to close the else block")?;
-        self.instructions[else_jump_ip].opcode = OpCode::Jmp(self.compiled_opcodes);
+        self.emit_patch(OpCode::Jmp(self.compiled_opcodes()), else_jump_ip);
+
+        self.emit(OpCode::Esc); // End the new scope
 
         Ok(())
     }
@@ -293,17 +300,46 @@ impl Compiler {
             self.unary()?; // emits the expression to be applied
             self.emit(operator)
         } else {
-            self.primary()?;
+            self.call()?;
             self.next()?;
         }
 
         Ok(())
     }
 
+    fn call(&mut self) -> ParseResult {
+        self.primary()?; // compiles the called expression
+
+        while matches!(
+            self.lexer.peek().unwrap().as_ref().map(|c| &c.token),
+            Ok(Tkt::Lparen)
+        ) {
+            self.next()?;
+            self.block()?;
+            self.emit(OpCode::Call);
+        }
+
+        Ok(())
+    }
+
+    fn block(&mut self) -> ParseResult {
+        assert_eq!(self.current.token, Tkt::Lparen);
+
+        self.next()?;
+        self.expression()?;
+        self.assert(
+            &[Tkt::Rparen],
+            format!(
+                "expected `)` to close the block, found `{}`",
+                self.current.token
+            ),
+        )
+    }
+
     fn primary(&mut self) -> ParseResult {
         macro_rules! push {
             ($type: expr) => {{
-                self.emit_const_push($type)
+                self.emit_const_push($type);
             }};
         }
 
@@ -331,15 +367,8 @@ impl Compiler {
             Tkt::Nil => push!(Nil),
 
             Tkt::Lparen => {
-                self.next()?;
-                self.expression()?;
-                self.consume(
-                    &[Tkt::Rparen],
-                    format!(
-                        "expected `)` to close the block, found `{}`",
-                        self.current.token
-                    ),
-                )?;
+                self.current.token = Tkt::Lparen; // `(` is needed for self.block() to work correctly
+                self.block()?;
             }
             tk => self.throw(format!("expected expression, found `{}`", tk))?,
         }

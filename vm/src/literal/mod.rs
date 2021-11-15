@@ -1,6 +1,4 @@
-use std::{
-    ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
-};
+use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub};
 pub mod symbol;
 use symbol::Symbol;
 
