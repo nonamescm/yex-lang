@@ -122,11 +122,18 @@ impl Compiler {
         self.next()?;
 
         (!matches!(self.current.token, Tkt::Idnt(_))).then(|| self.throw("Expected argument name"));
+
+        self.proxies.push(vec![]);
+
+        if let Tkt::Idnt(id) = take(&mut self.current.token) {
+            let idx = self.emit_const(Constant::Val(Symbol::new(id)));
+            self.emit(OpCode::Save(idx));
+        }
+
         self.next()?;
 
         self.consume(&[Tkt::Arrow], "Expected `->` after argument")?;
 
-        self.proxies.push(vec![]);
         self.expression()?;
         let body = self.proxies.pop().unwrap();
 

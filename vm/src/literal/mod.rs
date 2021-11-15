@@ -1,5 +1,4 @@
 use std::{
-    hint::unreachable_unchecked,
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
 };
 pub mod symbol;
@@ -45,7 +44,7 @@ impl From<Constant> for bool {
         match !o {
             Constant::Bool(true) => false,
             Constant::Bool(false) => true,
-            _ => unsafe { unreachable_unchecked() },
+            _ => unreachable!(),
         }
     }
 }

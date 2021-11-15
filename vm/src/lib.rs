@@ -6,7 +6,7 @@ mod literal;
 #[cfg(test)]
 mod tests;
 pub use crate::literal::{symbol::Symbol, Constant};
-use std::{collections::HashMap, hint::unreachable_unchecked, mem};
+use std::{collections::HashMap, mem};
 
 const STACK_SIZE: usize = 512;
 const NIL: Constant = Constant::Nil;
@@ -278,7 +278,7 @@ impl VirtualMachine {
     fn get_val(&self, idx: usize) -> Symbol {
         match &self.constants[idx] {
             Constant::Val(v) => v.clone(),
-            _ => unsafe { unreachable_unchecked() },
+            _ => panic!("Tried to access a value that is not variable"),
         }
     }
 
