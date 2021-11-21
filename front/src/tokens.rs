@@ -11,6 +11,7 @@ pub enum TokenType {
 
     // Keywords
     If,
+    Elif,
     Else,
     Do,
     End,
@@ -61,6 +62,7 @@ impl std::fmt::Display for TokenType {
             Self::Nil => "nil".into(),
 
             Self::If => "if".into(),
+            Self::Elif => "elif".into(),
             Self::Else => "else".into(),
             Self::Do => "do".into(),
             Self::End => "end".into(),
@@ -94,6 +96,7 @@ impl std::fmt::Display for TokenType {
 pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
     match word.as_ref() {
         "if" => Some(TokenType::If),
+        "elif" => Some(TokenType::Elif),
         "else" => Some(TokenType::Else),
         "do" => Some(TokenType::Do),
         "end" => Some(TokenType::End),

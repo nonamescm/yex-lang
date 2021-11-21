@@ -148,7 +148,7 @@ impl Compiler {
     }
 
     fn condition(&mut self) -> ParseResult {
-        assert_eq!(self.current.token, Tkt::If); // security check
+        assert!(matches!(self.current.token, Tkt::If | Tkt::Elif)); // security check
         self.next()?; // skips the if token
 
         self.expression()?; // compiles the condition
@@ -171,6 +171,10 @@ impl Compiler {
         self.emit(OpCode::Jmp(0));
 
         self.emit_patch(OpCode::Jmf(self.compiled_opcodes()), then_jump_ip);
+
+        if self.current.token == Tkt::Elif {
+            return self.condition()
+        }
 
         self.consume(&[Tkt::Else], "Expected `else` after if")?;
         self.expression()?; // compiles the else branch

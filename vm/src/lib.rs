@@ -271,13 +271,9 @@ impl VirtualMachine {
                     continue;
                 }
 
-                Nsc => {
-                    self.variables.nsc()
-                }
+                Nsc => self.variables.nsc(),
 
-                Esc => {
-                    self.variables.esc()
-                }
+                Esc => self.variables.esc(),
 
                 Call => {
                     let arg = self.pop();
@@ -326,16 +322,17 @@ impl VirtualMachine {
         Constant::Nil
     }
 
-    fn debug_stack(&self) {
+    /// Debug the values on the stack and in the bytecode
+    pub fn debug_stack(&self) {
         #[cfg(debug_assertions)]
         eprintln!(
-            "STACK: {:?}\nINSTRUCTION: {:?}\nSTACK_PTR: {}\n",
+            "stack: {:#?}\nnext instruction: {:?}\nstack pointer: {}\n",
             self.stack
                 .iter()
                 .rev()
                 .skip_while(|it| *it == &NIL)
                 .collect::<Vec<&Constant>>(),
-            self.bytecode[self.ip].opcode,
+            self.bytecode.get(self.ip).map(|it| it.opcode),
             self.stack_ptr
         );
     }

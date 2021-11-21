@@ -24,8 +24,9 @@ fn start(_args: Vec<String>) -> i32 {
                         );
                         vm.set_consts(constants);
                         vm.run(bytecode);
+                        vm.debug_stack();
 
-                        println!(" => {}", vm.pop_last())
+                        println!("=> {}", vm.pop_last())
                     }
                     Err(e) => println!("{}", e),
                 }
