@@ -147,8 +147,7 @@ impl Compiler {
         Ok(())
     }
 
-    fn condition(&mut self) -> ParseResult {
-        assert!(matches!(self.current.token, Tkt::If | Tkt::Elif)); // security check
+    fn if_elif(&mut self) -> Result<usize, ParseError> {
         self.next()?; // skips the if token
 
         self.expression()?; // compiles the condition
@@ -160,26 +159,39 @@ impl Compiler {
             ),
         )?; // checks for do
 
-        self.emit(OpCode::Nsc); // creates a new scope
-
         let then_jump_ip = self.compiled_opcodes();
         self.emit(OpCode::Jmf(0));
 
         self.expression()?; // compiles the if branch
 
-        let else_jump_ip = self.compiled_opcodes();
-        self.emit(OpCode::Jmp(0));
+        Ok(then_jump_ip)
+    }
 
-        self.emit_patch(OpCode::Jmf(self.compiled_opcodes()), then_jump_ip);
+    fn condition(&mut self) -> ParseResult {
+        assert!(matches!(self.current.token, Tkt::If | Tkt::Elif)); // security check
 
-        if self.current.token == Tkt::Elif {
-            return self.condition()
+        self.emit(OpCode::Nsc); // creates a new scope
+
+        let mut patch_stack = vec![];
+
+        while matches!(self.current.token, Tkt::If | Tkt::Elif) {
+            let then_jump_ip = self.if_elif()?;
+            self.emit_patch(OpCode::Jmf(self.compiled_opcodes() + 1), then_jump_ip);
+
+            patch_stack.push(self.compiled_opcodes());
+            self.emit(OpCode::Jmp(0));
         }
 
         self.consume(&[Tkt::Else], "Expected `else` after if")?;
         self.expression()?; // compiles the else branch
         self.consume(&[Tkt::End], "expected `end` to close the else block")?;
-        self.emit_patch(OpCode::Jmp(self.compiled_opcodes()), else_jump_ip);
+
+        let compiled_opcodes = self.compiled_opcodes();
+        let jmp = OpCode::Jmp(compiled_opcodes);
+
+        patch_stack
+            .into_iter()
+            .for_each(|it| self.emit_patch(jmp, it));
 
         self.emit(OpCode::Esc); // End the new scope
 

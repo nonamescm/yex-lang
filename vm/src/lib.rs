@@ -25,9 +25,10 @@ macro_rules! panic {
     }
 }
 
+#[derive(Debug)]
 struct Env {
     current: HashMap<Symbol, Constant>,
-    pub over: Option<Box<Env>>,
+    over: Option<Box<Env>>,
 }
 
 impl Env {
@@ -149,16 +150,35 @@ pub enum OpCode {
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,
 /// make it possible to be used for error handling
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct OpCodeMetadata {
     /// Source's code line
     pub line: usize,
     /// Source's code column
     pub column: usize,
-
     /// Actual opcode
     pub opcode: OpCode,
 }
+
+impl std::fmt::Debug for OpCodeMetadata {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.opcode)
+    }
+}
+
+struct CallFrame {
+    pub ip: usize,
+    pub bytecode: Bytecode,
+}
+
+impl CallFrame {
+    pub(crate) fn new(bytecode: Bytecode) -> Self {
+        Self { ip: 0, bytecode }
+    }
+}
+
+type CallStack = Vec<CallFrame>;
+type Stack = [Constant; STACK_SIZE];
 
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
@@ -168,9 +188,8 @@ pub type Bytecode = Vec<OpCodeMetadata>;
 /// model
 pub struct VirtualMachine {
     constants: Vec<Constant>,
-    bytecode: Bytecode,
-    ip: usize, // instruction pointer
-    stack: [Constant; STACK_SIZE],
+    call_stack: CallStack,
+    stack: Stack,
     stack_ptr: usize,
     variables: Env,
 }
@@ -178,7 +197,7 @@ pub struct VirtualMachine {
 impl VirtualMachine {
     /// Reset the instruction pointer and the stack
     pub fn reset(&mut self) {
-        self.ip = 0;
+        self.call_stack = vec![];
         self.stack = [NIL; 512];
         self.stack_ptr = 0;
     }
@@ -195,8 +214,8 @@ impl VirtualMachine {
 
     /// Executes a given set of bytecode instructions
     pub fn run(&mut self, bytecode: Bytecode) -> Constant {
-        self.ip = 0;
-        self.bytecode = bytecode;
+        self.call_stack.push(CallFrame::new(bytecode));
+
         macro_rules! binop {
             ($op:tt) => {{
                 let right = self.pop();
@@ -214,12 +233,12 @@ impl VirtualMachine {
             }};
         }
 
-        'main: while self.ip < self.bytecode.len() {
+        'main: while *self.ip() < self.bytecode().len() {
             self.debug_stack();
 
-            let inst_ip = self.ip;
-            let inst = self.bytecode[inst_ip];
-            self.ip += 1;
+            let inst_ip = *self.ip();
+            let inst = self.bytecode()[inst_ip];
+            *self.ip() += 1;
 
             unsafe {
                 LINE = inst.line;
@@ -260,14 +279,15 @@ impl VirtualMachine {
 
                     self.variables.remove(&val);
                 }
+
                 Jmf(offset) => {
                     if Into::<bool>::into(!self.pop()) {
-                        self.ip = offset;
+                        *self.ip() = offset;
                         continue;
                     }
                 }
                 Jmp(offset) => {
-                    self.ip = offset;
+                    *self.ip() = offset;
                     continue;
                 }
 
@@ -277,16 +297,14 @@ impl VirtualMachine {
 
                 Call => {
                     let arg = self.pop();
-                    let fun = self.pop();
+                    let fun = match self.pop() {
+                        Constant::Fun(fun) => fun,
+                        other => panic!("Can't call {}", other),
+                    };
                     self.push(arg);
 
                     self.variables.nsc();
-
-                    self.run(match fun {
-                        Constant::Fun(body) => body,
-                        o => panic!("Can't call {}", o),
-                    });
-
+                    self.run(fun);
                     self.variables.esc();
                 }
 
@@ -319,12 +337,21 @@ impl VirtualMachine {
             }
         }
 
+        self.call_stack.pop();
+
         Constant::Nil
     }
 
+    #[cfg(debug_assertions)]
     /// Debug the values on the stack and in the bytecode
     pub fn debug_stack(&self) {
-        #[cfg(debug_assertions)]
+        let default = CallFrame {
+            ip: 0,
+            bytecode: vec![],
+        };
+
+        let stack = self.call_stack.last().unwrap_or(&default);
+
         eprintln!(
             "stack: {:#?}\nnext instruction: {:?}\nstack pointer: {}\n",
             self.stack
@@ -332,14 +359,26 @@ impl VirtualMachine {
                 .rev()
                 .skip_while(|it| *it == &NIL)
                 .collect::<Vec<&Constant>>(),
-            self.bytecode.get(self.ip).map(|it| it.opcode),
+            stack.bytecode.get(stack.ip).map(|it| it.opcode),
             self.stack_ptr
         );
     }
 
+    #[cfg(not(debug_assertions))]
+    /// Debug the values on the stack and in the bytecode
+    pub fn debug_stack(&self) {}
+
     fn push(&mut self, constant: Constant) {
         self.stack[self.stack_ptr] = constant;
         self.stack_ptr += 1;
+    }
+
+    fn ip(&mut self) -> &mut usize {
+        &mut self.call_stack.last_mut().unwrap().ip
+    }
+
+    fn bytecode(&mut self) -> &Bytecode {
+        &self.call_stack.last().unwrap().bytecode
     }
 
     fn pop(&mut self) -> Constant {
@@ -365,33 +404,41 @@ impl VirtualMachine {
 impl Default for VirtualMachine {
     fn default() -> Self {
         let mut prelude = Env::new(None);
+
+        macro_rules! vecop {
+            ($($elems: expr),*) => {{
+                let mut vec = Vec::new();
+                $({
+                    vec.push($elems)
+                })*;
+                vec.into_iter().map(|opcode| OpCodeMetadata {
+                    line: 0,
+                    column: 0,
+                    opcode,
+                }
+                ).collect::<Vec<_>>()
+            }}
+        }
+
         prelude.insert(
             Symbol::new("puts"),
-            Constant::Fun(vec![OpCodeMetadata {
-                line: 0,
-                column: 0,
-                opcode: OpCode::Cnll(|c| {
-                    println!("{}", c);
-                    Constant::Nil
-                }),
-            }]),
+            Constant::Fun(vecop![OpCode::Cnll(|c| {
+                println!("{}", c);
+                Constant::Nil
+            })]),
         );
 
         prelude.insert(
             Symbol::new("print"),
-            Constant::Fun(vec![OpCodeMetadata {
-                line: 0,
-                column: 0,
-                opcode: OpCode::Cnll(|c| {
-                    print!("{}", c);
-                    Constant::Nil
-                }),
-            }]),
+            Constant::Fun(vecop![OpCode::Cnll(|c| {
+                print!("{}", c);
+                Constant::Nil
+            })]),
         );
+
         Self {
             constants: vec![],
-            bytecode: vec![],
-            ip: 0,
+            call_stack: vec![],
             stack: [NIL; STACK_SIZE],
             stack_ptr: 0,
             variables: prelude,
