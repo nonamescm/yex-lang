@@ -1,9 +1,22 @@
 use front::compile;
 use rustyline::{error::ReadlineError, Editor};
+use std::fs;
 use vm::VirtualMachine;
 
-fn start(_args: Vec<String>) -> i32 {
+fn start(mut args: Vec<String>) -> i32 {
     let mut vm = VirtualMachine::default();
+
+    if args.len() > 1 {
+        let file = fs::read_to_string(std::mem::take(&mut args[1])).unwrap();
+        let (bytecode, constants) = compile(file).unwrap_or_else(|e| {
+            println!("{}", e);
+            (vec![], vec![])
+        });
+        vm.set_consts(constants);
+        vm.run(bytecode);
+        return 0;
+    }
+
     let mut repl = Editor::<()>::new();
     repl.load_history("/tmp/.yex_history").ok();
 
