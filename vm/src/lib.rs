@@ -1,12 +1,18 @@
-#![feature(option_result_unwrap_unchecked)]
 #![deny(missing_docs)]
 //! Virtual Machine implementation for the yex programming language
-
-mod literal;
 #[cfg(test)]
 mod tests;
-pub use crate::literal::{symbol::Symbol, Constant};
-use std::{collections::HashMap, mem};
+
+mod env;
+mod literal;
+mod opcode;
+
+use crate::env::Env;
+pub use crate::{
+    literal::{symbol::Symbol, Constant},
+    opcode::{OpCode, OpCodeMetadata},
+};
+use std::mem;
 
 const STACK_SIZE: usize = 512;
 const NIL: Constant = Constant::Nil;
@@ -22,147 +28,6 @@ macro_rules! panic {
             std::panic::set_hook(Box::new(|_| {}));
             std::panic!()
         }
-    }
-}
-
-#[derive(Debug)]
-struct Env {
-    current: HashMap<Symbol, Constant>,
-    over: Option<Box<Env>>,
-}
-
-impl Env {
-    pub fn nsc(&mut self) {
-        let old = mem::replace(self, Env::new(None));
-        *self = Env::new(Some(Box::new(old)));
-    }
-
-    pub fn esc(&mut self) {
-        let over = mem::replace(&mut self.over, None);
-        *self = *over.unwrap();
-    }
-
-    pub fn new(over: Option<Box<Env>>) -> Self {
-        Self {
-            current: HashMap::new(),
-            over,
-        }
-    }
-
-    pub fn insert(&mut self, key: Symbol, value: Constant) -> Option<()> {
-        self.current.insert(key, value);
-        Some(())
-    }
-
-    pub fn get(&mut self, key: &Symbol) -> Option<Constant> {
-        if let Some(v) = self.current.get(key) {
-            Some(v.clone())
-        } else {
-            match &mut self.over {
-                Some(sup) => sup.get(key),
-                None => None,
-            }
-        }
-    }
-
-    pub fn remove(&mut self, key: &Symbol) {
-        self.current.remove(key);
-    }
-}
-
-/// OpCodes for the virtualMachine
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
-pub enum OpCode {
-    /// Stops the virtual machine
-    Halt,
-
-    /// Push a value by it's index on the constant table on-to the stack
-    Push(usize), // pointer to constant table
-
-    /// Pop a value from the stack
-    Pop,
-
-    /// Read a value from a variable, receives the index of the variable name in the constant table as
-    /// argument
-    Load(usize),
-
-    /// Save a value to a variable, receives the index of the variable name in the constant table as
-    /// argument
-    Save(usize),
-
-    /// Drops a variable, receives the index of the variable name in the constant table as argument
-    Drop(usize),
-
-    /// Jump if the value on the stack top is false
-    Jmf(usize),
-
-    /// Unconditional jump
-    Jmp(usize),
-
-    /// Creates a new scope
-    Nsc,
-
-    /// Ends a scope
-    Esc,
-
-    /// Calls the value on the top of the stack
-    Call,
-
-    /// Calls a native rust function
-    Cnll(fn(Constant) -> Constant),
-
-    /// Add the two values on the stack top
-    Add,
-
-    /// Subtract the two values on the stack top
-    Sub,
-
-    /// Multiplicate the two values on the stack top
-    Mul,
-
-    /// Divide the two values on the stack top
-    Div,
-
-    /// Negates the value on the stack top
-    Neg,
-
-    /// Apply a unary not to the stack top
-    Not,
-
-    /// Apply a xor operation on the two values on the stack top
-    Xor,
-
-    /// Apply shift-right operation on the two values on the stack top
-    Shr,
-
-    /// Apply shift-left operation on the two values on the stack top
-    Shl,
-
-    /// Apply bit-and operation on the two values on the stack top
-    BitAnd,
-
-    /// Apply bit-or operation on the two values on the stack top
-    BitOr,
-
-    /// Check if the two values on the stack tops are equal
-    Eq,
-}
-
-/// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,
-/// make it possible to be used for error handling
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct OpCodeMetadata {
-    /// Source's code line
-    pub line: usize,
-    /// Source's code column
-    pub column: usize,
-    /// Actual opcode
-    pub opcode: OpCode,
-}
-
-impl std::fmt::Debug for OpCodeMetadata {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.opcode)
     }
 }
 
