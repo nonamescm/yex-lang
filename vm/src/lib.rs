@@ -268,7 +268,7 @@ impl VirtualMachine {
 
 impl Default for VirtualMachine {
     fn default() -> Self {
-        let mut prelude = Env::new(None);
+        let mut prelude = Env::new();
 
         macro_rules! vecop {
             ($($elems: expr),*) => {{
