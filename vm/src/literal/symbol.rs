@@ -4,9 +4,9 @@ use std::{
 };
 
 /// Symbol struct, contains the symbol string and a pre-hashed value for faster comparison
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Symbol {
-    string: String,
+    string: &'static str,
     hash: u64,
 }
 
@@ -61,6 +61,6 @@ impl Symbol {
         string.hash(&mut hash);
         let hash = hash.finish();
 
-        Self { string, hash }
+        Self { string: Box::leak(string.into_boxed_str()), hash }
     }
 }

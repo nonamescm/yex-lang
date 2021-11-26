@@ -253,7 +253,7 @@ impl VirtualMachine {
 
     fn get_val(&self, idx: usize) -> Symbol {
         match &self.constants[idx] {
-            Constant::Val(v) => v.clone(),
+            Constant::Val(v) => *v,
             _ => panic!("Tried to access a value that is not variable"),
         }
     }
