@@ -63,7 +63,7 @@ impl std::fmt::Display for Constant {
 }
 
 impl Add for Constant {
-    type Output = Result<Self, String>;
+    type Output = ConstantErr;
 
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
@@ -137,7 +137,7 @@ impl Mul for &Constant {
 }
 
 impl Div for Constant {
-    type Output = Result<Self, String>;
+    type Output = ConstantErr;
 
     fn div(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
