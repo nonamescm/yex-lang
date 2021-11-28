@@ -347,8 +347,22 @@ impl Compiler {
     }
 
     fn call(&mut self) -> ParseResult {
-        self.proxies.push((vec![], 0));
+        let compiled = self.compiled_opcodes();
         self.primary()?; // compiles the called expresion
+        let callee = {
+            let mut old_compiled = self.compiled_opcodes() - compiled;
+            let (mut proxy, mut compiled) = self.proxies.pop().unwrap();
+            let mut new = vec![];
+
+            while old_compiled > 0 {
+                new.push(proxy.pop().unwrap());
+                old_compiled -= 1;
+                compiled -= 1;
+            }
+
+            self.proxies.push((proxy, compiled));
+            new
+        };
 
         let mut arity = 0;
 
@@ -358,21 +372,10 @@ impl Compiler {
         ) {
             self.call_args(&mut arity)?;
         } else {
-            self.proxies
-                .pop()
-                .unwrap()
-                .0
-                .iter()
-                .for_each(|it| self.emit(it.opcode));
+            callee.iter().for_each(|it| self.emit(it.opcode));
             return Ok(());
         }
-        self.proxies
-            .pop()
-            .unwrap()
-            .0
-            .iter()
-            .rev()
-            .for_each(|it| self.emit(it.opcode));
+        callee.iter().for_each(|it| self.emit(it.opcode));
 
         self.emit(OpCode::Call(arity));
 

@@ -189,7 +189,10 @@ impl VirtualMachine {
                         });
                     } else {
                         f_args.into_iter().for_each(|it| self.push(it));
+
+                        self.variables.nsc();
                         self.run(body);
+                        self.variables.esc();
                     }
                 }
 
