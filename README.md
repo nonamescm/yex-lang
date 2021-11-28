@@ -7,6 +7,8 @@
     * [Hello World](#hello-world)
     * [Variables](#variables)
     * [Functions](#functions)
+      * [Named](#named-functions)
+      * [Anonymous](#anonymous-functions)
   * [Contributing](#contributing)
 
 ## About
@@ -23,22 +25,35 @@ puts("Hello, World!")
 
 ### Variables
 
-Bind is made using the `val ... in` constructor. Like so:
+Bind is made using the `let ... in` constructor. Like so:
 
-```
+```ml
 puts(
-  val how = "how "
-    in val are = "are "
-      in val you = "you" in how + are + you
+  let how = "how "
+  in let are = "are "
+  in let you = "you"
+  in how + are + you
 )
 ```
 
 ### Functions
 
-Functions are created using the `fun` keyword, like:
+#### Named Functions
 
+Functions are created using the `let` keyword, like:
+
+```ml
+let say_hello name =
+  puts("Hello " + name)
+in say_hello("foo")
 ```
-val my_func = (fun n -> n * n) in puts(my_func(40))
+
+#### Anonymous Functions
+
+You can create anonymous functions using the `fn` keyword.
+
+```elixir
+puts((fn n = n * n)(20))
 ```
 
 ## Contributing

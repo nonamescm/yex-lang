@@ -116,16 +116,14 @@ impl Compiler {
     fn expression(&mut self) -> ParseResult {
         match self.current.token {
             Tkt::If => self.condition(),
-            Tkt::Val => self.assign_val(),
-            Tkt::Fun => self.function(),
+            Tkt::Let => self.let_(),
+            Tkt::Fn => self.fn_(),
             _ => self.equality(),
         }
     }
 
-    fn function(&mut self) -> ParseResult {
-        assert_eq!(self.current.token, Tkt::Fun); // security check
-        self.next()?;
 
+    fn function(&mut self) -> ParseResult {
         let mut arity = 0;
         self.proxies.push((vec![], 0));
 
@@ -141,7 +139,7 @@ impl Compiler {
             self.next()?;
         }
 
-        self.consume(&[Tkt::Arrow], "Expected `->` after argument")?;
+        self.consume(&[Tkt::Assign], "Expected `->` after argument")?;
 
         self.expression()?;
         let (body, _) = self.proxies.pop().unwrap();
@@ -149,6 +147,12 @@ impl Compiler {
         self.emit_const_push(Constant::Fun { body, arity });
 
         Ok(())
+    }
+
+    fn fn_(&mut self) -> ParseResult {
+        assert_eq!(self.current.token, Tkt::Fn); // security check
+        self.next()?;
+        self.function()
     }
 
     fn if_elif(&mut self) -> Result<usize, ParseError> {
@@ -202,8 +206,8 @@ impl Compiler {
         Ok(())
     }
 
-    fn assign_val(&mut self) -> ParseResult {
-        assert_eq!(self.current.token, Tkt::Val); // security check
+    fn let_(&mut self) -> ParseResult {
+        assert_eq!(self.current.token, Tkt::Let); // security check
         self.next()?; // skips the val token
 
         let name = match take(&mut self.current.token) {
@@ -212,11 +216,16 @@ impl Compiler {
         };
         self.next()?;
 
-        self.consume(
-            &[Tkt::Assign],
-            format!("Expected `=` after name, found {}", self.current.token),
-        )?;
-        self.expression()?;
+        if matches!(self.current.token, Tkt::Name(_)) {
+            self.function()?;
+        } else {
+            self.consume(
+                &[Tkt::Assign],
+                format!("Expected `=` after name, found {}", self.current.token),
+            )?;
+            self.expression()?;
+        }
+
         let idx = self.emit_const(Constant::Val(Symbol::new(name)));
         self.emit(OpCode::Save(idx));
 

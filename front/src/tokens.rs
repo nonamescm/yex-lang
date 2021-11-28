@@ -15,9 +15,9 @@ pub enum TokenType {
     Else,
     Do,
     End,
-    Val,
+    Let,
     In,
-    Fun,
+    Fn,
 
     // logical operators
     Add,
@@ -39,7 +39,6 @@ pub enum TokenType {
 
     // Symbol
     Semicolon,
-    Arrow,
 
     Eof,
 }
@@ -66,9 +65,9 @@ impl std::fmt::Display for TokenType {
             Self::Else => "else".into(),
             Self::Do => "do".into(),
             Self::End => "end".into(),
-            Self::Val => "val".into(),
+            Self::Let => "let".into(),
             Self::In => "in".into(),
-            Self::Fun => "fun".into(),
+            Self::Fn => "fn".into(),
 
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
@@ -84,7 +83,6 @@ impl std::fmt::Display for TokenType {
             Self::Shl => "<<<".into(),
             Self::Lparen => '('.into(),
             Self::Rparen => ')'.into(),
-            Self::Arrow => "->".into(),
             Self::Semicolon => ';'.into(),
             Self::Eof => "<eof>".into(),
         };
@@ -100,12 +98,12 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "else" => Some(TokenType::Else),
         "do" => Some(TokenType::Do),
         "end" => Some(TokenType::End),
-        "val" => Some(TokenType::Val),
+        "let" => Some(TokenType::Let),
         "in" => Some(TokenType::In),
         "true" => Some(TokenType::True),
         "false" => Some(TokenType::False),
         "nil" => Some(TokenType::Nil),
-        "fun" => Some(TokenType::Fun),
+        "fn" => Some(TokenType::Fn),
         _ => None,
     }
 }
