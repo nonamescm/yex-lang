@@ -126,23 +126,27 @@ impl Compiler {
         assert_eq!(self.current.token, Tkt::Fun); // security check
         self.next()?;
 
-        (!matches!(self.current.token, Tkt::Idnt(_))).then(|| self.throw("Expected argument name"));
-
+        let mut arity = 0;
         self.proxies.push((vec![], 0));
 
-        if let Tkt::Idnt(id) = take(&mut self.current.token) {
+        while matches!(self.current.token, Tkt::Name(_)) {
+            let id = match take(&mut self.current.token) {
+                Tkt::Name(id) => id,
+                _ => unreachable!(),
+            };
+
             let idx = self.emit_const(Constant::Val(Symbol::new(id)));
             self.emit(OpCode::Save(idx));
+            arity += 1;
+            self.next()?;
         }
-
-        self.next()?;
 
         self.consume(&[Tkt::Arrow], "Expected `->` after argument")?;
 
         self.expression()?;
         let (body, _) = self.proxies.pop().unwrap();
 
-        self.emit_const_push(Constant::Fun(body));
+        self.emit_const_push(Constant::Fun { body, arity });
 
         Ok(())
     }
@@ -203,7 +207,7 @@ impl Compiler {
         self.next()?; // skips the val token
 
         let name = match take(&mut self.current.token) {
-            Tkt::Idnt(v) => v,
+            Tkt::Name(v) => v,
             o => return self.throw(format!("Expected variable name after `val`, found {}", o)),
         };
         self.next()?;
@@ -321,17 +325,56 @@ impl Compiler {
         Ok(())
     }
 
-    fn call(&mut self) -> ParseResult {
-        self.primary()?; // compiles the called expression
+    fn call_args(&mut self, arity: &mut usize) -> ParseResult {
+        self.next()?;
 
-        while matches!(
+        loop {
+            if matches!(self.current.token, Tkt::Rparen) {
+                break;
+            }
+            self.next()?;
+
+            self.expression()?; // compiles the argument
+            *arity += 1;
+            if !matches!(&self.current.token, Tkt::Semicolon | Tkt::Rparen) {
+                self.throw(format!(
+                    "Expected `;`, `)` or other token, found {}",
+                    &self.current.token
+                ))?
+            }
+        }
+        Ok(())
+    }
+
+    fn call(&mut self) -> ParseResult {
+        self.proxies.push((vec![], 0));
+        self.primary()?; // compiles the called expresion
+
+        let mut arity = 0;
+
+        if matches!(
             self.lexer.peek().unwrap().as_ref().map(|c| &c.token),
             Ok(Tkt::Lparen)
         ) {
-            self.next()?;
-            self.block()?;
-            self.emit(OpCode::Call);
+            self.call_args(&mut arity)?;
+        } else {
+            self.proxies
+                .pop()
+                .unwrap()
+                .0
+                .iter()
+                .for_each(|it| self.emit(it.opcode));
+            return Ok(());
         }
+        self.proxies
+            .pop()
+            .unwrap()
+            .0
+            .iter()
+            .rev()
+            .for_each(|it| self.emit(it.opcode));
+
+        self.emit(OpCode::Call(arity));
 
         Ok(())
     }
@@ -364,7 +407,7 @@ impl Compiler {
             Tkt::Sym(sym) => push!(Sym(sym)), // don't allow for duplicated symbols
             Tkt::True => push!(Bool(true)),
             Tkt::False => push!(Bool(false)),
-            Tkt::Idnt(v) => {
+            Tkt::Name(v) => {
                 let v = Symbol::new(v);
 
                 if let Some(idx) = self

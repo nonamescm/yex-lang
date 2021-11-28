@@ -18,7 +18,21 @@ pub enum Constant {
     /// Booleans
     Bool(bool),
     /// Functions
-    Fun(Bytecode),
+    Fun {
+        /// The number of argument the function receives
+        arity: usize,
+        /// The function body
+        body: Bytecode,
+    },
+    /// Partially applied function
+    PartialFun {
+        /// The number of argument the function receives
+        arity: usize,
+        /// The function body
+        body: Bytecode,
+        /// The arguments that where already passed to the function
+        args: Vec<Constant>,
+    },
     /// null
     Nil,
 }
@@ -51,7 +65,7 @@ impl std::fmt::Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Constant::*;
         let tk = match self {
-            Fun(_) => "<fun>".into(),
+            Fun { arity, .. } | PartialFun { arity, .. } => format!("<fun({})>", arity),
             Nil => "nil".to_string(),
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) | Val(s) => format!("{}", s),

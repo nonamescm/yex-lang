@@ -36,7 +36,7 @@ pub enum OpCode {
     Esc,
 
     /// Calls the value on the top of the stack
-    Call,
+    Call(usize /* number of arguments */),
 
     /// Calls a native rust function
     Cnll(fn(Constant) -> Constant),

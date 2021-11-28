@@ -160,17 +160,37 @@ impl VirtualMachine {
 
                 Esc => self.variables.esc(),
 
-                Call => {
-                    let arg = self.pop();
-                    let fun = match self.pop() {
-                        Constant::Fun(fun) => fun,
+                Call(carity) => {
+                    let mut f_args = vec![];
+
+                    let (farity, body) = match self.pop() {
+                        Constant::Fun { arity, body } => (arity, body),
+                        Constant::PartialFun { arity, body, args } => {
+                            f_args = args;
+                            (arity, body)
+                        }
                         other => panic!("Can't call {}", other),
                     };
-                    self.push(arg);
 
-                    self.variables.nsc();
-                    self.run(fun);
-                    self.variables.esc();
+                    while f_args.len() < carity {
+                        f_args.push(self.pop())
+                    }
+
+                    if carity > farity {
+                        panic!(
+                            "function expected {} arguments, but received {}",
+                            carity, farity
+                        );
+                    } else if carity < farity {
+                        self.push(Constant::PartialFun {
+                            arity: farity - carity,
+                            body,
+                            args: f_args,
+                        });
+                    } else {
+                        f_args.into_iter().for_each(|it| self.push(it));
+                        self.run(body);
+                    }
                 }
 
                 Cnll(fun) => {
@@ -287,18 +307,24 @@ impl Default for VirtualMachine {
 
         prelude.insert(
             Symbol::new("puts"),
-            Constant::Fun(vecop![OpCode::Cnll(|c| {
-                println!("{}", c);
-                Constant::Nil
-            })]),
+            Constant::Fun {
+                arity: 1,
+                body: vecop![OpCode::Cnll(|c| {
+                    println!("{}", c);
+                    Constant::Nil
+                })],
+            },
         );
 
         prelude.insert(
             Symbol::new("print"),
-            Constant::Fun(vecop![OpCode::Cnll(|c| {
-                print!("{}", c);
-                Constant::Nil
-            })]),
+            Constant::Fun {
+                arity: 1,
+                body: vecop![OpCode::Cnll(|c| {
+                    print!("{}", c);
+                    Constant::Nil
+                })],
+            },
         );
 
         Self {

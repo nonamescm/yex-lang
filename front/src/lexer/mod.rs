@@ -138,7 +138,7 @@ impl Lexer {
                 if let Some(tk) = fetch_keyword(&tk) {
                     tk
                 } else {
-                    TokenType::Idnt(tk)
+                    TokenType::Name(tk)
                 }
             }
 
