@@ -109,7 +109,7 @@ fn lex_test_2() {
 fn test_compiler() {
     use crate::compile;
 
-    let bytecode = compile("val oi = 10 in oi * 20").expect("Should be a valid syntax");
+    let bytecode = compile("let oi = 10 in oi * 20").expect("Should be a valid syntax");
 
     assert_eq!(
         bytecode,
