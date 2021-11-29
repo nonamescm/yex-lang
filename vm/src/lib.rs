@@ -160,41 +160,7 @@ impl VirtualMachine {
 
                 Esc => self.variables.esc(),
 
-                Call(carity) => {
-                    let mut f_args = vec![];
-
-                    let (farity, body) = match self.pop() {
-                        Constant::Fun { arity, body } => (arity, body),
-                        Constant::PartialFun { arity, body, args } => {
-                            f_args = args;
-                            (arity, body)
-                        }
-                        other => panic!("Can't call {}", other),
-                    };
-
-                    while f_args.len() < carity {
-                        f_args.push(self.pop())
-                    }
-
-                    if carity > farity {
-                        panic!(
-                            "function expected {} arguments, but received {}",
-                            carity, farity
-                        );
-                    } else if carity < farity {
-                        self.push(Constant::PartialFun {
-                            arity: farity - carity,
-                            body,
-                            args: f_args,
-                        });
-                    } else {
-                        f_args.into_iter().for_each(|it| self.push(it));
-
-                        self.variables.nsc();
-                        self.run(body);
-                        self.variables.esc();
-                    }
-                }
+                Call(carity) => self.call(carity),
 
                 Cnll(fun) => {
                     let ret = fun(self.pop());
@@ -228,6 +194,42 @@ impl VirtualMachine {
         self.call_stack.pop();
 
         Constant::Nil
+    }
+
+    fn call(&mut self, carity: usize) {
+        let mut f_args = vec![];
+
+        let (farity, body) = match self.pop() {
+            Constant::Fun { arity, body } => (arity, body),
+            Constant::PartialFun { arity, body, args } => {
+                f_args = args;
+                (arity, body)
+            }
+            other => panic!("Can't call {}", other),
+        };
+
+        while f_args.len() < carity {
+            f_args.push(self.pop())
+        }
+
+        if carity > farity {
+            panic!(
+                "function expected {} arguments, but received {}",
+                carity, farity
+            );
+        } else if carity < farity {
+            self.push(Constant::PartialFun {
+                arity: farity - carity,
+                body,
+                args: f_args,
+            });
+        } else {
+            f_args.into_iter().for_each(|it| self.push(it));
+
+            self.variables.nsc();
+            self.run(body);
+            self.variables.esc();
+        }
     }
 
     #[cfg(debug_assertions)]
