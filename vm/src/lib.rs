@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+#![feature(inline_const)]
 //! Virtual Machine implementation for the yex programming language
 #[cfg(test)]
 mod tests;
@@ -6,16 +7,16 @@ mod tests;
 mod env;
 mod literal;
 mod opcode;
+mod stack;
 
-use crate::env::Env;
+use crate::{env::Env, stack::StackVec};
 pub use crate::{
     literal::{symbol::Symbol, Constant},
     opcode::{OpCode, OpCodeMetadata},
 };
-use std::mem;
 
 const STACK_SIZE: usize = 512;
-const NIL: Constant = Constant::Nil;
+const RECURSION_LIMIT: usize = 768;
 
 static mut LINE: usize = 1;
 static mut COLUMN: usize = 1;
@@ -42,8 +43,8 @@ impl CallFrame {
     }
 }
 
-type CallStack = Vec<CallFrame>;
-type Stack = [Constant; STACK_SIZE];
+type CallStack = StackVec<CallFrame, RECURSION_LIMIT>;
+type Stack = StackVec<Constant, STACK_SIZE>;
 
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
@@ -52,29 +53,30 @@ pub type Bytecode = Vec<OpCodeMetadata>;
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
 pub struct VirtualMachine {
-    constants: Vec<Constant>,
+    constants: Vec<&'static Constant>,
     call_stack: CallStack,
     stack: Stack,
-    stack_ptr: usize,
     variables: Env,
 }
 
 impl VirtualMachine {
     /// Reset the instruction pointer and the stack
     pub fn reset(&mut self) {
-        self.call_stack = vec![];
-        self.stack = [NIL; 512];
-        self.stack_ptr = 0;
+        self.call_stack = StackVec::new();
+        self.stack = StackVec::new();
     }
 
     /// sets the constants for execution
     pub fn set_consts(&mut self, constants: Vec<Constant>) {
-        self.constants = constants;
+        self.constants = vec![];
+        for cnst in constants.into_iter() {
+            self.constants.push(Box::leak(Box::new(cnst)))
+        }
     }
 
     /// Pop's the last value on the stack
     pub fn pop_last(&self) -> &Constant {
-        &self.stack[self.stack_ptr - 1]
+        &self.stack.last().unwrap()
     }
 
     /// Executes a given set of bytecode instructions
@@ -196,6 +198,7 @@ impl VirtualMachine {
         Constant::Nil
     }
 
+    #[inline(never)]
     fn call(&mut self, carity: usize) {
         let mut f_args = vec![];
 
@@ -226,9 +229,13 @@ impl VirtualMachine {
         } else {
             f_args.into_iter().for_each(|it| self.push(it));
 
-            self.variables.nsc();
-            self.run(body);
-            self.variables.esc();
+            if &body == self.bytecode() && *self.ip() == self.bytecode().len() - 1 {
+                *self.ip() = 0;
+            } else {
+                self.variables.nsc();
+                self.run(body);
+                self.variables.esc();
+            }
         }
     }
 
@@ -243,14 +250,9 @@ impl VirtualMachine {
         let stack = self.call_stack.last().unwrap_or(&default);
 
         eprintln!(
-            "stack: {:#?}\nnext instruction: {:?}\nstack pointer: {}\n",
-            self.stack
-                .iter()
-                .rev()
-                .skip_while(|it| *it == &NIL)
-                .collect::<Vec<&Constant>>(),
+            "stack: {:#?}\nnext instruction: {:?}\n",
+            self.stack.iter().rev().collect::<Vec<&Constant>>(),
             stack.bytecode.get(stack.ip).map(|it| it.opcode),
-            self.stack_ptr
         );
     }
 
@@ -259,12 +261,12 @@ impl VirtualMachine {
     pub fn debug_stack(&self) {}
 
     fn push(&mut self, constant: Constant) {
-        self.stack[self.stack_ptr] = constant;
-        self.stack_ptr += 1;
+        self.stack.push(constant)
     }
 
     fn ip(&mut self) -> &mut usize {
-        &mut self.call_stack.last_mut().unwrap().ip
+        let idx = self.call_stack.len();
+        &mut self.call_stack[idx - 1].ip
     }
 
     fn bytecode(&mut self) -> &Bytecode {
@@ -272,8 +274,7 @@ impl VirtualMachine {
     }
 
     fn pop(&mut self) -> Constant {
-        self.stack_ptr -= 1;
-        mem::replace(&mut self.stack[self.stack_ptr], Constant::Nil)
+        self.stack.pop()
     }
 
     fn get_val(&self, idx: usize) -> Symbol {
@@ -334,9 +335,8 @@ impl Default for VirtualMachine {
 
         Self {
             constants: vec![],
-            call_stack: vec![],
-            stack: [NIL; STACK_SIZE],
-            stack_ptr: 0,
+            call_stack: StackVec::new(),
+            stack: StackVec::new(),
             variables: prelude,
         }
     }

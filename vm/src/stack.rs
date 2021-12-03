@@ -1,16 +1,18 @@
 use std::mem::MaybeUninit;
 
 #[derive(Debug)]
-pub struct Stack<T, const S: usize> {
+/// A wrapper around an array armazenated on the stack
+pub struct StackVec<T, const S: usize> {
     len: usize,
     array: [MaybeUninit<T>; S],
 }
 
-impl<T, const S: usize> Stack<T, S> {
+impl<T, const S: usize> StackVec<T, S> {
+    const ARRAY_INIT: [MaybeUninit<T>; S] = [const { MaybeUninit::uninit() }; S];
     pub fn new() -> Self {
         Self {
             len: 0,
-            array: [(); S].map(|_| MaybeUninit::uninit()),
+            array: StackVec::ARRAY_INIT,
         }
     }
 
@@ -39,14 +41,14 @@ impl<T, const S: usize> Stack<T, S> {
     }
 
     #[track_caller]
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> + DoubleEndedIterator {
         self.array[0..self.len]
             .iter_mut()
             .filter_map(|it| unsafe { Some(it.assume_init_mut()) })
     }
 
     #[track_caller]
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
+    pub fn iter(&self) -> impl Iterator<Item = &T> + DoubleEndedIterator {
         self.array[0..self.len]
             .iter()
             .filter_map(|it| unsafe { Some(it.assume_init_ref()) })
@@ -63,9 +65,27 @@ impl<T, const S: usize> Stack<T, S> {
         self.array[index..self.len].rotate_left(1);
         self.pop();
     }
+
+    pub fn last(&self) -> Option<&T> {
+        if self.len == 0 {
+            None
+        } else {
+            Some(&self[self.len - 1])
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn last_mut(&mut self) -> Option<&mut T> {
+        if self.len == 0 {
+            None
+        } else {
+            let idx = self.len - 1;
+            Some(&mut self[idx])
+        }
+    }
 }
 
-impl<T, const S: usize> std::ops::Index<usize> for Stack<T, S> {
+impl<T, const S: usize> std::ops::Index<usize> for StackVec<T, S> {
     type Output = T;
     fn index(&self, index: usize) -> &Self::Output {
         if self.len <= index {
@@ -78,7 +98,19 @@ impl<T, const S: usize> std::ops::Index<usize> for Stack<T, S> {
     }
 }
 
-impl<T: std::fmt::Display, const S: usize> std::fmt::Display for Stack<T, S> {
+impl<T, const S: usize> std::ops::IndexMut<usize> for StackVec<T, S> {
+    fn index_mut(&mut self, index: usize) -> &mut T {
+        if self.len <= index {
+            panic!(
+                "index out of bounds, the len is `{}` but the index is `{}`",
+                self.len, index
+            )
+        }
+        unsafe { self.array[index].assume_init_mut() }
+    }
+}
+
+impl<T: std::fmt::Display, const S: usize> std::fmt::Display for StackVec<T, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;
         for (index, value) in self.iter().enumerate() {

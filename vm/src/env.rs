@@ -1,4 +1,6 @@
-use crate::{Constant, Symbol};
+use crate::{Constant, StackVec, Symbol};
+
+const MAX_TABLE_ENTRIES: usize = 256;
 
 #[derive(Debug)]
 struct Entry {
@@ -8,12 +10,14 @@ struct Entry {
 
 #[derive(Debug)]
 struct Table {
-    entries: Vec<Entry>,
+    entries: StackVec<Entry, MAX_TABLE_ENTRIES>,
 }
 
 impl Table {
     pub fn new() -> Self {
-        Self { entries: vec![] }
+        Self {
+            entries: StackVec::new(),
+        }
     }
 
     fn find_entry_idx(&mut self, key: &Symbol) -> Option<usize> {
@@ -77,7 +81,9 @@ impl Env {
     }
 
     pub fn new() -> Self {
-        Self { entries: vec![Table::new()] }
+        Self {
+            entries: vec![Table::new()],
+        }
     }
 
     pub fn insert(&mut self, key: Symbol, value: Constant) -> Option<()> {
@@ -88,7 +94,7 @@ impl Env {
     pub fn get(&mut self, key: &Symbol) -> Option<&Constant> {
         for entry in self.entries.iter_mut().rev() {
             if let Some(value) = entry.get(key) {
-                return Some(value)
+                return Some(value);
             }
         }
         None

@@ -57,6 +57,8 @@ fn start(mut args: Vec<String>) -> i32 {
 
                 #[cfg(debug_assertions)]
                 eprintln!("Error: {}", e);
+
+                drop(e);
             }
         }
         vm.reset();
