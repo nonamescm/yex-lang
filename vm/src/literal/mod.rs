@@ -35,6 +35,13 @@ pub enum Constant {
     Nil,
 }
 
+impl Constant {
+    /// checks if the constant is `nil`
+    pub fn is_nil(&self) -> bool {
+        self == &Self::Nil
+    }
+}
+
 impl Default for Constant {
     fn default() -> Self {
         Self::Nil

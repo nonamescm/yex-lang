@@ -23,9 +23,14 @@ fn start(mut args: Vec<String>) -> i32 {
     loop {
         match repl.readline("yex> ") {
             Ok(l) => {
-                repl.add_history_entry(l.as_str());
-                if l.trim() == "" {
+                let mut l = l.trim().to_string();
+                repl.add_history_entry(&l);
+                if l == "" {
                     continue;
+                }
+                if !l.starts_with("let") {
+                    l = String::from("let __last__ = puts(") + &l;
+                    l.push(')');
                 }
                 match compile(l) {
                     Ok((bytecode, constants)) => {
@@ -39,7 +44,9 @@ fn start(mut args: Vec<String>) -> i32 {
                         vm.run(bytecode);
                         vm.debug_stack();
 
-                        println!("=> {}", vm.pop_last())
+                        if !vm.pop_last().is_nil() {
+                            println!("=> {}", vm.pop_last())
+                        }
                     }
                     Err(e) => println!("{}", e),
                 }
