@@ -54,7 +54,10 @@ impl Compiler {
             column: self.current.column,
             opcode: intr,
         };
+        self.emit_metadata(op)
+    }
 
+    fn emit_metadata(&mut self, op: OpCodeMetadata) {
         let (proxy, compiled) = self.proxies.last_mut().unwrap();
         proxy.push(op);
         *compiled += 1;
@@ -118,10 +121,10 @@ impl Compiler {
             Tkt::If => self.condition(),
             Tkt::Let => self.let_(),
             Tkt::Fn => self.fn_(),
+            Tkt::Become => self.become_(),
             _ => self.equality(),
         }
     }
-
 
     fn function(&mut self) -> ParseResult {
         let mut arity = 0;
@@ -139,13 +142,40 @@ impl Compiler {
             self.next()?;
         }
 
-        self.consume(&[Tkt::Assign], format!("Expected `=` after argument, found `{}`", self.current.token))?;
+        self.consume(
+            &[Tkt::Assign],
+            format!(
+                "Expected `=` after argument, found `{}`",
+                self.current.token
+            ),
+        )?;
 
         self.expression()?;
         let (body, _) = self.proxies.pop().unwrap();
 
         self.emit_const_push(Constant::Fun { body, arity });
 
+        Ok(())
+    }
+
+    fn become_(&mut self) -> ParseResult {
+        assert_eq!(self.current.token, Tkt::Become); // security check
+        self.next()?;
+        self.call()?;
+        let proxy = &mut self.proxies.last_mut().unwrap().0;
+        match proxy.pop() {
+            Some(OpCodeMetadata {
+                opcode: OpCode::Call(arity),
+                line,
+                column,
+            }) => self.emit_metadata(OpCodeMetadata {
+                line,
+                column,
+                opcode: OpCode::TCall(arity),
+            }),
+            _ => unreachable!(),
+        }
+        self.next()?; // skips the leading `)` token
         Ok(())
     }
 
@@ -190,9 +220,15 @@ impl Compiler {
             self.emit(OpCode::Jmp(0));
         }
 
-        self.consume(&[Tkt::Else], format!("Expected `else` after if, found `{}`", self.current.token))?;
+        self.consume(
+            &[Tkt::Else],
+            format!("Expected `else` after if, found `{}`", self.current.token),
+        )?;
         self.expression()?; // compiles the else branch
-        self.consume(&[Tkt::End], format!("Expected `else` after if, found `{}`", self.current.token))?;
+        self.consume(
+            &[Tkt::End],
+            format!("Expected `else` after if, found `{}`", self.current.token),
+        )?;
 
         let compiled_opcodes = self.compiled_opcodes();
         let jmp = OpCode::Jmp(compiled_opcodes);
@@ -208,11 +244,11 @@ impl Compiler {
 
     fn let_(&mut self) -> ParseResult {
         assert_eq!(self.current.token, Tkt::Let); // security check
-        self.next()?; // skips the val token
+        self.next()?; // skips the let token
 
         let name = match take(&mut self.current.token) {
             Tkt::Name(v) => v,
-            o => return self.throw(format!("Expected variable name after `val`, found {}", o)),
+            o => return self.throw(format!("Expected variable name after `let`, found {}", o)),
         };
         self.next()?;
 

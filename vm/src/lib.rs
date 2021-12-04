@@ -163,6 +163,7 @@ impl VirtualMachine {
                 Esc => self.variables.esc(),
 
                 Call(carity) => self.call(carity),
+                TCall(carity) => self.tcall(carity),
 
                 Cnll(fun) => {
                     let ret = fun(self.pop());
@@ -229,9 +230,42 @@ impl VirtualMachine {
         } else {
             f_args.into_iter().for_each(|it| self.push(it));
 
-            if &body == self.bytecode() && *self.ip() == self.bytecode().len() - 1 {
+            self.variables.nsc();
+            self.run(body);
+            self.variables.esc();
+        }
+    }
+
+    fn tcall(&mut self, carity: usize) {
+        let mut f_args = vec![];
+
+        let (farity, body) = match self.pop() {
+            Constant::Fun { arity, body } => (arity, body),
+            Constant::PartialFun { arity, body, args } => {
+                f_args = args;
+                (arity, body)
+            }
+            other => panic!("Can't call {}", other),
+        };
+
+        while f_args.len() < carity {
+            f_args.push(self.pop())
+        }
+
+        if carity > farity {
+            panic!(
+                "function expected {} arguments, but received {}",
+                carity, farity
+            );
+        } else if carity < farity {
+            panic!("Can't use partial application in a tail call")
+        } else {
+            f_args.into_iter().for_each(|it| self.push(it));
+
+            if &body == self.bytecode() {
                 *self.ip() = 0;
             } else {
+                // useful for doing some optimizations with high-order-functions
                 self.variables.nsc();
                 self.run(body);
                 self.variables.esc();

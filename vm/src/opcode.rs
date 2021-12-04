@@ -38,6 +38,9 @@ pub enum OpCode {
     /// Calls the value on the top of the stack
     Call(usize /* number of arguments */),
 
+    /// same as call but with tail optimization
+    TCall(usize),
+
     /// Calls a native rust function
     Cnll(fn(Constant) -> Constant),
 
