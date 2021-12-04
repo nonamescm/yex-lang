@@ -46,7 +46,9 @@ Functions are created using the `let` keyword, like:
 ```ml
 let say_hello name =
   puts("Hello " + name)
-in say_hello("foo")
+end
+
+let _ = say_hello("foo")
 ```
 
 #### Anonymous Functions

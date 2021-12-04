@@ -76,7 +76,7 @@ impl VirtualMachine {
 
     /// Pop's the last value on the stack
     pub fn pop_last(&self) -> &Constant {
-        &self.stack.last().unwrap()
+        &self.stack.last().unwrap_or(&Constant::Nil)
     }
 
     /// Executes a given set of bytecode instructions
@@ -123,16 +123,12 @@ impl VirtualMachine {
                     self.pop();
                 }
 
-                Save(n) => {
-                    let val = self.get_val(n);
-
+                Save(val) => {
                     let value = self.pop();
                     self.variables.insert(val, value);
                 }
 
-                Load(n) => {
-                    let val = self.get_val(n);
-
+                Load(val) => {
                     let val = match self.variables.get(&val) {
                         Some(v) => v.clone(),
                         None => panic!("unknown variable {}", val),
@@ -141,9 +137,7 @@ impl VirtualMachine {
                     self.push(val);
                 }
 
-                Drop(n) => {
-                    let val = self.get_val(n);
-
+                Drop(val) => {
                     self.variables.remove(&val);
                 }
 
@@ -293,6 +287,7 @@ impl VirtualMachine {
     /// Debug the values on the stack and in the bytecode
     pub fn debug_stack(&self) {}
 
+    #[track_caller]
     fn push(&mut self, constant: Constant) {
         self.stack.push(constant)
     }
@@ -306,15 +301,9 @@ impl VirtualMachine {
         &self.call_stack.last().unwrap().bytecode
     }
 
+    #[track_caller]
     fn pop(&mut self) -> Constant {
         self.stack.pop()
-    }
-
-    fn get_val(&self, idx: usize) -> Symbol {
-        match &self.constants[idx] {
-            Constant::Val(v) => *v,
-            _ => panic!("Tried to access a value that is not variable"),
-        }
     }
 
     fn try_do(&self, res: Result<Constant, impl std::fmt::Display>) -> Constant {

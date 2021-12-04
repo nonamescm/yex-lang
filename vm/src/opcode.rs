@@ -1,4 +1,4 @@
-use crate::Constant;
+use crate::{Constant, Symbol};
 
 /// OpCodes for the virtualMachine
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
@@ -14,14 +14,13 @@ pub enum OpCode {
 
     /// Read a value from a variable, receives the index of the variable name in the constant table as
     /// argument
-    Load(usize),
+    Load(Symbol),
 
-    /// Save a value to a variable, receives the index of the variable name in the constant table as
-    /// argument
-    Save(usize),
+    /// Save a value to a variable
+    Save(Symbol),
 
     /// Drops a variable, receives the index of the variable name in the constant table as argument
-    Drop(usize),
+    Drop(Symbol),
 
     /// Jump if the value on the stack top is false
     Jmf(usize),

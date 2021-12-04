@@ -4,7 +4,7 @@ use std::{
 };
 
 /// Symbol struct, contains the symbol string and a pre-hashed value for faster comparison
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct Symbol {
     string: &'static str,
     hash: u64,
@@ -29,6 +29,12 @@ impl std::fmt::Display for Symbol {
         let sym = ":".to_string() + &self.string;
         write!(f, "{}", sym)?;
         Ok(())
+    }
+}
+
+impl std::fmt::Debug for Symbol {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Symbol({})", self.string)
     }
 }
 

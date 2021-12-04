@@ -165,7 +165,6 @@ impl Lexer {
                 TokenType::BitXor
             }
 
-            ';' => TokenType::Semicolon,
             ',' => TokenType::Colon,
 
             EOF => TokenType::Eof,

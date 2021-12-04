@@ -27,25 +27,54 @@ impl Compiler {
             },
             proxies: vec![vec![]],
         };
-        while {
-            this.next()?;
-            this.current.token != Tkt::Eof
-        } {
-            this.expression()?;
-            this.consume(
-                &[Tkt::Semicolon, Tkt::Eof],
-                format!(
-                    "expected `;` or <eof> after expression, found `{}`",
-                    this.current.token
-                ),
-            )?;
+        this.next()?;
+
+        loop {
+            this.scoped_let()?;
+            if this.current.token == Tkt::Eof {
+                break;
+            }
         }
 
         Ok((this.proxies.pop().unwrap(), this.constants))
     }
 
+    fn scoped_let(&mut self) -> ParseResult {
+        if self.current.token != Tkt::Let {
+            self.throw(format!("Expected `let`, found `{}`", self.current.token))?
+        }
+        self.next()?; // skips the let token
+
+        let name = match take(&mut self.current.token) {
+            Tkt::Name(v) => Symbol::new(v),
+            o => return self.throw(format!("Expected variable name after `let`, found `{}`", o)),
+        };
+        self.next()?;
+
+        if matches!(self.current.token, Tkt::Name(_)) {
+            self.function()?;
+            self.consume(
+                &[Tkt::End],
+                format!(
+                    "Expected `end` after let expression, found `{}`",
+                    self.current.token
+                ),
+            )?;
+        } else {
+            self.consume(
+                &[Tkt::Assign],
+                format!("Expected `=` after name, found `{}`", self.current.token),
+            )?;
+            self.expression()?;
+        }
+
+        self.emit(OpCode::Save(name));
+
+        Ok(())
+    }
+
     fn compiled_opcodes(&self) -> usize {
-        self.proxies.last().unwrap().len() - 1
+        self.proxies.last().unwrap().len()
     }
 
     fn emit(&mut self, intr: OpCode) {
@@ -73,15 +102,6 @@ impl Compiler {
         } else {
             self.emit(OpCode::Push(self.constants.len()));
             self.constants.push(constant)
-        }
-    }
-
-    fn emit_const(&mut self, constant: Constant) -> usize {
-        if let Some(idx) = self.constants.iter().position(|c| c == &constant) {
-            idx
-        } else {
-            self.constants.push(constant);
-            self.constants.len() - 1
         }
     }
 
@@ -135,8 +155,7 @@ impl Compiler {
                 _ => unreachable!(),
             };
 
-            let idx = self.emit_const(Constant::Val(Symbol::new(id)));
-            self.emit(OpCode::Save(idx));
+            self.emit(OpCode::Save(Symbol::new(id)));
             arity += 1;
             self.next()?;
         }
@@ -150,7 +169,7 @@ impl Compiler {
         )?;
 
         self.expression()?;
-        let body= self.proxies.pop().unwrap();
+        let body = self.proxies.pop().unwrap();
 
         self.emit_const_push(Constant::Fun { body, arity });
 
@@ -191,7 +210,7 @@ impl Compiler {
         self.consume(
             &[Tkt::Do],
             format!(
-                "expected `do` after condition, found {}",
+                "expected `do` after condition, found `{}`",
                 &self.current.token
             ),
         )?; // checks for do
@@ -226,7 +245,7 @@ impl Compiler {
         self.expression()?; // compiles the else branch
         self.consume(
             &[Tkt::End],
-            format!("Expected `else` after if, found `{}`", self.current.token),
+            format!("Expected `end` after else, found `{}`", self.current.token),
         )?;
 
         let compiled_opcodes = self.compiled_opcodes();
@@ -246,8 +265,8 @@ impl Compiler {
         self.next()?; // skips the let token
 
         let name = match take(&mut self.current.token) {
-            Tkt::Name(v) => v,
-            o => return self.throw(format!("Expected variable name after `let`, found {}", o)),
+            Tkt::Name(v) => Symbol::new(v),
+            o => return self.throw(format!("Expected variable name after `let`, found `{}`", o)),
         };
         self.next()?;
 
@@ -256,24 +275,23 @@ impl Compiler {
         } else {
             self.consume(
                 &[Tkt::Assign],
-                format!("Expected `=` after name, found {}", self.current.token),
+                format!("Expected `=` after name, found `{}`", self.current.token),
             )?;
             self.expression()?;
         }
 
-        let idx = self.emit_const(Constant::Val(Symbol::new(name)));
-        self.emit(OpCode::Save(idx));
+        self.emit(OpCode::Save(name));
 
         self.consume(
             &[Tkt::In],
             format!(
-                "Expected `in` after val expression, found {}",
+                "Expected `in` after let expression, found {}",
                 self.current.token
             ),
         )?;
         self.expression()?;
 
-        self.emit(OpCode::Drop(idx));
+        self.emit(OpCode::Drop(name));
 
         Ok(())
     }
@@ -382,7 +400,7 @@ impl Compiler {
             *arity += 1;
             if !matches!(&self.current.token, Tkt::Colon | Tkt::Rparen) {
                 self.throw(format!(
-                    "Expected `,`, `)` or other token, found {}",
+                    "Expected `,`, `)` or other token, found `{}`",
                     &self.current.token
                 ))?
             }
@@ -397,7 +415,7 @@ impl Compiler {
             let mut old_comp = self.compiled_opcodes() - comp;
             let mut proxy = self.proxies.pop().unwrap();
             let mut new = vec![];
-            
+
             while old_comp > 0 {
                 new.push(proxy.pop().unwrap());
                 old_comp -= 1;
@@ -455,17 +473,7 @@ impl Compiler {
             Tkt::False => push!(Bool(false)),
             Tkt::Name(v) => {
                 let v = Symbol::new(v);
-
-                if let Some(idx) = self
-                    .constants
-                    .iter()
-                    .position(|c| matches!(c, Val(ref s) if s == &v))
-                {
-                    self.emit(Load(idx))
-                } else {
-                    self.emit(Load(self.constants.len()));
-                    self.emit_const(Val(v));
-                }
+                self.emit(Load(v));
             }
             Tkt::Nil => push!(Nil),
 

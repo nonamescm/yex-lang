@@ -13,8 +13,6 @@ pub enum Constant {
     Str(String),
     /// erlang-like atoms
     Sym(Symbol),
-    /// Variables
-    Val(Symbol),
     /// Booleans
     Bool(bool),
     /// Functions
@@ -68,7 +66,7 @@ impl std::fmt::Display for Constant {
             Fun { arity, .. } | PartialFun { arity, .. } => format!("<fun({})>", arity),
             Nil => "nil".to_string(),
             Str(s) => "\"".to_owned() + s + "\"",
-            Sym(s) | Val(s) => format!("{}", s),
+            Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
             Bool(b) => b.to_string(),
         };

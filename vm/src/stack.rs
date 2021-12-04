@@ -16,6 +16,7 @@ impl<T, const S: usize> StackVec<T, S> {
         }
     }
 
+    #[track_caller]
     pub fn push(&mut self, new_value: T) {
         if self.len >= S {
             panic!(
@@ -27,6 +28,7 @@ impl<T, const S: usize> StackVec<T, S> {
         self.len += 1;
     }
 
+    #[track_caller]
     pub fn pop(&mut self) -> T {
         if self.len() == 0 {
             panic!("Called pop() on a array with no elements");
@@ -54,6 +56,7 @@ impl<T, const S: usize> StackVec<T, S> {
             .filter_map(|it| unsafe { Some(it.assume_init_ref()) })
     }
 
+    #[track_caller]
     pub fn remove(&mut self, index: usize) {
         if index >= S {
             panic!(
@@ -66,6 +69,7 @@ impl<T, const S: usize> StackVec<T, S> {
         self.pop();
     }
 
+    #[track_caller]
     pub fn last(&self) -> Option<&T> {
         if self.len == 0 {
             None
@@ -75,6 +79,7 @@ impl<T, const S: usize> StackVec<T, S> {
     }
 
     #[allow(dead_code)]
+    #[track_caller]
     pub fn last_mut(&mut self) -> Option<&mut T> {
         if self.len == 0 {
             None
@@ -87,6 +92,7 @@ impl<T, const S: usize> StackVec<T, S> {
 
 impl<T, const S: usize> std::ops::Index<usize> for StackVec<T, S> {
     type Output = T;
+    #[track_caller]
     fn index(&self, index: usize) -> &Self::Output {
         if self.len <= index {
             panic!(
@@ -99,6 +105,7 @@ impl<T, const S: usize> std::ops::Index<usize> for StackVec<T, S> {
 }
 
 impl<T, const S: usize> std::ops::IndexMut<usize> for StackVec<T, S> {
+    #[track_caller]
     fn index_mut(&mut self, index: usize) -> &mut T {
         if self.len <= index {
             panic!(
