@@ -47,14 +47,14 @@ impl<T, const S: usize> StackVec<T, S> {
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> + DoubleEndedIterator {
         self.array[0..self.len]
             .iter_mut()
-            .filter_map(|it| unsafe { Some(it.assume_init_mut()) })
+            .map(|it| unsafe { it.assume_init_mut() })
     }
 
     #[track_caller]
     pub fn iter(&self) -> impl Iterator<Item = &T> + DoubleEndedIterator {
         self.array[0..self.len]
             .iter()
-            .filter_map(|it| unsafe { Some(it.assume_init_ref()) })
+            .map(|it| unsafe { it.assume_init_ref() })
     }
 
     #[track_caller]

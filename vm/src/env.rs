@@ -46,18 +46,15 @@ impl Table {
     }
 
     pub fn get(&mut self, key: &Symbol) -> Option<&Constant> {
-        match self.find_entry(&key) {
+        match self.find_entry(key) {
             Some(entry) => Some(&entry.value),
             None => None,
         }
     }
 
     pub fn remove(&mut self, key: &Symbol) {
-        match self.find_entry_idx(key) {
-            Some(idx) => {
-                self.entries.remove(idx);
-            }
-            None => {}
+        if let Some(idx) = self.find_entry_idx(key) {
+            self.entries.remove(idx);
         }
     }
 }

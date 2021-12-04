@@ -13,7 +13,7 @@ fn start(mut args: Vec<String>) -> i32 {
         });
         vm.set_consts(constants);
         vm.run(bytecode);
-        return 0;
+        0
     } else {
         println!("Yex language interpreter");
         1

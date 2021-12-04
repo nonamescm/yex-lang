@@ -8,6 +8,8 @@ mod literal;
 mod opcode;
 mod stack;
 
+use std::cmp::Ordering;
+
 use crate::{env::Env, stack::StackVec};
 pub use crate::{
     literal::{symbol::Symbol, Constant},
@@ -75,7 +77,7 @@ impl VirtualMachine {
 
     /// Pop's the last value on the stack
     pub fn pop_last(&self) -> &Constant {
-        &self.stack.last().unwrap_or(&Constant::Nil)
+        self.stack.last().unwrap_or(&Constant::Nil)
     }
 
     /// Executes a given set of bytecode instructions
@@ -208,23 +210,23 @@ impl VirtualMachine {
             f_args.push(self.pop())
         }
 
-        if carity > farity {
-            panic!(
+        match carity.cmp(&farity) {
+            Ordering::Greater => panic!(
                 "function expected {} arguments, but received {}",
                 carity, farity
-            );
-        } else if carity < farity {
-            self.push(Constant::PartialFun {
+            ),
+            Ordering::Less => self.push(Constant::PartialFun {
                 arity: farity - carity,
                 body,
                 args: f_args,
-            });
-        } else {
-            f_args.into_iter().for_each(|it| self.push(it));
+            }),
+            Ordering::Equal => {
+                f_args.into_iter().for_each(|it| self.push(it));
 
-            self.variables.nsc();
-            self.run(body);
-            self.variables.esc();
+                self.variables.nsc();
+                self.run(body);
+                self.variables.esc();
+            }
         }
     }
 
@@ -244,23 +246,26 @@ impl VirtualMachine {
             f_args.push(self.pop())
         }
 
-        if carity > farity {
-            panic!(
+        match carity.cmp(&farity) {
+            Ordering::Greater => panic!(
                 "function expected {} arguments, but received {}",
                 carity, farity
-            );
-        } else if carity < farity {
-            panic!("Can't use partial application in a tail call")
-        } else {
-            f_args.into_iter().for_each(|it| self.push(it));
+            ),
 
-            if &body == self.bytecode() {
-                *self.ip() = 0;
-            } else {
-                // useful for doing some optimizations with high-order-functions
-                self.variables.nsc();
-                self.run(body);
-                self.variables.esc();
+            Ordering::Less => {
+                panic!("Can't use partial application in a tail call")
+            }
+            Ordering::Equal => {
+                f_args.into_iter().for_each(|it| self.push(it));
+
+                if &body == self.bytecode() {
+                    *self.ip() = 0;
+                } else {
+                    // useful for doing some optimizations with high-order-functions
+                    self.variables.nsc();
+                    self.run(body);
+                    self.variables.esc();
+                }
             }
         }
     }

@@ -26,7 +26,7 @@ impl Eq for Symbol {}
 
 impl std::fmt::Display for Symbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let sym = ":".to_string() + &self.string;
+        let sym = ":".to_string() + self.string;
         write!(f, "{}", sym)?;
         Ok(())
     }
