@@ -31,6 +31,9 @@ impl Compiler {
 
         loop {
             this.scoped_let()?;
+            if this.current.token == Tkt::End {
+                this.next()?;
+            }
             if this.current.token == Tkt::Eof {
                 break;
             }
@@ -208,12 +211,12 @@ impl Compiler {
 
         self.expression()?; // compiles the condition
         self.consume(
-            &[Tkt::Do],
+            &[Tkt::Then],
             format!(
-                "expected `do` after condition, found `{}`",
+                "expected `then` after condition, found `{}`",
                 &self.current.token
             ),
-        )?; // checks for do
+        )?; // checks for then
 
         let then_jump_ip = self.compiled_opcodes();
         self.emit(OpCode::Jmf(0));
@@ -224,13 +227,13 @@ impl Compiler {
     }
 
     fn condition(&mut self) -> ParseResult {
-        assert!(matches!(self.current.token, Tkt::If | Tkt::Elif)); // security check
+        assert_eq!(self.current.token, Tkt::If); // security check
 
         self.emit(OpCode::Nsc); // creates a new scope
 
         let mut patch_stack = vec![];
 
-        while matches!(self.current.token, Tkt::If | Tkt::Elif) {
+        while matches!(self.current.token, Tkt::If) {
             let then_jump_ip = self.if_elif()?;
             self.emit_patch(OpCode::Jmf(self.compiled_opcodes() + 1), then_jump_ip);
 
@@ -243,10 +246,6 @@ impl Compiler {
             format!("Expected `else` after if, found `{}`", self.current.token),
         )?;
         self.expression()?; // compiles the else branch
-        self.consume(
-            &[Tkt::End],
-            format!("Expected `end` after else, found `{}`", self.current.token),
-        )?;
 
         let compiled_opcodes = self.compiled_opcodes();
         let jmp = OpCode::Jmp(compiled_opcodes);
