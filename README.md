@@ -9,6 +9,7 @@
     * [Functions](#functions)
       * [Named](#named-functions)
       * [Anonymous](#anonymous-functions)
+  * [TODO](#todo)
   * [Contributing](#contributing)
 
 ## About
@@ -55,6 +56,12 @@ You can create anonymous functions using the `fn` keyword.
 ```elixir
 puts((fn n = n * n)(20))
 ```
+
+## TODO
+  * Closures
+  * Garbage collection
+  * Lists
+  * Modules
 
 ## Contributing
   * Open a issue if you find any bug
