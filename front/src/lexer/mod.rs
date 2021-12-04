@@ -166,6 +166,7 @@ impl Lexer {
             }
 
             ';' => TokenType::Semicolon,
+            ',' => TokenType::Colon,
 
             EOF => TokenType::Eof,
 

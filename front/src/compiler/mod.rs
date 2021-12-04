@@ -381,9 +381,9 @@ impl Compiler {
 
             self.expression()?; // compiles the argument
             *arity += 1;
-            if !matches!(&self.current.token, Tkt::Semicolon | Tkt::Rparen) {
+            if !matches!(&self.current.token, Tkt::Colon | Tkt::Rparen) {
                 self.throw(format!(
-                    "Expected `;`, `)` or other token, found {}",
+                    "Expected `,`, `)` or other token, found {}",
                     &self.current.token
                 ))?
             }

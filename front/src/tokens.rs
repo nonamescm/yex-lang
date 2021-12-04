@@ -40,6 +40,7 @@ pub enum TokenType {
 
     // Symbol
     Semicolon,
+    Colon,
 
     Eof,
 }
@@ -86,6 +87,7 @@ impl std::fmt::Display for TokenType {
             Self::Lparen => '('.into(),
             Self::Rparen => ')'.into(),
             Self::Semicolon => ';'.into(),
+            Self::Colon => ','.into(),
             Self::Eof => "<eof>".into(),
         };
 
