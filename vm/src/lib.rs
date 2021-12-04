@@ -199,7 +199,6 @@ impl VirtualMachine {
         Constant::Nil
     }
 
-    #[inline(never)]
     fn call(&mut self, carity: usize) {
         let mut f_args = vec![];
 
