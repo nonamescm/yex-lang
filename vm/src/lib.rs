@@ -1,5 +1,4 @@
 #![deny(missing_docs)]
-#![feature(inline_const)]
 //! Virtual Machine implementation for the yex programming language
 #[cfg(test)]
 mod tests;

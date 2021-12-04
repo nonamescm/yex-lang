@@ -8,11 +8,12 @@ pub struct StackVec<T, const S: usize> {
 }
 
 impl<T, const S: usize> StackVec<T, S> {
-    const ARRAY_INIT: [MaybeUninit<T>; S] = [const { MaybeUninit::uninit() }; S];
+    const UNINIT: MaybeUninit<T> = MaybeUninit::uninit();
+    const ARRAY_INIT: [MaybeUninit<T>; S] = [Self::UNINIT; S];
     pub fn new() -> Self {
         Self {
             len: 0,
-            array: StackVec::ARRAY_INIT,
+            array: Self::ARRAY_INIT,
         }
     }
 
