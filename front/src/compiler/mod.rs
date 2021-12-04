@@ -12,7 +12,7 @@ pub struct Compiler {
     lexer: Peekable<Lexer>,
     constants: Vec<Constant>,
     current: Token,
-    proxies: Vec<(Vec<OpCodeMetadata>, usize)>,
+    proxies: Vec<Vec<OpCodeMetadata>>,
 }
 
 impl Compiler {
@@ -25,7 +25,7 @@ impl Compiler {
                 column: 0,
                 token: Tkt::Eof,
             },
-            proxies: vec![(vec![], 0)],
+            proxies: vec![vec![]],
         };
         while {
             this.next()?;
@@ -41,11 +41,11 @@ impl Compiler {
             )?;
         }
 
-        Ok((this.proxies.pop().unwrap().0, this.constants))
+        Ok((this.proxies.pop().unwrap(), this.constants))
     }
 
     fn compiled_opcodes(&self) -> usize {
-        self.proxies.last().unwrap().1
+        self.proxies.last().unwrap().len() - 1
     }
 
     fn emit(&mut self, intr: OpCode) {
@@ -58,13 +58,12 @@ impl Compiler {
     }
 
     fn emit_metadata(&mut self, op: OpCodeMetadata) {
-        let (proxy, compiled) = self.proxies.last_mut().unwrap();
+        let proxy = self.proxies.last_mut().unwrap();
         proxy.push(op);
-        *compiled += 1;
     }
 
     fn emit_patch(&mut self, intr: OpCode, idx: usize) {
-        let (proxy, _) = self.proxies.last_mut().unwrap();
+        let proxy = self.proxies.last_mut().unwrap();
         proxy[idx].opcode = intr;
     }
 
@@ -128,7 +127,7 @@ impl Compiler {
 
     fn function(&mut self) -> ParseResult {
         let mut arity = 0;
-        self.proxies.push((vec![], 0));
+        self.proxies.push(vec![]);
 
         while matches!(self.current.token, Tkt::Name(_)) {
             let id = match take(&mut self.current.token) {
@@ -151,7 +150,7 @@ impl Compiler {
         )?;
 
         self.expression()?;
-        let (body, _) = self.proxies.pop().unwrap();
+        let body= self.proxies.pop().unwrap();
 
         self.emit_const_push(Constant::Fun { body, arity });
 
@@ -162,7 +161,7 @@ impl Compiler {
         assert_eq!(self.current.token, Tkt::Become); // security check
         self.next()?;
         self.call()?;
-        let proxy = &mut self.proxies.last_mut().unwrap().0;
+        let proxy = &mut self.proxies.last_mut().unwrap();
         match proxy.pop() {
             Some(OpCodeMetadata {
                 opcode: OpCode::Call(arity),
@@ -392,20 +391,19 @@ impl Compiler {
     }
 
     fn call(&mut self) -> ParseResult {
-        let compiled = self.compiled_opcodes();
+        let comp = self.compiled_opcodes();
         self.primary()?; // compiles the called expresion
         let callee = {
-            let mut old_compiled = self.compiled_opcodes() - compiled;
-            let (mut proxy, mut compiled) = self.proxies.pop().unwrap();
+            let mut old_comp = self.compiled_opcodes() - comp;
+            let mut proxy = self.proxies.pop().unwrap();
             let mut new = vec![];
-
-            while old_compiled > 0 {
+            
+            while old_comp > 0 {
                 new.push(proxy.pop().unwrap());
-                old_compiled -= 1;
-                compiled -= 1;
+                old_comp -= 1;
             }
 
-            self.proxies.push((proxy, compiled));
+            self.proxies.push(proxy);
             new
         };
 
