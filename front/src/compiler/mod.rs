@@ -139,7 +139,7 @@ impl Compiler {
             self.next()?;
         }
 
-        self.consume(&[Tkt::Assign], "Expected `->` after argument")?;
+        self.consume(&[Tkt::Assign], format!("Expected `=` after argument, found `{}`", self.current.token))?;
 
         self.expression()?;
         let (body, _) = self.proxies.pop().unwrap();
@@ -190,9 +190,9 @@ impl Compiler {
             self.emit(OpCode::Jmp(0));
         }
 
-        self.consume(&[Tkt::Else], "Expected `else` after if")?;
+        self.consume(&[Tkt::Else], format!("Expected `else` after if, found `{}`", self.current.token))?;
         self.expression()?; // compiles the else branch
-        self.consume(&[Tkt::End], "expected `end` to close the else block")?;
+        self.consume(&[Tkt::End], format!("Expected `else` after if, found `{}`", self.current.token))?;
 
         let compiled_opcodes = self.compiled_opcodes();
         let jmp = OpCode::Jmp(compiled_opcodes);
