@@ -67,6 +67,9 @@ impl Symbol {
         string.hash(&mut hash);
         let hash = hash.finish();
 
-        Self { string: Box::leak(string.into_boxed_str()), hash }
+        Self {
+            string: Box::leak(string.into_boxed_str()),
+            hash,
+        }
     }
 }
