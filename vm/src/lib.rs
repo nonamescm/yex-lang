@@ -4,19 +4,26 @@
 mod tests;
 
 mod env;
+mod list;
 mod literal;
 mod opcode;
 mod stack;
-mod list;
 
-use std::io::{self, Write};
-use std::cmp::Ordering;
+use std::{
+    cmp::Ordering,
+    io::{self, Write},
+    mem,
+};
 
-use crate::{env::Env, stack::StackVec};
+use crate::{
+    env::{Env, Table},
+    stack::StackVec,
+};
+
 pub use crate::{
+    list::List,
     literal::{symbol::Symbol, Constant},
     opcode::{OpCode, OpCodeMetadata},
-    list::List,
 };
 
 const STACK_SIZE: usize = 512;
@@ -61,6 +68,7 @@ pub struct VirtualMachine {
     call_stack: CallStack,
     stack: Stack,
     variables: Env,
+    globals: Table,
 }
 
 impl VirtualMachine {
@@ -132,10 +140,18 @@ impl VirtualMachine {
                     self.variables.insert(val, value);
                 }
 
+                Savg(val) => {
+                    let value = self.pop();
+                    self.globals.insert(val, value)
+                }
+
                 Load(val) => {
                     let val = match self.variables.get(&val) {
                         Some(v) => v.clone(),
-                        None => panic!("unknown variable {}", val),
+                        None => match self.globals.get(&val) {
+                            Some(v) => v.clone(),
+                            None => panic!("unknown variable {}", val),
+                        },
                     };
 
                     self.push(val);
@@ -144,6 +160,8 @@ impl VirtualMachine {
                 Drop(val) => {
                     self.variables.remove(&val);
                 }
+
+                Drpg(val) => self.globals.remove(&val),
 
                 Jmf(offset) => {
                     if Into::<bool>::into(!self.pop()) {
@@ -172,7 +190,7 @@ impl VirtualMachine {
                     let val = self.pop();
                     let xs = match self.pop() {
                         Constant::List(xs) => xs,
-                        other => panic!("Expected a list, found a `{}`", other)
+                        other => panic!("Expected a list, found a `{}`", other),
                     };
                     self.push(Constant::List(xs.prepend(val)))
                 }
@@ -235,9 +253,9 @@ impl VirtualMachine {
             Ordering::Equal => {
                 f_args.into_iter().for_each(|it| self.push(it));
 
-                self.variables.nsc();
+                let curr_env = mem::replace(&mut self.variables, Env::new());
                 self.run(body);
-                self.variables.esc();
+                self.variables = curr_env;
             }
         }
     }
@@ -273,10 +291,7 @@ impl VirtualMachine {
                 if &body == self.bytecode() {
                     *self.ip() = 0;
                 } else {
-                    // useful for doing some optimizations with high-order-functions
-                    self.variables.nsc();
-                    self.run(body);
-                    self.variables.esc();
+                    panic!("Can't use tail calls with different functions")
                 }
             }
         }
@@ -332,7 +347,7 @@ impl VirtualMachine {
 
 impl Default for VirtualMachine {
     fn default() -> Self {
-        let mut prelude = Env::new();
+        let mut prelude = Table::new();
 
         macro_rules! vecop {
             ($($elems: expr),*) => {{
@@ -356,7 +371,7 @@ impl Default for VirtualMachine {
                 body: vecop![OpCode::Cnll(|c| {
                     match c {
                         Constant::Str(s) => println!("{}", s),
-                        other => println!("{}", other)
+                        other => println!("{}", other),
                     };
                     Constant::Nil
                 })],
@@ -370,7 +385,7 @@ impl Default for VirtualMachine {
                 body: vecop![OpCode::Cnll(|c| {
                     match c {
                         Constant::Str(s) => print!("{}", s),
-                        other => print!("{}", other)
+                        other => print!("{}", other),
                     };
                     Constant::Nil
                 })],
@@ -384,7 +399,7 @@ impl Default for VirtualMachine {
                 body: vecop![OpCode::Cnll(|c| {
                     match c {
                         Constant::Str(s) => print!("{}", s),
-                        other => print!("{}", other)
+                        other => print!("{}", other),
                     };
                     if let Err(_) = io::stdout().flush() {
                         panic!("Error flushing stdout")
@@ -403,7 +418,8 @@ impl Default for VirtualMachine {
             constants: vec![],
             call_stack: StackVec::new(),
             stack: StackVec::new(),
-            variables: prelude,
+            globals: prelude,
+            variables: Env::new(),
         }
     }
 }

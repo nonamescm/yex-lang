@@ -71,7 +71,7 @@ impl Compiler {
             self.expression()?;
         }
 
-        self.emit(OpCode::Save(name));
+        self.emit(OpCode::Savg(name));
 
         Ok(())
     }

@@ -27,6 +27,16 @@ pub enum OpCode {
     /// The stack layout after running it: []
     Save(Symbol),
 
+    /// Save a value to a global variable
+    /// The stack layout before running this opcode: [value-to-save]
+    /// The stack layout after running it: []
+    Savg(Symbol),
+
+    /// Drops a global variable, receives the index of the variable name in the constant table as argument
+    /// The stack layout before running this opcode: []
+    /// The stack layout after running it: []
+    Drpg(Symbol),
+
     /// Drops a variable, receives the index of the variable name in the constant table as argument
     /// The stack layout before running this opcode: []
     /// The stack layout after running it: []

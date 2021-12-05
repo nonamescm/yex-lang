@@ -9,7 +9,7 @@ struct Entry {
 }
 
 #[derive(Debug)]
-struct Table {
+pub struct Table {
     entries: StackVec<Entry, MAX_TABLE_ENTRIES>,
 }
 
