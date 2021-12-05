@@ -428,19 +428,20 @@ impl Compiler {
         };
 
         let mut arity = 0;
+        let mut is_call = false;
 
-        if matches!(
+        while matches!(
             self.lexer.peek().unwrap().as_ref().map(|c| &c.token),
             Ok(Tkt::Lparen)
         ) {
             self.call_args(&mut arity)?;
-        } else {
-            callee.iter().for_each(|it| self.emit(it.opcode));
-            return Ok(());
+            is_call = true;
         }
         callee.iter().for_each(|it| self.emit(it.opcode));
 
-        self.emit(OpCode::Call(arity));
+        if is_call {
+            self.emit(OpCode::Call(arity));
+        }
 
         Ok(())
     }
