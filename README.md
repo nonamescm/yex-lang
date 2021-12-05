@@ -31,10 +31,10 @@ Bind is made using the `let ... in` constructor. Like so:
 
 ```ml
 puts(
-  let how = "how "
-  in let are = "are "
-  in let you = "you"
-  in how + are + you
+	let how = "how "
+	in let are = "are "
+	in let you = "you"
+	in how + are + you
 )
 ```
 
@@ -46,8 +46,7 @@ Functions are created using the `let` keyword, like:
 
 ```ml
 let say_hello name =
-  puts("Hello " + name)
-end
+	puts("Hello " + name)
 
 let _ = say_hello("foo")
 ```

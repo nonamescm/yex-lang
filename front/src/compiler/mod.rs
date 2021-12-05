@@ -31,9 +31,6 @@ impl Compiler {
 
         loop {
             this.scoped_let()?;
-            if this.current.token == Tkt::End {
-                this.next()?;
-            }
             if this.current.token == Tkt::Eof {
                 break;
             }
@@ -56,13 +53,6 @@ impl Compiler {
 
         if matches!(self.current.token, Tkt::Name(_)) {
             self.function()?;
-            self.consume(
-                &[Tkt::End],
-                format!(
-                    "Expected `end` after let expression, found `{}`",
-                    self.current.token
-                ),
-            )?;
         } else {
             self.consume(
                 &[Tkt::Assign],
