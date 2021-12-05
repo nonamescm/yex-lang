@@ -9,6 +9,7 @@
     * [Functions](#functions)
       * [Named](#named-functions)
       * [Anonymous](#anonymous-functions)
+	* [Lists](#lists)
   * [TODO](#todo)
   * [Contributing](#contributing)
 
@@ -59,11 +60,19 @@ You can create anonymous functions using the `fn` keyword.
 puts((fn n = n * n)(20))
 ```
 
+### Lists
+
+Lists are created using `[]` like in most other languages:
+
+```ml
+[1, 2, 3]
+```
+
 ## TODO
-  * Closures
-  * Garbage collection
-  * Lists
-  * Modules
+  * [ ] Closures
+  * [ ] Garbage collection
+  * [x] Lists
+  * [ ] Modules
 
 ## Contributing
   * Open a issue if you find any bug
