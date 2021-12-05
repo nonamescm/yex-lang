@@ -64,7 +64,7 @@ pub type Bytecode = Vec<OpCodeMetadata>;
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
 pub struct VirtualMachine {
-    constants: Vec<&'static Constant>,
+    constants: Vec<Constant>,
     call_stack: CallStack,
     stack: Stack,
     variables: Env,
@@ -80,10 +80,7 @@ impl VirtualMachine {
 
     /// sets the constants for execution
     pub fn set_consts(&mut self, constants: Vec<Constant>) {
-        self.constants = vec![];
-        for cnst in constants.into_iter() {
-            self.constants.push(Box::leak(Box::new(cnst)))
-        }
+        self.constants = constants;
     }
 
     /// Pop's the last value on the stack
@@ -371,83 +368,82 @@ impl Default for VirtualMachine {
             }}
         }
 
+        macro_rules! nativefn {
+            ($closure: expr) => {
+                Constant::Fun {
+                    arity: 1,
+                    body: vecop![OpCode::Cnll($closure)],
+                }
+            };
+        }
+
         prelude.insert(
             Symbol::new("puts"),
-            Constant::Fun {
-                arity: 1,
-                body: vecop![OpCode::Cnll(|c| {
-                    match c {
-                        Constant::Str(s) => println!("{}", s),
-                        other => println!("{}", other),
-                    };
-                    Constant::Nil
-                })],
-            },
+            nativefn!(|c| {
+                match c {
+                    Constant::Str(s) => println!("{}", s),
+                    other => println!("{}", other),
+                };
+                Constant::Nil
+            }),
         );
 
         prelude.insert(
             Symbol::new("print"),
-            Constant::Fun {
-                arity: 1,
-                body: vecop![OpCode::Cnll(|c| {
-                    match c {
-                        Constant::Str(s) => print!("{}", s),
-                        other => print!("{}", other),
-                    };
-                    Constant::Nil
-                })],
-            },
+            nativefn!(|c| {
+                match c {
+                    Constant::Str(s) => print!("{}", s),
+                    other => print!("{}", other),
+                };
+                Constant::Nil
+            }),
         );
 
         prelude.insert(
             Symbol::new("input"),
-            Constant::Fun {
-                arity: 1,
-                body: vecop![OpCode::Cnll(|c| {
-                    match c {
-                        Constant::Str(s) => print!("{}", s),
-                        other => print!("{}", other),
-                    };
-                    if let Err(_) = io::stdout().flush() {
-                        panic!("Error flushing stdout")
-                    }
-                    let mut input = String::new();
-                    if let Err(_) = io::stdin().read_line(&mut input) {
-                        panic!("Error reading line")
-                    }
-                    input.pop();
-                    Constant::Str(input)
-                })],
-            },
+            nativefn!(|c| {
+                match c {
+                    Constant::Str(s) => print!("{}", s),
+                    other => print!("{}", other),
+                };
+                if let Err(_) = io::stdout().flush() {
+                    panic!("Error flushing stdout")
+                }
+                let mut input = String::new();
+                if let Err(_) = io::stdin().read_line(&mut input) {
+                    panic!("Error reading line")
+                }
+                input.pop();
+                Constant::Str(input)
+            }),
         );
 
         prelude.insert(
             Symbol::new("head"),
-            Constant::Fun {
-                arity: 1,
-                body: vecop![OpCode::Cnll(|xs| {
-                    match xs {
-                        Constant::List(xs) => match xs.head() {
-                            Some(x) => x.clone(),
-                            None => Constant::Nil,
-                        },
-                        other => panic!("Expected a list, found {}", other),
-                    }
-                })],
-            },
+            nativefn!(|xs| {
+                match xs {
+                    Constant::List(xs) => match xs.head() {
+                        Some(x) => x.clone(),
+                        None => Constant::Nil,
+                    },
+                    other => panic!("Expected a list, found {}", other),
+                }
+            }),
         );
 
         prelude.insert(
             Symbol::new("tail"),
-            Constant::Fun {
-                arity: 1,
-                body: vecop![OpCode::Cnll(|xs| {
-                    match xs {
-                        Constant::List(xs) => Constant::List(xs.tail()),
-                        other => panic!("Expected a list, found {}", other),
-                    }
-                })],
-            },
+            nativefn!(|xs| {
+                match xs {
+                    Constant::List(xs) => Constant::List(xs.tail()),
+                    other => panic!("Expected a list, found {}", other),
+                }
+            }),
+        );
+
+        prelude.insert(
+            Symbol::new("str"),
+            nativefn!(|xs| Constant::Str(format!("{}", xs))),
         );
 
         Self {

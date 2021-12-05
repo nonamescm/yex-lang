@@ -14,8 +14,13 @@ pub struct Node {
 
 impl List {
     /// Creates a List
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { head: None }
+    }
+
+    /// Checks if the list is empty
+    pub fn is_empty(&self) -> bool {
+        self.head == None
     }
 
     /// Prepends a value to the end, returning the list
@@ -49,13 +54,21 @@ impl std::fmt::Display for List {
         let str = loop {
             let mut str = String::from('[');
             str.push_str(&match self.head() {
-                Some(s) => format!("{},", s),
+                Some(s) => if self.tail().is_empty() {
+                    format!("{}", s)
+                } else {
+                    format!("{}, ", s)
+                }
                 None => break str + "]",
             });
 
             let mut head = self.tail();
             while head.head() != None {
-                str.push_str(&format!("{},", head.head().unwrap()));
+                if head.tail().is_empty() {
+                    str.push_str(&format!("{}", head.head().unwrap()));
+                } else {
+                    str.push_str(&format!("{}, ", head.head().unwrap()));
+                }
                 head = head.tail();
             }
 
