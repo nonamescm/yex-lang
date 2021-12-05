@@ -353,7 +353,10 @@ impl Default for VirtualMachine {
             Constant::Fun {
                 arity: 1,
                 body: vecop![OpCode::Cnll(|c| {
-                    println!("{}", c);
+                    match c {
+                        Constant::Str(s) => println!("{}", s),
+                        other => println!("{}", other)
+                    };
                     Constant::Nil
                 })],
             },
@@ -364,7 +367,10 @@ impl Default for VirtualMachine {
             Constant::Fun {
                 arity: 1,
                 body: vecop![OpCode::Cnll(|c| {
-                    print!("{}", c);
+                    match c {
+                        Constant::Str(s) => print!("{}", s),
+                        other => print!("{}", other)
+                    };
                     Constant::Nil
                 })],
             },
