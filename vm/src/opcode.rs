@@ -82,6 +82,11 @@ pub enum OpCode {
     /// The stack layout after running it: [new-list]
     Prep,
 
+    /// Swap the two first elements in the stack
+    /// The stack layout before running this opcode: [a, b]
+    /// The stack layout after running it: [b, a]
+    Rev,
+
     /// Add the two values on the stack top
     /// The stack layout before running this opcode: [const1, const2]
     /// The stack layout after running it: [result]

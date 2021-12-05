@@ -296,7 +296,7 @@ impl Compiler {
     }
 
     fn equality(&mut self) -> ParseResult {
-        self.bitwise()?;
+        self.cons()?;
 
         while let Tkt::Eq = self.current.token {
             let operator = match self.current.token {
@@ -304,8 +304,21 @@ impl Compiler {
                 _ => unreachable!(),
             };
             self.next()?;
-            self.bitwise()?;
+            self.equality()?;
             self.emit(operator);
+        }
+
+        Ok(())
+    }
+
+    fn cons(&mut self) -> ParseResult {
+        self.bitwise()?;
+
+        while Tkt::Cons == self.current.token {
+            self.next()?;
+            self.cons()?;
+            self.emit(OpCode::Rev);
+            self.emit(OpCode::Prep);
         }
 
         Ok(())
@@ -325,7 +338,7 @@ impl Compiler {
                 _ => unreachable!(),
             };
             self.next()?;
-            self.term()?;
+            self.bitwise()?;
             self.emit(operator);
         }
 
@@ -449,6 +462,9 @@ impl Compiler {
                 break;
             }
             self.next()?;
+            if matches!(self.current.token, Tkt::Rbrack) {
+                break;
+            }
 
             self.proxies.push(vec![]);
             self.expression()?; // compiles the argument

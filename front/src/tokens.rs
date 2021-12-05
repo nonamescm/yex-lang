@@ -27,6 +27,7 @@ pub enum TokenType {
     Eq,
     Not,
     Assign,
+    Cons,
 
     // bitwise
     BitOr,
@@ -78,6 +79,7 @@ impl std::fmt::Display for TokenType {
             Self::Eq => "==".into(),
             Self::Not => '~'.into(),
             Self::Assign => '='.into(),
+            Self::Cons => "::".into(),
             Self::BitAnd => "&&&".into(),
             Self::BitOr => "|||".into(),
             Self::BitXor => "^^^".into(),

@@ -195,6 +195,13 @@ impl VirtualMachine {
                     self.push(Constant::List(xs.prepend(val)))
                 }
 
+                Rev => {
+                    let a = self.pop();
+                    let b = self.pop();
+                    self.push(a);
+                    self.push(b);
+                }
+
                 Add => binop!(+),
                 Sub => binop!(-),
                 Mul => binop!(*),
@@ -243,7 +250,7 @@ impl VirtualMachine {
         match carity.cmp(&farity) {
             Ordering::Greater => panic!(
                 "function expected {} arguments, but received {}",
-                carity, farity
+                farity, carity
             ),
             Ordering::Less => self.push(Constant::PartialFun {
                 arity: farity - carity,
@@ -279,7 +286,7 @@ impl VirtualMachine {
         match carity.cmp(&farity) {
             Ordering::Greater => panic!(
                 "function expected {} arguments, but received {}",
-                carity, farity
+                farity, carity
             ),
 
             Ordering::Less => {
@@ -410,6 +417,35 @@ impl Default for VirtualMachine {
                     }
                     input.pop();
                     Constant::Str(input)
+                })],
+            },
+        );
+
+        prelude.insert(
+            Symbol::new("head"),
+            Constant::Fun {
+                arity: 1,
+                body: vecop![OpCode::Cnll(|xs| {
+                    match xs {
+                        Constant::List(xs) => match xs.head() {
+                            Some(x) => x.clone(),
+                            None => Constant::Nil,
+                        },
+                        other => panic!("Expected a list, found {}", other),
+                    }
+                })],
+            },
+        );
+
+        prelude.insert(
+            Symbol::new("tail"),
+            Constant::Fun {
+                arity: 1,
+                body: vecop![OpCode::Cnll(|xs| {
+                    match xs {
+                        Constant::List(xs) => Constant::List(xs.tail()),
+                        other => panic!("Expected a list, found {}", other),
+                    }
                 })],
             },
         );
