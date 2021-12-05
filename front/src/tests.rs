@@ -109,7 +109,8 @@ fn lex_test_2() {
 fn test_compiler() {
     use crate::compile;
 
-    let bytecode = compile("let oi = 10 in oi * 20").expect("Should be a valid syntax");
+    let bytecode = compile("let _ = let oi = 10 in oi * 20").expect("Should be a valid syntax");
+    let oi = Symbol::new("oi");
 
     assert_eq!(
         bytecode,
@@ -117,40 +118,41 @@ fn test_compiler() {
             vec![
                 OpCodeMetadata {
                     line: 1,
-                    column: 11,
+                    column: 19,
                     opcode: OpCode::Push(0)
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 14,
-                    opcode: OpCode::Save(1)
-                },
-                OpCodeMetadata {
-                    line: 1,
-                    column: 17,
-                    opcode: OpCode::Load(1)
-                },
-                OpCodeMetadata {
-                    line: 1,
                     column: 22,
-                    opcode: OpCode::Push(2)
+                    opcode: OpCode::Save(oi)
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 23,
+                    column: 25,
+                    opcode: OpCode::Load(oi)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 30,
+                    opcode: OpCode::Push(1)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 31,
                     opcode: OpCode::Mul
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 23,
-                    opcode: OpCode::Drop(1)
-                }
+                    column: 31,
+                    opcode: OpCode::Drop(oi)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 31,
+                    opcode: OpCode::Save(Symbol::new("_"))
+                },
             ],
-            vec![
-                Constant::Num(10.0),
-                Constant::Val(Symbol::new("oi")),
-                Constant::Num(20.0)
-            ]
+            vec![Constant::Num(10.0), Constant::Num(20.0)]
         )
     );
 }
