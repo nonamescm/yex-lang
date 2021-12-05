@@ -9,6 +9,7 @@ mod opcode;
 mod stack;
 mod list;
 
+use std::io::{self, Write};
 use std::cmp::Ordering;
 
 use crate::{env::Env, stack::StackVec};
@@ -372,6 +373,28 @@ impl Default for VirtualMachine {
                         other => print!("{}", other)
                     };
                     Constant::Nil
+                })],
+            },
+        );
+
+        prelude.insert(
+            Symbol::new("input"),
+            Constant::Fun {
+                arity: 1,
+                body: vecop![OpCode::Cnll(|c| {
+                    match c {
+                        Constant::Str(s) => print!("{}", s),
+                        other => print!("{}", other)
+                    };
+                    if let Err(_) = io::stdout().flush() {
+                        panic!("Error flushing stdout")
+                    }
+                    let mut input = String::new();
+                    if let Err(_) = io::stdin().read_line(&mut input) {
+                        panic!("Error reading line")
+                    }
+                    input.pop();
+                    Constant::Str(input)
                 })],
             },
         );
