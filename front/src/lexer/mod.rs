@@ -85,6 +85,14 @@ impl Lexer {
 
     fn get(&mut self) -> Tk {
         let tk = match self.current() {
+            // comments
+            '/' if self.peek_at(1) == '/' => {
+                while !matches!(self.current(), '\n' | EOF) {
+                    self.next();
+                }
+                return self.get();
+            }
+
             '+' => TokenType::Add,
             '-' => TokenType::Sub,
             '/' => TokenType::Div,
@@ -166,7 +174,6 @@ impl Lexer {
                 self.next();
                 TokenType::BitXor
             }
-
             ',' => TokenType::Colon,
 
             EOF => TokenType::Eof,
