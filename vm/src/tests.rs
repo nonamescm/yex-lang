@@ -1,4 +1,4 @@
-use crate::{Constant, OpCode, OpCodeMetadata, VirtualMachine};
+use crate::{Constant, OpCode, OpCodeMetadata, VirtualMachine, list::List};
 
 macro_rules! vecm {
     ($($tt:tt)*) => {
@@ -42,4 +42,27 @@ fn test_ops() {
     vm.run(vecm![Push(0), Push(0), Div]);
     assert_eq!(vm.pop_last(), &Constant::Num(1.0));
     vm.reset();
+}
+
+#[test]
+fn test_list() {
+    use Constant::Num;
+    let list = List::new();
+    assert_eq!(list.head(), None);
+
+    let list = list.prepend(Num(1.0)).prepend(Num(2.0)).prepend(Num(3.0));
+    assert_eq!(list.head(), Some(&Num(3.0)));
+
+    let list = list.tail();
+    assert_eq!(list.head(), Some(&Num(2.0)));
+
+    let list = list.tail();
+    assert_eq!(list.head(), Some(&Num(1.0)));
+
+    let list = list.tail();
+    assert_eq!(list.head(), None);
+
+    // Make sure empty tail works
+    let list = list.tail();
+    assert_eq!(list.head(), None);
 }

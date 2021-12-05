@@ -4,7 +4,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 use std::{iter::Peekable, mem::take};
-use vm::{Bytecode, Constant, OpCode, OpCodeMetadata, Symbol};
+use vm::{Bytecode, Constant, List, OpCode, OpCodeMetadata, Symbol};
 
 type ParseResult = Result<(), ParseError>;
 
@@ -442,6 +442,37 @@ impl Compiler {
         Ok(())
     }
 
+    fn list(&mut self) -> ParseResult {
+        let mut ret_vec = vec![];
+        loop {
+            if matches!(self.current.token, Tkt::Rbrack) {
+                break;
+            }
+            self.next()?;
+
+            self.proxies.push(vec![]);
+            self.expression()?; // compiles the argument
+            self.emit(OpCode::Prep);
+            ret_vec.push(self.proxies.pop().unwrap());
+
+            if !matches!(&self.current.token, Tkt::Colon | Tkt::Rbrack) {
+                self.throw(format!(
+                    "Expected `,`, `)` or other token, found `{}`",
+                    &self.current.token
+                ))?;
+            }
+        }
+
+        ret_vec
+            .iter()
+            .map(|it| it.iter().rev())
+            .flatten()
+            .for_each(|it| self.emit_metadata(*it));
+
+        self.emit_const_push(Constant::List(List::new()));
+        Ok(())
+    }
+
     fn block(&mut self) -> ParseResult {
         assert_eq!(self.current.token, Tkt::Lparen);
 
@@ -475,7 +506,7 @@ impl Compiler {
                 self.emit(Load(v));
             }
             Tkt::Nil => push!(Nil),
-
+            Tkt::Lbrack => self.list()?,
             Tkt::Lparen => {
                 self.current.token = Tkt::Lparen; // `(` is needed for self.block() to work correctly
                 self.block()?;

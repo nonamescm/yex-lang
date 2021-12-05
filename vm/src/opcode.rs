@@ -43,6 +43,9 @@ pub enum OpCode {
     /// Calls a native rust function
     Cnll(fn(Constant) -> Constant),
 
+    /// Prepends a value to a list
+    Prep,
+
     /// Add the two values on the stack top
     Add,
 

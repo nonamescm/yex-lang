@@ -7,6 +7,7 @@ mod env;
 mod literal;
 mod opcode;
 mod stack;
+mod list;
 
 use std::cmp::Ordering;
 
@@ -14,6 +15,7 @@ use crate::{env::Env, stack::StackVec};
 pub use crate::{
     literal::{symbol::Symbol, Constant},
     opcode::{OpCode, OpCodeMetadata},
+    list::List,
 };
 
 const STACK_SIZE: usize = 512;
@@ -163,6 +165,15 @@ impl VirtualMachine {
                 Cnll(fun) => {
                     let ret = fun(self.pop());
                     self.push(ret)
+                }
+
+                Prep => {
+                    let val = self.pop();
+                    let xs = match self.pop() {
+                        Constant::List(xs) => xs,
+                        other => panic!("Expected a list, found a `{}`", other)
+                    };
+                    self.push(Constant::List(xs.prepend(val)))
                 }
 
                 Add => binop!(+),

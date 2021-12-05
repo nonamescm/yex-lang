@@ -36,6 +36,8 @@ pub enum TokenType {
     Shl, // left-shift
     Lparen,
     Rparen,
+    Lbrack,
+    Rbrack,
 
     // Symbol
     Colon,
@@ -83,6 +85,8 @@ impl std::fmt::Display for TokenType {
             Self::Shl => "<<<".into(),
             Self::Lparen => '('.into(),
             Self::Rparen => ')'.into(),
+            Self::Lbrack => '['.into(),
+            Self::Rbrack => ']'.into(),
             Self::Colon => ','.into(),
             Self::Eof => "<eof>".into(),
         };

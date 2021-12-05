@@ -2,7 +2,7 @@ use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub};
 pub mod symbol;
 use symbol::Symbol;
 
-use crate::Bytecode;
+use crate::{list::List, Bytecode};
 
 /// Immediate values that can be consumed
 #[derive(Debug, PartialEq, Clone)]
@@ -31,6 +31,9 @@ pub enum Constant {
         /// The arguments that where already passed to the function
         args: Vec<Constant>,
     },
+
+    /// Yex lists
+    List(List),
     /// null
     Nil,
 }
@@ -72,6 +75,7 @@ impl std::fmt::Display for Constant {
         let tk = match self {
             Fun { arity, .. } | PartialFun { arity, .. } => format!("<fun({})>", arity),
             Nil => "nil".to_string(),
+            List(xs) => format!("{}", xs),
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),

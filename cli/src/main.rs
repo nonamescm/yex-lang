@@ -11,6 +11,11 @@ fn start(mut args: Vec<String>) -> i32 {
             println!("{}", e);
             (vec![], vec![])
         });
+        #[cfg(debug_assertions)]
+        {
+            println!("{:#?}", &bytecode);
+            println!("{:#?}", &constants);
+        }
         vm.set_consts(constants);
         vm.run(bytecode);
         0
