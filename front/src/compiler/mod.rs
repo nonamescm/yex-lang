@@ -413,22 +413,29 @@ impl Compiler {
     fn call(&mut self) -> ParseResult {
         let comp = self.compiled_opcodes();
         self.primary()?; // compiles the called expresion
-        let callee = {
-            let mut old_comp = self.compiled_opcodes() - comp;
-            let mut proxy = self.proxies.pop().unwrap();
-            let mut new = vec![];
 
-            while old_comp > 0 {
-                new.push(proxy.pop().unwrap());
-                old_comp -= 1;
-            }
-
-            self.proxies.push(proxy);
-            new
-        };
-
+        let mut callee = vec![];
         let mut arity = 0;
         let mut is_call = false;
+
+        if matches!(
+            self.lexer.peek().unwrap().as_ref().map(|c| &c.token),
+            Ok(Tkt::Lparen)
+        ) {
+            callee = {
+                let mut old_comp = self.compiled_opcodes() - comp;
+                let mut proxy = self.proxies.pop().unwrap();
+                let mut new = vec![];
+
+                while old_comp > 0 {
+                    new.push(proxy.pop().unwrap());
+                    old_comp -= 1;
+                }
+
+                self.proxies.push(proxy);
+                new
+            };
+        }
 
         while matches!(
             self.lexer.peek().unwrap().as_ref().map(|c| &c.token),
@@ -437,6 +444,7 @@ impl Compiler {
             self.call_args(&mut arity)?;
             is_call = true;
         }
+        println!("Calle: {:#?}", callee);
         callee.iter().for_each(|it| self.emit(it.opcode));
 
         if is_call {
@@ -484,7 +492,9 @@ impl Compiler {
         assert_eq!(self.current.token, Tkt::Lparen);
 
         self.next()?;
+        println!("Before: {:#?}", self.proxies);
         self.expression()?;
+        println!("After: {:#?}", self.proxies);
         self.assert(
             &[Tkt::Rparen],
             format!(
