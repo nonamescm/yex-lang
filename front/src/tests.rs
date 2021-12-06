@@ -1,5 +1,5 @@
 #[cfg(test)]
-use vm::{Constant, OpCode, OpCodeMetadata, Symbol};
+use vm::{Constant, OpCode, OpCodeMetadata, Symbol, List};
 
 #[test]
 fn lex_test() {
@@ -110,7 +110,7 @@ fn test_compiler() {
     use crate::compile;
     use OpCode::*;
 
-    let bytecode = compile("let _ = let oi = 10 in oi * 20").expect("Should be a valid syntax");
+    let bytecode = compile("let _ = let oi = (((10))) in oi * 20").expect("Should be a valid syntax");
     let oi = Symbol::new("oi");
 
     assert_eq!(
@@ -119,41 +119,95 @@ fn test_compiler() {
             vec![
                 OpCodeMetadata {
                     line: 1,
-                    column: 19,
+                    column: 22,
                     opcode: Push(0)
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 22,
+                    column: 28,
                     opcode: Save(oi)
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 25,
+                    column: 31,
                     opcode: Load(oi)
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 30,
+                    column: 36,
                     opcode: Push(1)
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 31,
+                    column: 37,
                     opcode: Mul
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 31,
+                    column: 37,
                     opcode: Drop(oi)
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 31,
+                    column: 37,
                     opcode: Savg(Symbol::new("_"))
                 }
             ],
             vec![Constant::Num(10.0), Constant::Num(20.0)]
         )
     );
+
+    assert_eq!(
+        compile("let _ = [1, 2, 3]").unwrap(),
+        (
+            vec![
+                OpCodeMetadata {
+                    line: 1,
+                    column: 9,
+                    opcode: Push(0)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 16,
+                    opcode: Push(3)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 17,
+                    opcode: Prep
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 13,
+                    opcode: Push(2)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 14,
+                    opcode: Prep
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 10,
+                    opcode: Push(1)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 11,
+                    opcode: Prep
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 18,
+                    opcode: Savg(Symbol::new("_"))
+                }
+            ],
+            vec![
+                Constant::List(List::new()),
+                Constant::Num(1.0),
+                Constant::Num(2.0),
+                Constant::Num(3.0)
+            ]
+        )
+    )
 }

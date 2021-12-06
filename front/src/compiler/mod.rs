@@ -464,6 +464,7 @@ impl Compiler {
 
     fn list(&mut self) -> ParseResult {
         let mut ret_vec = vec![];
+        self.emit_const_push(Constant::List(List::new()));
         loop {
             if matches!(self.current.token, Tkt::Rbrack) {
                 break;
@@ -488,11 +489,10 @@ impl Compiler {
 
         ret_vec
             .iter()
-            .map(|it| it.iter().rev())
+            .rev()
             .flatten()
             .for_each(|it| self.emit_metadata(*it));
 
-        self.emit_const_push(Constant::List(List::new()));
         Ok(())
     }
 
