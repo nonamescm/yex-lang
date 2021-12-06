@@ -134,6 +134,7 @@ impl Compiler {
             Tkt::Let => self.let_(),
             Tkt::Fn => self.fn_(),
             Tkt::Become => self.become_(),
+            Tkt::Lparen => self.block(),
             _ => self.equality(),
         }
     }
@@ -485,7 +486,7 @@ impl Compiler {
 
         self.next()?;
         self.expression()?;
-        self.assert(
+        self.consume(
             &[Tkt::Rparen],
             format!(
                 "expected `)` to close the block, found `{}`",
@@ -514,10 +515,6 @@ impl Compiler {
             }
             Tkt::Nil => push!(Nil),
             Tkt::Lbrack => self.list()?,
-            Tkt::Lparen => {
-                self.current.token = Tkt::Lparen; // `(` is needed for self.block() to work correctly
-                self.block()?;
-            }
             tk => self.throw(format!("expected expression, found `{}`", tk))?,
         }
 
