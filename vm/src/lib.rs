@@ -228,22 +228,30 @@ impl VirtualMachine {
         Constant::Nil
     }
 
-    fn call(&mut self, carity: usize) {
-        let mut f_args = vec![];
+    fn call_helper(&mut self, carity: usize) -> (Bytecode, usize, Vec<Constant>) {
+        let mut fargs = vec![];
 
         let (farity, body) = match self.pop() {
             Constant::Fun { arity, body } => (arity, body),
             Constant::PartialFun { arity, body, args } => {
-                f_args = args;
+                fargs = args;
                 (arity, body)
             }
             other => panic!("Can't call {}", other),
         };
 
-        while f_args.len() < carity {
-            f_args.push(self.pop())
+        let mut old_fargs_len = 0;
+        let len = fargs.len();
+        while fargs.len() - len < carity {
+            fargs.insert(old_fargs_len, self.pop());
+            old_fargs_len += 1;
         }
 
+        (body, farity, fargs)
+    }
+
+    fn call(&mut self, carity: usize) {
+        let (body, farity, fargs) = self.call_helper(carity);
         match carity.cmp(&farity) {
             Ordering::Greater => panic!(
                 "function expected {} arguments, but received {}",
@@ -252,10 +260,10 @@ impl VirtualMachine {
             Ordering::Less => self.push(Constant::PartialFun {
                 arity: farity - carity,
                 body,
-                args: f_args,
+                args: fargs,
             }),
             Ordering::Equal => {
-                f_args.into_iter().for_each(|it| self.push(it));
+                fargs.into_iter().for_each(|it| self.push(it));
 
                 let curr_env = mem::replace(&mut self.variables, Env::new());
                 self.run(body);
@@ -265,21 +273,7 @@ impl VirtualMachine {
     }
 
     fn tcall(&mut self, carity: usize) {
-        let mut f_args = vec![];
-
-        let (farity, body) = match self.pop() {
-            Constant::Fun { arity, body } => (arity, body),
-            Constant::PartialFun { arity, body, args } => {
-                f_args = args;
-                (arity, body)
-            }
-            other => panic!("Can't call {}", other),
-        };
-
-        while f_args.len() < carity {
-            f_args.push(self.pop())
-        }
-
+        let (body, farity, fargs) = self.call_helper(carity);
         match carity.cmp(&farity) {
             Ordering::Greater => panic!(
                 "function expected {} arguments, but received {}",
@@ -290,7 +284,7 @@ impl VirtualMachine {
                 panic!("Can't use partial application in a tail call")
             }
             Ordering::Equal => {
-                f_args.into_iter().for_each(|it| self.push(it));
+                fargs.into_iter().for_each(|it| self.push(it));
 
                 if &body == self.bytecode() {
                     *self.ip() = 0;
@@ -426,7 +420,7 @@ impl Default for VirtualMachine {
                         Some(x) => x.clone(),
                         None => Constant::Nil,
                     },
-                    other => panic!("Expected a list, found {}", other),
+                    other => panic!("head() expected a list, found {}", other),
                 }
             }),
         );
@@ -436,7 +430,7 @@ impl Default for VirtualMachine {
             nativefn!(|xs| {
                 match xs {
                     Constant::List(xs) => Constant::List(xs.tail()),
-                    other => panic!("Expected a list, found {}", other),
+                    other => panic!("tail() expected a list, found {}", other),
                 }
             }),
         );
@@ -444,6 +438,30 @@ impl Default for VirtualMachine {
         prelude.insert(
             Symbol::new("str"),
             nativefn!(|xs| Constant::Str(format!("{}", xs))),
+        );
+
+        prelude.insert(
+            Symbol::new("type"),
+            nativefn!(|it| Constant::Str(
+                match it {
+                    Constant::List(_) => "list",
+                    Constant::Str(_) => "str",
+                    Constant::Num(_) => "num",
+                    Constant::Bool(_) => "bool",
+                    Constant::Sym(_) => "symbol",
+                    Constant::Nil => "nil",
+                    Constant::Fun { .. } => "fn",
+                    Constant::PartialFun { .. } => "fn",
+                }
+                .into()
+            )),
+        );
+
+        prelude.insert(
+            Symbol::new("__inspect__"),
+            nativefn!(|it| {
+                Constant::Str(format!("{:#?}", it))
+            }),
         );
 
         Self {
