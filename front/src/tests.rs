@@ -108,6 +108,7 @@ fn lex_test_2() {
 #[test]
 fn test_compiler() {
     use crate::compile;
+    use OpCode::*;
 
     let bytecode = compile("let _ = let oi = 10 in oi * 20").expect("Should be a valid syntax");
     let oi = Symbol::new("oi");
@@ -119,38 +120,38 @@ fn test_compiler() {
                 OpCodeMetadata {
                     line: 1,
                     column: 19,
-                    opcode: OpCode::Push(0)
+                    opcode: Push(0)
                 },
                 OpCodeMetadata {
                     line: 1,
                     column: 22,
-                    opcode: OpCode::Save(oi)
+                    opcode: Save(oi)
                 },
                 OpCodeMetadata {
                     line: 1,
                     column: 25,
-                    opcode: OpCode::Load(oi)
+                    opcode: Load(oi)
                 },
                 OpCodeMetadata {
                     line: 1,
                     column: 30,
-                    opcode: OpCode::Push(1)
+                    opcode: Push(1)
                 },
                 OpCodeMetadata {
                     line: 1,
                     column: 31,
-                    opcode: OpCode::Mul
+                    opcode: Mul
                 },
                 OpCodeMetadata {
                     line: 1,
                     column: 31,
-                    opcode: OpCode::Drop(oi)
+                    opcode: Drop(oi)
                 },
                 OpCodeMetadata {
                     line: 1,
                     column: 31,
-                    opcode: OpCode::Save(Symbol::new("_"))
-                },
+                    opcode: Savg(Symbol::new("_"))
+                }
             ],
             vec![Constant::Num(10.0), Constant::Num(20.0)]
         )

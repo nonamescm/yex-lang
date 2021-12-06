@@ -35,13 +35,14 @@ pub enum TokenType {
     BitXor,
     Shr, // right-shift
     Shl, // left-shift
+
+    // Symbol
     Lparen,
     Rparen,
     Lbrack,
     Rbrack,
-
-    // Symbol
     Colon,
+    Seq,
 
     Eof,
 }
@@ -68,8 +69,8 @@ impl std::fmt::Display for TokenType {
             Self::Then => "then".into(),
             Self::End => "end".into(),
             Self::Let => "let".into(),
-            Self::In => "in".into(),
             Self::Fn => "fn".into(),
+            Self::In => "in".into(),
             Self::Become => "become".into(),
 
             Self::Add => '+'.into(),
@@ -80,16 +81,20 @@ impl std::fmt::Display for TokenType {
             Self::Not => '~'.into(),
             Self::Assign => '='.into(),
             Self::Cons => "::".into(),
+
             Self::BitAnd => "&&&".into(),
             Self::BitOr => "|||".into(),
             Self::BitXor => "^^^".into(),
             Self::Shr => ">>>".into(),
             Self::Shl => "<<<".into(),
+
             Self::Lparen => '('.into(),
             Self::Rparen => ')'.into(),
             Self::Lbrack => '['.into(),
             Self::Rbrack => ']'.into(),
             Self::Colon => ','.into(),
+            Self::Seq => "=>".into(),
+
             Self::Eof => "<eof>".into(),
         };
 

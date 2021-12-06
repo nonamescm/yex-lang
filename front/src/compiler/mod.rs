@@ -129,13 +129,22 @@ impl Compiler {
     }
 
     fn expression(&mut self) -> ParseResult {
-        match self.current.token {
-            Tkt::If => self.condition(),
-            Tkt::Let => self.let_(),
-            Tkt::Fn => self.fn_(),
-            Tkt::Become => self.become_(),
-            _ => self.equality(),
+        loop {
+            match self.current.token {
+                Tkt::If => self.condition(),
+                Tkt::Let => self.let_(),
+                Tkt::Fn => self.fn_(),
+                Tkt::Become => self.become_(),
+                _ => self.equality(),
+            }?;
+
+            if self.current.token != Tkt::Seq {
+                break;
+            }
+            self.next()?;
         }
+
+        Ok(())
     }
 
     fn function(&mut self) -> ParseResult {
@@ -444,7 +453,6 @@ impl Compiler {
             self.call_args(&mut arity)?;
             is_call = true;
         }
-        println!("Calle: {:#?}", callee);
         callee.iter().for_each(|it| self.emit(it.opcode));
 
         if is_call {
@@ -492,9 +500,7 @@ impl Compiler {
         assert_eq!(self.current.token, Tkt::Lparen);
 
         self.next()?;
-        println!("Before: {:#?}", self.proxies);
         self.expression()?;
-        println!("After: {:#?}", self.proxies);
         self.assert(
             &[Tkt::Rparen],
             format!(
