@@ -39,6 +39,23 @@ impl Compiler {
         Ok((this.proxies.pop().unwrap(), this.constants))
     }
 
+    pub fn compile_expr(lexer: Lexer) -> Result<(Bytecode, Vec<Constant>), ParseError> {
+        let mut this = Self {
+            lexer: lexer.peekable(),
+            constants: vec![],
+            current: Token {
+                line: 0,
+                column: 0,
+                token: Tkt::Eof,
+            },
+            proxies: vec![vec![]],
+        };
+        this.next()?;
+
+        this.expression()?;
+        Ok((this.proxies.pop().unwrap(), this.constants))
+    }
+
     fn scoped_let(&mut self) -> ParseResult {
         if self.current.token != Tkt::Let {
             self.throw(format!("Expected `let`, found `{}`", self.current.token))?

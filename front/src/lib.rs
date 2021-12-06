@@ -15,3 +15,10 @@ pub fn compile<T: Into<String>>(
 ) -> Result<(vm::Bytecode, Vec<vm::Constant>), error::ParseError> {
     Compiler::compile(Lexer::new(str))
 }
+
+/// Compiles a given expression into yex bytecode
+pub fn compile_expr<T: Into<String>>(
+    str: T,
+) -> Result<(vm::Bytecode, Vec<vm::Constant>), error::ParseError> {
+    Compiler::compile_expr(Lexer::new(str))
+}
