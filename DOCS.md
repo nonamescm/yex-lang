@@ -4,30 +4,30 @@
 This tutorial assumes that you have previous experience with programming and
 already has the yex language installed.
 
-1. [Basics](#basics)
+* [Basics](#basics)
   * [Primitives](#Primitives)
     * [Numbers](#Numbers)
     * [Strings](#Strings)
     * [Bool](#Booleans)
     * [Nulls](#Nulls)
   * [Structuring a program](#structuring-a-program)
-2. [Variables](#variables)
+* [Variables](#variables)
   * [Globals](#globals)
   * [Locals](#locals)
-3. [Lists](#lists)
+* [Lists](#lists)
   * [Creating lists](#creating-lists)
   * [Operating on lists](#operating-on-lists)
-4. [Functions](#Functions)
+* [Functions](#Functions)
   * [Creating functions](#creating-functions)
     * [Named functions](#named-functions)
     * [Anonymous functions](#anonymous-functions)
   * [Tail calls](#tail-calls)
-4. [Control flow](#control-flow)
+* [Control flow](#control-flow)
   * [Conditional execution](#conditional-execution)
     * [If and else](#if-and-else)
   * [Sequential execution](#sequential-execution)
     * [The sequence operator](#the-sequence-operator)
-5. [Builtin functions](#builtin-functions)
+* [Builtin functions](#builtin-functions)
 
 ## Basics
 
