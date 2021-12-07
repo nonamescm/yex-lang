@@ -21,12 +21,13 @@ already has the yex language installed.
   * [Creating functions](#creating-functions)
     * [Named functions](#named-functions)
     * [Anonymous functions](#anonymous-functions)
-  2. [Tail calls](#tail-calls)
+  * [Tail calls](#tail-calls)
 4. [Control flow](#control-flow)
   * [Conditional execution](#conditional-execution)
     * [If and else](#if-and-else)
   * [Sequential execution](#sequential-execution)
     * [The sequence operator](#the-sequence-operator)
+5. [Builtin functions](#builtin-functions)
 
 ## Basics
 
@@ -310,3 +311,16 @@ This should print:
 Hello
 World
 ```
+
+## Builtin functions
+
+| Name      | Description                                       |
+|-----------|---------------------------------------------------|
+| `print`   | prints a value without adding the new line        |
+| `puts`    | prints a value with a newline at the end          |
+| `str`     | converts a value to string                        |
+| `input`   | Reads the input from the console                  |
+| `head`    | Returns the first element of a list               |
+| `tail`    | Returns the tail of a list                        |
+| `type`    | Returns the string representation of value type's |
+| `inspect` | Returns the intern representation of the value    |
