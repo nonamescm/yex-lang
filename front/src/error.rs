@@ -1,4 +1,5 @@
 #[derive(Debug, PartialEq, Eq)]
+/// Parse errors
 pub struct ParseError {
     line: usize,
     column: usize,
@@ -12,7 +13,7 @@ impl std::fmt::Display for ParseError {
 }
 
 impl ParseError {
-    pub fn throw<T>(line: usize, column: usize, message: String) -> Result<T, Self> {
+    pub(crate) fn throw<T>(line: usize, column: usize, message: String) -> Result<T, Self> {
         Err(Self {
             line,
             column,

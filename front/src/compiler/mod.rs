@@ -53,6 +53,9 @@ impl Compiler {
         this.next()?;
 
         this.expression()?;
+        if this.current.token != Tkt::Eof {
+            this.throw(format!("Expected <eof>, got {}", this.current.token))?
+        }
         Ok((this.proxies.pop().unwrap(), this.constants))
     }
 
