@@ -22,6 +22,7 @@ already has the yex language installed.
     * [Named functions](#named-functions)
     * [Anonymous functions](#anonymous-functions)
   * [Tail calls](#tail-calls)
+  * [Partial application](#partial-application)
 * [Control flow](#control-flow)
   * [Conditional execution](#conditional-execution)
     * [If and else](#if-and-else)
