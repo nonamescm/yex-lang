@@ -201,8 +201,8 @@ yex> [1, "hello", :symbol, [3, 4], true, nil]
 ### Operating on lists
 
 Lists support the following operations:
-  * head() - returns the first element of the list
-  * tail() - returns the tail of the list, (all elements except for the first)
+  * `head()` - returns the first element of the list
+  * `tail()` - returns the tail of the list, (all elements except for the first)
   * `::` - This is the cons operator, it add a new element at the start of the
     list without mutating it.
 
@@ -268,6 +268,22 @@ let until_0 num =
 Tail calls just use a jump instruction, so they are faster than normal recursive
 functions. A important detail about tail calls is that they can only be used to
 do recursion, they can't call any arbitrary function.
+
+### Partial application
+
+Functions in yex support partial application, or, in other words, you can call a
+function with missing arguments and it will return another function.
+
+In the repl, type:
+
+```
+yex> let mul a b = a * b
+>> nil
+yex> let double = mul(2) // returns mul() with the `a` argument already applied
+>> nil
+yex> double(5)
+>> 10
+```
 
 ## Controw flow
 
