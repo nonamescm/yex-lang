@@ -458,7 +458,7 @@ impl Default for VirtualMachine {
         );
 
         prelude.insert(
-            Symbol::new("__inspect__"),
+            Symbol::new("inspect"),
             nativefn!(|it| {
                 Constant::Str(format!("{:#?}", it))
             }),
