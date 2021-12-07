@@ -47,6 +47,21 @@ impl List {
     pub fn head(&self) -> Option<&Constant> {
         self.head.as_ref().map(|node| Some(&node.as_ref().elem))?
     }
+
+    /// Returns a index into the list
+    pub fn index(&self, index: usize) -> Constant {
+        use Constant::Nil;
+        if index == 0 {
+            self.head().cloned().unwrap_or(Nil)
+        } else {
+            let tail = self.tail();
+            if tail.is_empty() {
+                Nil
+            } else {
+                tail.index(index - 1)
+            }
+        }
+    }
 }
 
 impl std::fmt::Display for List {

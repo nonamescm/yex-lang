@@ -192,6 +192,19 @@ impl VirtualMachine {
                     self.push(Constant::List(xs.prepend(val)))
                 }
 
+                Index => {
+                    let index = match self.pop() {
+                        Constant::Num(n) if n.fract() == 0.0 && n > 0.0 => n as usize,
+                        other => panic!("Expected a integer to use as index, found a `{}`", other),
+                    };
+                    let xs = match self.pop() {
+                        Constant::List(xs) => xs,
+                        other => panic!("Expected a list to index, found a `{}`", other),
+                    };
+
+                    self.push(xs.index(index))
+                }
+
                 Rev => {
                     let a = self.pop();
                     let b = self.pop();
@@ -459,9 +472,7 @@ impl Default for VirtualMachine {
 
         prelude.insert(
             Symbol::new("inspect"),
-            nativefn!(|it| {
-                Constant::Str(format!("{:#?}", it))
-            }),
+            nativefn!(|it| { Constant::Str(format!("{:#?}", it)) }),
         );
 
         Self {

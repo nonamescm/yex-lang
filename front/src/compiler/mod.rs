@@ -411,7 +411,7 @@ impl Compiler {
             self.unary()?; // emits the expression to be applied
             self.emit(operator)
         } else {
-            self.call()?;
+            self.index()?;
             self.next()?;
         }
 
@@ -435,6 +435,22 @@ impl Compiler {
                     &self.current.token
                 ))?
             }
+        }
+        Ok(())
+    }
+
+    fn index(&mut self) -> ParseResult {
+        self.call()?; // Emits the expression to be indexed
+
+        while matches!(
+            self.lexer.peek().unwrap().as_ref().map(|c| &c.token),
+            Ok(Tkt::Lbrack)
+        ) {
+            self.next()?;
+            self.next()?;
+            self.expression()?; // emits the index to be acessed
+            self.emit(OpCode::Index);
+            self.consume(&[Tkt::Rbrack], format!("Expected `]` after index, found {}", self.current.token))?;
         }
         Ok(())
     }
