@@ -25,6 +25,12 @@ fn start(mut args: Vec<String>) -> i32 {
             file.trim().to_string()
         };
 
+        if file.is_empty() && is_repl {
+            continue;
+        } else if file.is_empty() {
+            return 0;
+        }
+
         let (bytecode, constants) = {
             if file.trim().starts_with("let") {
                 compile(file)
