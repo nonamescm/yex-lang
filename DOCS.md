@@ -34,13 +34,13 @@ already has the yex language installed.
 ### Primitives
 
 Yex has the following primitive types:
-  * fn - Functions
-  * num - 64 bits floating-point numbers
-  * str - Strings
-  * sym - Compile-time hashed strings
-  * bool - Booleans (true and false)
-  * list - Singly linked lists
-  * nil - Null values
+  * `fn` - Functions
+  * `num` - 64 bits floating-point numbers
+  * `str` - Strings
+  * `nil` - Null values
+  * `sym` - Compile-time hashed strings
+  * `bool` - Booleans (true and false)
+  * `list` - Singly linked lists
 
 Them all support the equality `==` operator.
 
