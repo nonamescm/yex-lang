@@ -2,5 +2,5 @@
 members = [
 	"vm",
 	"front",
-	"cli",
+	"yex",
 ]

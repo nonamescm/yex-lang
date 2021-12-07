@@ -3,6 +3,7 @@
 ## Contents:
 
   * [About](#about)
+  * [Installation](#installation)
   * [How to](#how-to)
   * [TODO](#todo)
   * [Contributing](#contributing)
@@ -10,6 +11,12 @@
 ## About
 
 Yex is a functional scripting language written in rust. <!--TODO: More information-->
+
+## Installation
+
+First, [install rust](https://doc.rust-lang.org/book/ch01-01-installation.html),
+after that, clone this repository on your machine and run `cargo build --release`.
+If you want to have it avaible on your path,
 
 ## How to
 
