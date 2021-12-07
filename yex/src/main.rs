@@ -11,6 +11,10 @@ fn eval_file(file: &str) -> Result<i32, front::ParseError> {
         exit(1)
     });
 
+    if file.is_empty() {
+        return Ok(0)
+    }
+
     let (bytecode, constants) = compile(file)?;
     #[cfg(debug_assertions)]
     {
