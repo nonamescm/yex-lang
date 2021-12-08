@@ -194,7 +194,7 @@ impl VirtualMachine {
 
                 Index => {
                     let index = match self.pop() {
-                        Constant::Num(n) if n.fract() == 0.0 && n > 0.0 => n as usize,
+                        Constant::Num(n) if n.fract() == 0.0 && n >= 0.0 => n as usize,
                         other => panic!("Expected a integer to use as index, found a `{}`", other),
                     };
                     let xs = match self.pop() {
