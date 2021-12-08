@@ -54,7 +54,7 @@ impl Compiler {
 
         this.expression()?;
         if this.current.token != Tkt::Eof {
-            this.throw(format!("Expected <eof>, got {}", this.current.token))?
+            this.throw(format!("Expected <eof>, got `{}`", this.current.token))?
         }
         Ok((this.proxies.pop().unwrap(), this.constants))
     }
@@ -215,7 +215,7 @@ impl Compiler {
             }),
             _ => unreachable!(),
         }
-        self.next()?; // skips the leading `)` token
+        self.next()?;
         Ok(())
     }
 
