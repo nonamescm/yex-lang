@@ -450,7 +450,7 @@ impl Compiler {
             self.next()?;
             self.expression()?; // emits the index to be acessed
             self.emit(OpCode::Index);
-            self.consume(&[Tkt::Rbrack], format!("Expected `]` after index, found {}", self.current.token))?;
+            self.assert(&[Tkt::Rbrack], format!("Expected `]` after index, found {}", self.current.token))?;
         }
         Ok(())
     }
@@ -517,7 +517,7 @@ impl Compiler {
 
             if !matches!(&self.current.token, Tkt::Colon | Tkt::Rbrack) {
                 self.throw(format!(
-                    "Expected `,`, `)` or other token, found `{}`",
+                    "Expected `,`, `]` or other token, found `{}`",
                     &self.current.token
                 ))?;
             }
