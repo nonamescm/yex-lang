@@ -3,12 +3,8 @@ use rustyline::Editor;
 use std::{env::args, fs::read_to_string, process::exit};
 use vm::VirtualMachine;
 
-fn new_vm() -> VirtualMachine {
-    VirtualMachine::new(|str| { compile(str).unwrap() })
-}
-
 fn eval_file(file: &str) -> Result<i32, front::ParseError> {
-    let mut vm = new_vm();
+    let mut vm = VirtualMachine::default();
 
     let file = read_to_string(file).unwrap_or_else(|_| {
         eprintln!("File not found");
@@ -32,7 +28,7 @@ fn eval_file(file: &str) -> Result<i32, front::ParseError> {
 }
 
 fn start(args: Vec<String>) -> i32 {
-    let mut vm = new_vm();
+    let mut vm = VirtualMachine::default();
     let mut repl = Editor::<()>::new();
 
     if args.len() > 1 {
@@ -59,7 +55,7 @@ fn start(args: Vec<String>) -> i32 {
         }
 
         let (bytecode, constants) = {
-            if line.trim().starts_with("let") || line.trim().starts_with("open") {
+            if line.trim().starts_with("let") {
                 compile(line)
             } else {
                 compile_expr(line)

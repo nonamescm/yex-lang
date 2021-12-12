@@ -14,7 +14,7 @@ pub struct Table {
 }
 
 impl Table {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             entries: StackVec::new(),
         }
@@ -59,12 +59,6 @@ impl Table {
     }
 }
 
-impl Default for Table {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[derive(Debug)]
 pub(crate) struct Env {
     entries: Vec<Table>,
@@ -105,11 +99,5 @@ impl Env {
 
     pub fn remove(&mut self, key: &Symbol) {
         self.top().remove(key);
-    }
-}
-
-impl Default for Env {
-    fn default() -> Self {
-        Self::new()
     }
 }
