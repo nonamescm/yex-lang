@@ -28,6 +28,7 @@ already has the yex language installed.
     * [If and else](#if-and-else)
   * [Sequential execution](#sequential-execution)
     * [The sequence operator](#the-sequence-operator)
+	* [Pipes](#pipes)
 * [Builtin functions](#builtin-functions)
 
 ## Basics
@@ -48,7 +49,7 @@ Them all support the equality `==` operator.
 #### Numbers
 Open the repl and start typing:
 
-```
+```ml
 yex> type(1)
 >> "num"
 yex> 2+2
@@ -64,7 +65,7 @@ yex> 2/2
 As you can see, numbers support all the basic math operations, they also support
 the xor, shift-left, shift-right, and and or, bitwise operators:
 
-```
+```ml
 yex> 2 ^^^ 3
 >> 1
 yex> 2 >>> 3
@@ -82,7 +83,7 @@ yex> 2 ||| 3
 Strings in yex are represented as UTF-8 encoded strings, they support
 concatenation, on the repl:
 
-```
+```ml
 yex> type("Example")
 >> "str"
 yex> "Hello"
@@ -96,7 +97,7 @@ yex> "Hello " + "World"
 Symbols in yex are represented as 64 bit unsigned integers. They are created
 using `:name` and are hashed at compile time, on the repl:
 
-```
+```ml
 yex> type(:symbol)
 >> "sym"
 yex> :sym
@@ -110,7 +111,7 @@ They don't support any operators except for comparison.
 Booleans in yex are just `true` and `false`, there is no magic behind the
 scenes.
 
-```
+```ml
 yex> type(true)
 >> "bool"
 yex> true
@@ -123,7 +124,7 @@ yex> false
 
 Null values in yex can be created using the `nil` keyword.
 
-```
+```ml
 yex> type(nil)
 >> "nil"
 yex> nil
@@ -148,7 +149,7 @@ it's value, (but shadowing is still supported).
 
 Global variables are created using the `let` keyword, open a file and type this:
 
-```
+```ml
 let number = 42
 let _ = puts(number)
 ```
@@ -163,7 +164,7 @@ defines a expression to be runned after the declaration.
 
 Open a file and type:
 
-```
+```ml
 let _ =
   let number = 42
   in puts(number)
@@ -174,7 +175,7 @@ Run it with the yex binary. It should print 42.
 You can create multiple locals just using a lot of `let ... in` expression,
 like:
 
-```
+```ml
 let _ =
   let a = 21
   in let b = 21
@@ -192,7 +193,7 @@ In yex, lists are data types that let you have a collection of values of diverge
 Like in most other languages, lists can be instantiated using brackets, open the
 repl and type:
 
-```
+```ml
 yex> type([])
 >> "list"
 yex> [1, "hello", :symbol, [3, 4], true, nil]
@@ -209,7 +210,7 @@ Lists support the following operations:
 
 On the repl:
 
-```
+```ml
 yex> head([1, 2, 3])
 >> 1
 yex> tail([1, 2, 3])
@@ -227,7 +228,7 @@ yex> 0 :: [1, 2, 3]
 Named functions are created using the `let` keyword, like variables. Open the
 repl and type:
 
-```
+```ml
 yex> let mul a b = a * b
 >> nil
 yex> mul(2, 3)
@@ -244,7 +245,7 @@ as parameters. After the `=` it specifies the function's body.
 You can create anonymous functions using the `fn` keyword. Open the repl and
 type:
 
-```
+```ml
 yex> let mul = fn a b = a * b
 >> nil
 yex> mul(2, 3)
@@ -258,7 +259,7 @@ yex> type(mul)
 Tail calls are an specific type of recursion where it just jump to some
 instructions before, you can create them using the `become` keyword, like:
 
-```
+```ml
 let until_0 num =
   if num == 0 then
     0
@@ -277,7 +278,7 @@ function with missing arguments and it will return another function.
 
 In the repl, type:
 
-```
+```ml
 yex> let mul a b = a * b
 >> nil
 yex> let double = mul(2) // returns mul() with the `a` argument already applied
@@ -294,7 +295,7 @@ yex> double(5)
 
 Yex supports if and else control flow structures, open the repl and type:
 
-```
+```ml
 yex> if true then 1 else 2
 >> 1
 yex> if false then 1 else if true then 2 else 3
@@ -315,7 +316,7 @@ computation.
 
 Open a file and type:
 
-```
+```ml
 let _ =
   puts("Hello")
   >> puts("World")
@@ -327,6 +328,19 @@ This should print:
 ```
 Hello
 World
+```
+
+### Pipes
+
+When working with high-order-functions, you might need to do something like:
+`fold(map(rev(...), ...), ...)`, which doesn't look good, so yex provides the
+`|>` operator, that allows the use of a pipeline-like flow.
+
+```ml
+rev([1, 2, 3])
+|> map(fn x = x * 2)
+|> fold(fn acc x = acc + x)
+// the same as `fold(fn acc x = acc + x, map(fn x = x * 2, rev([1, 2, 3])))`
 ```
 
 ## Builtin functions
