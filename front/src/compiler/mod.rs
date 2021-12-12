@@ -155,7 +155,7 @@ impl Compiler {
                 Tkt::Let => self.let_(),
                 Tkt::Fn => self.fn_(),
                 Tkt::Become => self.become_(),
-                _ => self.equality(),
+                _ => self.pipe(),
             }?;
 
             if self.current.token != Tkt::Seq {
@@ -310,6 +310,18 @@ impl Compiler {
         self.expression()?;
 
         self.emit(OpCode::Drop(name));
+
+        Ok(())
+    }
+
+    fn pipe(&mut self) -> ParseResult {
+        self.equality()?;
+
+        while let Tkt::Pipe = self.current.token {
+            self.next()?;
+            self.equality()?;
+            self.emit(OpCode::Call(1))
+        }
 
         Ok(())
     }

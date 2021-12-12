@@ -43,6 +43,7 @@ pub enum TokenType {
     Rbrack,
     Colon,
     Seq,
+    Pipe,
 
     Eof,
 }
@@ -94,6 +95,7 @@ impl std::fmt::Display for TokenType {
             Self::Rbrack => ']'.into(),
             Self::Colon => ','.into(),
             Self::Seq => "=>".into(),
+            Self::Pipe => "|>".into(),
 
             Self::Eof => "<eof>".into(),
         };
