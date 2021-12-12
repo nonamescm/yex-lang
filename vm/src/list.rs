@@ -96,3 +96,27 @@ impl std::fmt::Display for List {
         write!(f, "{}", str)
     }
 }
+
+pub struct Iter<'a> {
+    next: Option<&'a Node>,
+}
+
+impl List {
+    /// Iterates over the list
+    pub fn iter(&self) -> Iter<'_> {
+        Iter { next: self.head.as_deref() }
+    }
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = &'a Constant;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.map(|node| {
+            self.next = node.next.as_deref();
+            &node.elem
+        })
+    }
+}
+
+

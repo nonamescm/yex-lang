@@ -16,6 +16,11 @@ pub enum OpCode {
     /// The stack layout after running it: []
     Pop,
 
+    /// Imports a file
+    /// The stack layout before running this opcode: [imported-symbol-list, file-name]
+    /// The stack layout after running it: []
+    Import,
+
     /// Read a value from a variable, receives the index of the variable name in the constant table as
     /// argument
     /// The stack layout before running this opcode: []

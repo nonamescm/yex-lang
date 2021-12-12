@@ -7,16 +7,14 @@ mod env;
 mod list;
 mod literal;
 mod opcode;
+mod prelude;
 mod stack;
 
-use std::{
-    cmp::Ordering,
-    io::{self, Write},
-    mem,
-};
+use std::{cmp::Ordering, mem};
 
 use crate::{
     env::{Env, Table},
+    prelude::prelude,
     stack::StackVec,
 };
 
@@ -56,6 +54,7 @@ impl CallFrame {
 
 type CallStack = StackVec<CallFrame, RECURSION_LIMIT>;
 type Stack = StackVec<Constant, STACK_SIZE>;
+type Compiler = fn(String) -> (Bytecode, Vec<Constant>);
 
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
@@ -69,9 +68,22 @@ pub struct VirtualMachine {
     stack: Stack,
     variables: Env,
     globals: Table,
+    compiler: Compiler,
 }
 
 impl VirtualMachine {
+    /// Creates a new virtual machine, receives a compiler as argument
+    pub fn new(compiler: Compiler) -> Self {
+        Self {
+            constants: vec![],
+            call_stack: StackVec::new(),
+            stack: StackVec::new(),
+            globals: prelude(),
+            variables: Env::new(),
+            compiler,
+        }
+    }
+
     /// Reset the instruction pointer and the stack
     pub fn reset(&mut self) {
         self.call_stack = StackVec::new();
@@ -132,6 +144,8 @@ impl VirtualMachine {
                     self.pop();
                 }
 
+                Import => self.import(),
+
                 Save(val) => {
                     let value = self.pop();
                     self.variables.insert(val, value);
@@ -143,14 +157,7 @@ impl VirtualMachine {
                 }
 
                 Load(val) => {
-                    let val = match self.variables.get(&val) {
-                        Some(v) => v.clone(),
-                        None => match self.globals.get(&val) {
-                            Some(v) => v.clone(),
-                            None => panic!("unknown variable {}", val),
-                        },
-                    };
-
+                    let val = self.get(&val);
                     self.push(val);
                 }
 
@@ -241,6 +248,41 @@ impl VirtualMachine {
         Constant::Nil
     }
 
+    fn import(&mut self) {
+        let name = match self.pop() {
+            Constant::Str(f) => f,
+            _ => unreachable!(),
+        };
+
+        let imports = match self.pop() {
+            Constant::List(xs) => xs,
+            _ => unreachable!(),
+        };
+
+        let file =
+            std::fs::read_to_string(&name).unwrap_or_else(|_| panic!("File `{}` not found", &name));
+        let (bytecode, constants) = (self.compiler)(file);
+        let old_env = mem::take(&mut self.variables);
+        let old_stack = mem::take(&mut self.stack);
+        let mut old_globals = mem::replace(&mut self.globals, prelude());
+        let old_constants = mem::replace(&mut self.constants, constants);
+
+        self.run(bytecode);
+
+        imports
+            .iter()
+            .map(|it| match it {
+                Constant::Sym(s) => s,
+                _ => unreachable!(),
+            })
+            .for_each(|it| old_globals.insert(*it, self.get(it)));
+
+        self.variables = old_env;
+        self.stack = old_stack;
+        self.globals = old_globals;
+        self.constants = old_constants;
+    }
+
     fn call_helper(&mut self, carity: usize) -> (Bytecode, usize, Vec<Constant>) {
         let mut fargs = vec![];
 
@@ -308,6 +350,16 @@ impl VirtualMachine {
         }
     }
 
+    fn get(&mut self, val: &Symbol) -> Constant {
+        match self.variables.get(&val) {
+            Some(v) => v.clone(),
+            None => match self.globals.get(&val) {
+                Some(v) => v.clone(),
+                None => panic!("unknown variable {}", val),
+            },
+        }
+    }
+
     #[cfg(debug_assertions)]
     /// Debug the values on the stack and in the bytecode
     pub fn debug_stack(&self) {
@@ -358,129 +410,6 @@ impl VirtualMachine {
 
 impl Default for VirtualMachine {
     fn default() -> Self {
-        let mut prelude = Table::new();
-
-        macro_rules! vecop {
-            ($($elems: expr),*) => {{
-                let mut vec = Vec::new();
-                $({
-                    vec.push($elems)
-                })*;
-                vec.into_iter().map(|opcode| OpCodeMetadata {
-                    line: 0,
-                    column: 0,
-                    opcode,
-                }
-                ).collect::<Vec<_>>()
-            }}
-        }
-
-        macro_rules! nativefn {
-            ($closure: expr) => {
-                Constant::Fun {
-                    arity: 1,
-                    body: vecop![OpCode::Cnll($closure)],
-                }
-            };
-        }
-
-        prelude.insert(
-            Symbol::new("puts"),
-            nativefn!(|c| {
-                match c {
-                    Constant::Str(s) => println!("{}", s),
-                    other => println!("{}", other),
-                };
-                Constant::Nil
-            }),
-        );
-
-        prelude.insert(
-            Symbol::new("print"),
-            nativefn!(|c| {
-                match c {
-                    Constant::Str(s) => print!("{}", s),
-                    other => print!("{}", other),
-                };
-                Constant::Nil
-            }),
-        );
-
-        prelude.insert(
-            Symbol::new("input"),
-            nativefn!(|c| {
-                match c {
-                    Constant::Str(s) => print!("{}", s),
-                    other => print!("{}", other),
-                };
-                if io::stdout().flush().is_err() {
-                    panic!("Error flushing stdout")
-                }
-                let mut input = String::new();
-                if io::stdin().read_line(&mut input).is_err() {
-                    panic!("Error reading line")
-                }
-                input.pop();
-                Constant::Str(input)
-            }),
-        );
-
-        prelude.insert(
-            Symbol::new("head"),
-            nativefn!(|xs| {
-                match xs {
-                    Constant::List(xs) => match xs.head() {
-                        Some(x) => x.clone(),
-                        None => Constant::Nil,
-                    },
-                    other => panic!("head() expected a list, found {}", other),
-                }
-            }),
-        );
-
-        prelude.insert(
-            Symbol::new("tail"),
-            nativefn!(|xs| {
-                match xs {
-                    Constant::List(xs) => Constant::List(xs.tail()),
-                    other => panic!("tail() expected a list, found {}", other),
-                }
-            }),
-        );
-
-        prelude.insert(
-            Symbol::new("str"),
-            nativefn!(|xs| Constant::Str(format!("{}", xs))),
-        );
-
-        prelude.insert(
-            Symbol::new("type"),
-            nativefn!(|it| Constant::Str(
-                match it {
-                    Constant::List(_) => "list",
-                    Constant::Str(_) => "str",
-                    Constant::Num(_) => "num",
-                    Constant::Bool(_) => "bool",
-                    Constant::Sym(_) => "symbol",
-                    Constant::Nil => "nil",
-                    Constant::Fun { .. } => "fn",
-                    Constant::PartialFun { .. } => "fn",
-                }
-                .into()
-            )),
-        );
-
-        prelude.insert(
-            Symbol::new("inspect"),
-            nativefn!(|it| { Constant::Str(format!("{:#?}", it)) }),
-        );
-
-        Self {
-            constants: vec![],
-            call_stack: StackVec::new(),
-            stack: StackVec::new(),
-            globals: prelude,
-            variables: Env::new(),
-        }
+        Self::new(|_| (vec![], vec![]))
     }
 }

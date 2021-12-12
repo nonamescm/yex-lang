@@ -30,7 +30,10 @@ impl Compiler {
         this.next()?;
 
         loop {
-            this.scoped_let()?;
+            match this.current.token {
+                Tkt::Open => this.open(),
+                _ => this.scoped_let(),
+            }?;
             if this.current.token == Tkt::Eof {
                 break;
             }
@@ -57,6 +60,43 @@ impl Compiler {
             this.throw(format!("Expected <eof>, got `{}`", this.current.token))?
         }
         Ok((this.proxies.pop().unwrap(), this.constants))
+    }
+
+    fn open(&mut self) -> ParseResult {
+        assert_eq!(self.current.token, Tkt::Open);
+        self.next()?;
+
+        let mut imports = vec![];
+        while let Tkt::Name(name) = self.current.token.clone() {
+            imports.push(name);
+            self.next()?;
+            if self.current.token == Tkt::Colon {
+                self.next()?;
+            } else if self.current.token == Tkt::In {
+                break;
+            } else {
+                self.throw(format!(
+                    "Expected `in` or `,` after import name, found `{}`",
+                    self.current.token
+                ))?;
+            }
+        }
+        self.next()?; // skips the leading `ìn` token
+        let file_name = match take(&mut self.current.token) {
+            Tkt::Str(f) => f,
+            token => {
+                return self.throw(format!("Expected file name after `in`, found `{}`", token))
+            }
+        };
+        let symbol = |x| Constant::Sym(Symbol::new(x));
+        let list = imports.into_iter().fold(List::new(), |acc, x| acc.prepend(symbol(x)));
+        self.emit_const_push(Constant::List(list));
+
+        self.emit_const_push(Constant::Str(file_name));
+
+        self.emit(OpCode::Import);
+
+        Ok(())
     }
 
     fn scoped_let(&mut self) -> ParseResult {
@@ -462,7 +502,10 @@ impl Compiler {
             self.next()?;
             self.expression()?; // emits the index to be acessed
             self.emit(OpCode::Index);
-            self.assert(&[Tkt::Rbrack], format!("Expected `]` after index, found {}", self.current.token))?;
+            self.assert(
+                &[Tkt::Rbrack],
+                format!("Expected `]` after index, found {}", self.current.token),
+            )?;
         }
         Ok(())
     }

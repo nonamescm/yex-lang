@@ -10,7 +10,7 @@ pub struct StackVec<T, const S: usize> {
 impl<T, const S: usize> StackVec<T, S> {
     const UNINIT: MaybeUninit<T> = MaybeUninit::uninit();
     const ARRAY_INIT: [MaybeUninit<T>; S] = [Self::UNINIT; S];
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             len: 0,
             array: Self::ARRAY_INIT,
@@ -128,5 +128,11 @@ impl<T: std::fmt::Display, const S: usize> std::fmt::Display for StackVec<T, S> 
             }
         }
         write!(f, "]")
+    }
+}
+
+impl<T, const S: usize> Default for StackVec<T, S> {
+    fn default() -> Self {
+        Self::new()
     }
 }
