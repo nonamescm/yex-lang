@@ -413,11 +413,11 @@ impl Default for VirtualMachine {
                     Constant::Str(s) => print!("{}", s),
                     other => print!("{}", other),
                 };
-                if let Err(_) = io::stdout().flush() {
+                if io::stdout().flush().is_err() {
                     panic!("Error flushing stdout")
                 }
                 let mut input = String::new();
-                if let Err(_) = io::stdin().read_line(&mut input) {
+                if io::stdin().read_line(&mut input).is_err() {
                     panic!("Error reading line")
                 }
                 input.pop();
