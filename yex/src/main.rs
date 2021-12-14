@@ -12,7 +12,7 @@ fn eval_file(file: &str) -> Result<i32, front::ParseError> {
     });
 
     if file.is_empty() {
-        return Ok(0)
+        return Ok(0);
     }
 
     let (bytecode, constants) = compile(file)?;

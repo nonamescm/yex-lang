@@ -4,8 +4,8 @@ use std::{
 };
 pub mod symbol;
 use crate::{list::List, Bytecode};
-use symbol::Symbol;
 use either::Either;
+use symbol::Symbol;
 pub type NativeFun = fn(Vec<Constant>) -> Constant;
 
 /// Immediate values that can be consumed

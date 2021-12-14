@@ -56,7 +56,6 @@ fn tail(args: &[Constant]) -> Constant {
 fn str(args: &[Constant]) -> Constant {
     Constant::Str(format!("{}", &args[0]))
 }
-
 fn create_file(args: &[Constant]) -> Constant {
     use Constant::*;
     match &args[0] {
@@ -67,80 +66,84 @@ fn create_file(args: &[Constant]) -> Constant {
     }
     Nil
 }
-
 fn write_file(args: &[Constant]) -> Constant {
     use Constant::*;
-    let content = match &args[0] {
-        Str(ref content) => content,
+    match &args[0] {
+        Str(ref content) => match &args[1] {
+            Str(ref filename) => {
+                let _ = fs::write(filename, content);
+            }
+            other => panic!("file_write()[1] expected str, found {}", other),
+        },
         other => panic!("file_write() expected str, found {}", other),
-    };
-    match &args[1] {
-        Str(ref filename) => {
-            fs::write(filename, content).ok();
-        }
-        other => panic!("file_write()[1] expected str, found {}", other),
     }
     Nil
 }
-
 fn system(args: &[Constant]) -> Constant {
     use Constant::*;
-    let command = match &args[0] {
+    match &args[1] {
         Str(ref command) => {
             let mut command_pieces = command.split_whitespace();
             let command = match command_pieces.next() {
                 Some(v) => v,
                 _ => return Nil,
             };
+            let mut command_args = vec![];
+            match &args[0] {
+                List(list) => {
+                    let list_vec = list.to_vec();
+                    list_vec.into_iter().for_each(|val| {
+                        if let Str(s) = val {
+                            command_args.push(s);
+                        }
+                    })
+                }
+                other => panic!("system()[1] expected a list, found {}", other),
+            }
+            let proc_command = Command::new(command).args(&command_args).output();
+            if let Ok(out) = proc_command {
+                let stdout = String::from_utf8(out.stdout)
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string();
+                let stderr = String::from_utf8(out.stderr)
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string();
 
-            let args = command_pieces.collect::<Vec<_>>();
-            Command::new(command).args(&args).output()
+                let list = list::List::new();
+                let list = list.prepend(Str(stderr));
+                let list = list.prepend(Str(stdout));
+
+                return List(list);
+            }
         }
         other => panic!("system() expected str, found {}", other),
-    };
-
-    if let Ok(out) = command {
-        let stdout = String::from_utf8(out.stdout)
-            .unwrap_or(String::new())
-            .trim()
-            .to_string();
-
-        let stderr = String::from_utf8(out.stderr)
-            .unwrap_or(String::new())
-            .trim()
-            .to_string();
-
-        let list = list::List::new();
-        let list = list.prepend(Str(stderr));
-        let list = list.prepend(Str(stdout));
-
-        return List(list);
     }
-
     Nil
 }
-
 fn exists_file(args: &[Constant]) -> Constant {
     use Constant::*;
     match &args[0] {
         Str(ref filename) => {
-            Bool(fs::File::open(filename).is_ok())
+            if fs::File::open(filename).is_ok() {
+                return Bool(true);
+            }
         }
         other => panic!("file_exists() expected str, found {}", other),
     }
+    Bool(false)
 }
-
 fn remove_file(args: &[Constant]) -> Constant {
     use Constant::*;
     match &args[0] {
         Str(ref filename) => {
-            fs::remove_file(filename).ok();
+            let _ = fs::remove_file(filename);
         }
         other => panic!("file_remove() expected str, found {}", other),
     }
     Nil
 }
-
 fn read_file(args: &[Constant]) -> Constant {
     use Constant::*;
     match &args[0] {
@@ -151,7 +154,6 @@ fn read_file(args: &[Constant]) -> Constant {
         other => panic!("file_read() str, found {}", other),
     }
 }
-
 fn r#type(args: &[Constant]) -> Constant {
     Constant::Str(
         match &args[0] {
@@ -218,6 +220,7 @@ pub fn prelude() -> Table {
     insert_fn!("remove", remove_file);
     insert_fn!("creat", create_file);
     insert_fn!("exists", exists_file);
-    insert_fn!("system", system);
+    insert_fn!("system", system, 2);
+
     prelude
 }
