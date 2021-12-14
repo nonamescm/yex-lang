@@ -1,6 +1,10 @@
-use front::{compile, compile_expr};
+use front::compile;
+
+#[cfg(not(feature = "lite"))]
+use front::compile_expr;
 #[cfg(not(feature = "lite"))]
 use rustyline::Editor;
+
 use std::{env::args, fs::read_to_string, process::exit};
 use vm::VirtualMachine;
 
@@ -28,6 +32,7 @@ fn eval_file(file: &str) -> Result<i32, front::ParseError> {
     Ok(0)
 }
 
+#[cfg(not(feature = "lite"))]
 fn start(args: Vec<String>) -> i32 {
     let mut vm = VirtualMachine::default();
     let mut repl = Editor::<()>::new();
@@ -86,6 +91,7 @@ fn main() {
 
 #[cfg(feature = "lite")]
 fn main() {
+    let args = args().collect::<Vec<_>>();
     let file = match args.get(1) {
         Some(file) => eval_file(file),
         None => {
