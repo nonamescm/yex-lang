@@ -120,7 +120,7 @@ fn r#type(args: &[Constant]) -> Constant {
             Constant::Nil => "nil",
             Constant::Fun { .. } => "fn",
             Constant::PartialFun { .. } => "fn",
-            Constant::NativeFun { .. } => "fn",
+            Constant::NativeFun { .. } => "native fn",
         }
         .into(),
     )
