@@ -56,6 +56,7 @@ impl Constant {
     }
 
     /// Returns the size of `self`
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         match self {
             Constant::List(xs) => xs.len(),
