@@ -1,6 +1,6 @@
 use crate::{env::Table, list, panic, Constant};
-use std::fs;
 use std::env;
+use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
 
@@ -82,7 +82,7 @@ fn write_file(args: &[Constant]) -> Constant {
 }
 fn getenv(args: &[Constant]) -> Constant {
     use Constant::*;
-    
+
     match &args[0] {
         Str(ref env_var) => {
             if let Ok(evar) = env::var(env_var) {
@@ -95,16 +95,14 @@ fn getenv(args: &[Constant]) -> Constant {
 }
 fn setenv(args: &[Constant]) -> Constant {
     use Constant::*;
-    
+
     match &args[0] {
-        Str(ref env_value) => {
-            match &args[1] {
-                Str(ref env_name) => {
-                    env::set_var(env_name, env_value);
-                }
-                other => panic!("setenv()[1] expected str, found {}", other)
+        Str(ref env_value) => match &args[1] {
+            Str(ref env_name) => {
+                env::set_var(env_name, env_value);
             }
-        }
+            other => panic!("setenv()[1] expected str, found {}", other),
+        },
         other => panic!("getenv() expected str, found {}", other),
     }
     Nil
@@ -218,6 +216,15 @@ fn int(args: &[Constant]) -> Constant {
     }
 }
 
+fn get_args(_args: &[Constant]) -> Constant {
+    use Constant::*;
+    let mut args = list::List::new();
+    for i in env::args().into_iter().rev() {
+        args = args.prepend(Constant::Str(i.to_owned()));
+    }
+    return List(args);
+}
+
 pub fn prelude() -> Table {
     let mut prelude = Table::new();
     macro_rules! insert_fn {
@@ -251,6 +258,7 @@ pub fn prelude() -> Table {
     insert_fn!("creat", create_file);
     insert_fn!("exists", exists_file);
     insert_fn!("system", system, 2);
+    insert_fn!("getargs", get_args);
     insert_fn!("getenv", getenv);
     insert_fn!("setenv", setenv, 2);
     prelude
