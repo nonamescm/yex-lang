@@ -225,6 +225,26 @@ fn get_args(_args: &[Constant]) -> Constant {
     return List(args);
 }
 
+
+fn str_split(args: &[Constant]) -> Constant {
+    use Constant::*;
+    let pat = match &args[0] {
+        Str(ref pat) => pat,
+        other => panic!("split() expected str, found {}", other),
+    };
+    let str = match &args[1] {
+        Str(ref str) => str,
+        other => panic!("split(), expected str, found {}", other),
+    };
+    let splited = str.split(pat).collect::<Vec<&str>>();
+    let mut list = list::List::new();
+    for i in splited.into_iter().rev() {
+        list = list.prepend(Str(i.to_string()));
+    }
+    List(list)
+}
+
+
 pub fn prelude() -> Table {
     let mut prelude = Table::new();
     macro_rules! insert_fn {
@@ -251,7 +271,6 @@ pub fn prelude() -> Table {
     insert_fn!("type", r#type);
     insert_fn!("inspect", inspect);
     insert_fn!("int", int);
-
     insert_fn!("fread", read_file);
     insert_fn!("fwrite", write_file, 2);
     insert_fn!("remove", remove_file);
@@ -261,5 +280,6 @@ pub fn prelude() -> Table {
     insert_fn!("getargs", get_args);
     insert_fn!("getenv", getenv);
     insert_fn!("setenv", setenv, 2);
+    insert_fn!("split", str_split, 2);
     prelude
 }

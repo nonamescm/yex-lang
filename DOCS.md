@@ -372,6 +372,7 @@ Make sure the two files are in the same directory and run b.yex.
 
 ## Builtin functions
 
+
 |    Name   |                        Description                       |
 |:---------:|:--------------------------------------------------------:|
 | `print`   | prints a value without adding the new line               |
@@ -390,3 +391,5 @@ Make sure the two files are in the same directory and run b.yex.
 | `system`  | run a shell command, returning the stdout and the stderr |
 | `getenv`  | get an environment variable                              |
 | `setenv`  | Set an environment variable, `setenv("cool", "true")`    |
+| `split`   | Splits a string                                          |
+
