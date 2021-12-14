@@ -8,6 +8,21 @@ use vm::{Bytecode, Constant, List, OpCode, OpCodeMetadata, Symbol};
 
 type ParseResult = Result<(), ParseError>;
 
+fn patch_bytecode(len: usize, bt_len: usize, bytecode: Bytecode) -> Bytecode {
+    bytecode
+        .into_iter()
+        .map(|mut it| {
+            it.opcode = match it.opcode {
+                OpCode::Push(idx) => OpCode::Push(idx + len),
+                OpCode::Jmp(offset) => OpCode::Jmp(offset + bt_len),
+                OpCode::Jmf(offset) => OpCode::Jmf(offset + bt_len),
+                other => other,
+            };
+            it
+        })
+        .collect()
+}
+
 pub struct Compiler {
     lexer: Peekable<Lexer>,
     constants: Vec<Constant>,
@@ -30,7 +45,10 @@ impl Compiler {
         this.next()?;
 
         loop {
-            this.scoped_let()?;
+            match this.current.token {
+                Tkt::Open => this.open(),
+                _ => this.scoped_let(),
+            }?;
             if this.current.token == Tkt::Eof {
                 break;
             }
@@ -84,6 +102,45 @@ impl Compiler {
         self.emit(OpCode::Savg(name));
 
         Ok(())
+    }
+
+    fn open(&mut self) -> ParseResult {
+        assert_eq!(self.current.token, Tkt::Open);
+        self.next()?;
+        let file_name = match &self.current.token {
+            Tkt::Str(ref s) => s,
+            other => {
+                return self.throw(format!("Expected file name after `open`, found {}", other))
+            }
+        };
+        let file = match std::fs::read_to_string(&file_name) {
+            Ok(f) => f,
+            Err(_) => return self.throw(format!("File `{}` not found", file_name)),
+        };
+        self.next()?;
+
+        match crate::compile(file) {
+            Ok((bytecode, constants)) => self.compile_pather(bytecode, constants),
+            Err(e) => return Err(e),
+        }
+
+        Ok(())
+    }
+
+    fn compile_pather(&mut self, bytecode: Bytecode, constants: Vec<Constant>) {
+        let len = self.constants.len();
+        let bt_len = self.compiled_opcodes();
+        constants.into_iter().for_each(|it| {
+            self.constants.push(match it {
+                Constant::Fun { arity, body } => {
+                    let body = patch_bytecode(len, bt_len, body);
+                    Constant::Fun { arity, body }
+                }
+                other => other,
+            })
+        });
+        let bytecode = patch_bytecode(len, bt_len, bytecode);
+        bytecode.into_iter().for_each(|it| self.emit_metadata(it));
     }
 
     fn compiled_opcodes(&self) -> usize {
@@ -462,7 +519,10 @@ impl Compiler {
             self.next()?;
             self.expression()?; // emits the index to be acessed
             self.emit(OpCode::Index);
-            self.assert(&[Tkt::Rbrack], format!("Expected `]` after index, found {}", self.current.token))?;
+            self.assert(
+                &[Tkt::Rbrack],
+                format!("Expected `]` after index, found {}", self.current.token),
+            )?;
         }
         Ok(())
     }

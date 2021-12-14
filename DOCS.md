@@ -28,7 +28,9 @@ already has the yex language installed.
     * [If and else](#if-and-else)
   * [Sequential execution](#sequential-execution)
     * [The sequence operator](#the-sequence-operator)
-	* [Pipes](#pipes)
+  * [Pipes](#pipes)
+  * [Modules](#modules)
+    * [The open keyword](#the-open-keyword)
 * [Builtin functions](#builtin-functions)
 
 ## Basics
@@ -342,6 +344,28 @@ rev([1, 2, 3])
 |> fold(fn acc x = acc + x)
 // the same as `fold(fn acc x = acc + x, map(fn x = x * 2, rev([1, 2, 3])))`
 ```
+
+## Modules
+
+NOTE: Modules aren't yet implemented, there are going to be changes in the
+import system in the future.
+
+### The open keyword
+
+You can import from a file using the `open` keyword, a simple example would be:
+
+```
+// FILE: a.yex
+let greets p = puts("Hello " + p + "!")
+```
+
+```
+// FILE: b.yex
+open "./a.yex"
+let _ = greets("nonamescm") // prints "Hello nonamescm!"
+```
+
+Make sure the two files are in the same directory and run b.yex.
 
 ## Builtin functions
 
