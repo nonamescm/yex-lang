@@ -41,6 +41,10 @@ impl Lexer {
         reslt
     }
 
+    fn throw<A, T: Into<String>>(&self, str: T) -> Result<A, ParseError> {
+        ParseError::throw(self.line, self.column, str.into())
+    }
+
     fn get_char(&self, idx: usize) -> char {
         *self.tokens.get(idx).unwrap_or(&EOF)
     }
@@ -71,11 +75,7 @@ impl Lexer {
 
         while cond(self.get_char(self.idx + 1)) {
             if self.get_char(self.idx + 1) == '\0' {
-                ParseError::throw(
-                    self.line,
-                    self.column,
-                    "Unclosed delimiter opened here".into(),
-                )?;
+                self.throw("Unclosed delimiter opened here")?;
             }
 
             self.next();
@@ -89,11 +89,7 @@ impl Lexer {
         let mut unicode = String::new();
         while unicode.len() < len {
             if !self.current().is_ascii_hexdigit() {
-                return ParseError::throw(
-                    self.line,
-                    self.column,
-                    "malformed Unicode character escape sequence".into(),
-                );
+                return self.throw("malformed Unicode character escape sequence");
             }
             unicode.push(self.current());
             self.next();
@@ -115,7 +111,7 @@ impl Lexer {
             '\\' => '\\',
             '"' => '"',
             'r' => '\r',
-            _ => todo!(),
+            other => self.throw(format!("Unknow escape char `{}`", other))?,
         };
         self.next();
         Ok(char.into())
@@ -130,11 +126,7 @@ impl Lexer {
                     self.next();
                     self.escape_char()?
                 }
-                EOF => ParseError::throw(
-                    self.line,
-                    self.column,
-                    "Unclosed delimiter opened here".into(),
-                )?,
+                EOF => self.throw("Unclosed delimiter opened here")?,
                 other => {
                     let other = other.to_string();
                     self.next();
@@ -197,11 +189,7 @@ impl Lexer {
                     "true" => TokenType::True,
                     "false" => TokenType::False,
                     "nil" => TokenType::Nil,
-                    "\0" => ParseError::throw(
-                        self.line,
-                        self.column,
-                        "expected symbol string after `:`, found <eof>".into(),
-                    )?,
+                    "\0" => self.throw("expected symbol string after `:`, found <eof>")?,
                     _ => TokenType::Sym(vm::Symbol::new(sym)),
                 }
             }
@@ -221,11 +209,7 @@ impl Lexer {
                 let n = self.take_while(|c| c.is_numeric() || c == '.')?;
                 match n.parse::<f64>() {
                     Ok(n) => TokenType::Num(n),
-                    Err(_) => ParseError::throw(
-                        self.line,
-                        self.column,
-                        format!("Can't parse number {}", n),
-                    )?,
+                    Err(_) => self.throw(format!("Can't parse number {}", n))?,
                 }
             }
             c if c.is_alphabetic() || c == '_' => {
@@ -272,11 +256,7 @@ impl Lexer {
                 return self.get();
             }
 
-            c => ParseError::throw(
-                self.line,
-                self.column,
-                format!("Unknown start of token `{}`", c),
-            )?,
+            c => self.throw(format!("Unknown start of token `{}`", c))?,
         };
 
         Ok(Token {

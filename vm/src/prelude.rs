@@ -1,6 +1,7 @@
 use crate::{env::Table, list, panic, Constant};
 use std::env;
 use std::fs;
+use std::env;
 use std::io::{self, Write};
 use std::process::Command;
 
@@ -77,6 +78,35 @@ fn write_file(args: &[Constant]) -> Constant {
             other => panic!("file_write()[1] expected str, found {}", other),
         },
         other => panic!("file_write() expected str, found {}", other),
+    }
+    Nil
+}
+fn getenv(args: &[Constant]) -> Constant {
+    use Constant::*;
+    
+    match &args[0] {
+        Str(ref env_var) => {
+            if let Ok(evar) = env::var(env_var) {
+                return Str(evar);
+            }
+        }
+        other => panic!("getenv() expected str, found {}", other),
+    }
+    Nil
+}
+fn setenv(args: &[Constant]) -> Constant {
+    use Constant::*;
+    
+    match &args[0] {
+        Str(ref env_value) => {
+            match &args[1] {
+                Str(ref env_name) => {
+                    env::set_var(env_name, env_value);
+                }
+                other => panic!("setenv()[1] expected str, found {}", other)
+            }
+        }
+        other => panic!("getenv() expected str, found {}", other),
     }
     Nil
 }
@@ -232,5 +262,7 @@ pub fn prelude() -> Table {
     insert_fn!("exists", exists_file);
     insert_fn!("system", system, 2);
     insert_fn!("getargs", get_args);
+    insert_fn!("getenv", getenv);
+    insert_fn!("setenv", setenv, 2);
     prelude
 }
