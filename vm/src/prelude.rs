@@ -93,6 +93,22 @@ fn getenv(args: &[Constant]) -> Constant {
     }
     Nil
 }
+fn setenv(args: &[Constant]) -> Constant {
+    use Constant::*;
+    
+    match &args[0] {
+        Str(ref env_value) => {
+            match &args[1] {
+                Str(ref env_name) => {
+                    env::set_var(env_name, env_value);
+                }
+                other => panic!("setenv()[1] expected str, found {}", other)
+            }
+        }
+        other => panic!("getenv() expected str, found {}", other),
+    }
+    Nil
+}
 fn system(args: &[Constant]) -> Constant {
     use Constant::*;
     match &args[1] {
@@ -236,5 +252,6 @@ pub fn prelude() -> Table {
     insert_fn!("exists", exists_file);
     insert_fn!("system", system, 2);
     insert_fn!("getenv", getenv);
+    insert_fn!("setenv", setenv);
     prelude
 }
