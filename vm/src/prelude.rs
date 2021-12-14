@@ -1,6 +1,8 @@
-use crate::{env::Table, panic, Constant};
+use crate::{env::Table, list, panic, Constant};
 use std::fs;
 use std::io::{self, Write};
+use std::process::Command;
+
 fn puts(args: &[Constant]) -> Constant {
     match args[0] {
         Constant::Str(ref s) => println!("{}", s),
@@ -74,6 +76,38 @@ fn write_file(args: &[Constant]) -> Constant {
             other => panic!("file_write()[1] expected str, found {}", other),
         },
         other => panic!("file_write() expected str, found {}", other),
+    }
+    Nil
+}
+fn system(args: &[Constant]) -> Constant {
+    use Constant::*;
+    match &args[0] {
+        Str(ref command) => {
+            let mut command_pieces = command.split_whitespace();
+            let command = match command_pieces.next() {
+                Some(v) => v,
+                _ => return Nil,
+            };
+
+            let args = command_pieces.collect::<Vec<_>>();
+            let proc_command = Command::new(command).args(&args).output();
+            if let Ok(out) = proc_command {
+                let stdout = String::from_utf8(out.stdout)
+                    .unwrap_or(String::new())
+                    .trim()
+                    .to_string();
+                let stderr = String::from_utf8(out.stderr)
+                    .unwrap_or(String::new())
+                    .trim()
+                    .to_string();
+                let list = list::List::new();
+                let list = list.prepend(Str(stderr));
+                let list = list.prepend(Str(stdout));
+
+                return List(list);
+            }
+        }
+        other => panic!("system() expected str, found {}", other),
     }
     Nil
 }
@@ -174,5 +208,6 @@ pub fn prelude() -> Table {
     insert_fn!("file_remove", remove_file);
     insert_fn!("file_create", create_file);
     insert_fn!("file_exists", exists_file);
+    insert_fn!("system", system);
     prelude
 }
