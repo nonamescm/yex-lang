@@ -29,10 +29,12 @@ fn input(args: &[Constant]) -> Constant {
     if io::stdout().flush().is_err() {
         panic!("Error flushing stdout")
     }
+
     let mut input = String::new();
     if io::stdin().read_line(&mut input).is_err() {
         panic!("Error reading line")
     }
+
     input.pop();
     Constant::Str(input)
 }
@@ -57,8 +59,10 @@ fn tail(args: &[Constant]) -> Constant {
 fn str(args: &[Constant]) -> Constant {
     Constant::Str(format!("{}", &args[0]))
 }
+
 fn create_file(args: &[Constant]) -> Constant {
     use Constant::*;
+
     match &args[0] {
         Str(ref filename) => {
             let _ = fs::File::create(filename);
@@ -67,19 +71,23 @@ fn create_file(args: &[Constant]) -> Constant {
     }
     Nil
 }
+
 fn write_file(args: &[Constant]) -> Constant {
     use Constant::*;
-    match &args[0] {
-        Str(ref content) => match &args[1] {
-            Str(ref filename) => {
-                let _ = fs::write(filename, content);
-            }
-            other => panic!("file_write()[1] expected str, found {}", other),
-        },
+
+    let content = match &args[0] {
+        Str(ref content) => content,
         other => panic!("file_write() expected str, found {}", other),
+    };
+    match &args[1] {
+        Str(ref filename) => {
+            fs::write(filename, content).ok();
+        }
+        other => panic!("file_write()[1] expected str, found {}", other),
     }
     Nil
 }
+
 fn getenv(args: &[Constant]) -> Constant {
     use Constant::*;
 
@@ -93,87 +101,95 @@ fn getenv(args: &[Constant]) -> Constant {
     }
     Nil
 }
+
 fn setenv(args: &[Constant]) -> Constant {
     use Constant::*;
 
-    match &args[0] {
-        Str(ref env_value) => match &args[1] {
-            Str(ref env_name) => {
-                env::set_var(env_name, env_value);
-            }
-            other => panic!("setenv()[1] expected str, found {}", other),
-        },
+    let var = match &args[0] {
+        Str(ref var) => var,
         other => panic!("getenv() expected str, found {}", other),
+    };
+
+    match &args[0] {
+        Str(ref value) => {
+            env::set_var(var, value);
+        }
+        other => panic!("getenv()[1] expected str, found {}", other),
     }
+
     Nil
 }
+
 fn system(args: &[Constant]) -> Constant {
     use Constant::*;
-    match &args[1] {
+    let mut cmd = match &args[0] {
         Str(ref command) => {
             let mut command_pieces = command.split_whitespace();
             let command = match command_pieces.next() {
                 Some(v) => v,
                 _ => return Nil,
             };
-            let mut command_args = vec![];
-            match &args[0] {
-                List(list) => {
-                    let list_vec = list.to_vec();
-                    list_vec.into_iter().for_each(|val| {
-                        if let Str(s) = val {
-                            command_args.push(s);
-                        }
-                    })
-                }
-                other => panic!("system()[1] expected a list, found {}", other),
-            }
-            let proc_command = Command::new(command).args(&command_args).output();
-            if let Ok(out) = proc_command {
-                let stdout = String::from_utf8(out.stdout)
-                    .unwrap_or_default()
-                    .trim()
-                    .to_string();
-                let stderr = String::from_utf8(out.stderr)
-                    .unwrap_or_default()
-                    .trim()
-                    .to_string();
-
-                let list = list::List::new();
-                let list = list.prepend(Str(stderr));
-                let list = list.prepend(Str(stdout));
-
-                return List(list);
-            }
+            Command::new(command)
         }
         other => panic!("system() expected str, found {}", other),
+    };
+
+    let args = match &args[0] {
+        List(list) => list
+            .to_vec()
+            .into_iter()
+            .map(|it| match it {
+                Str(s) => s,
+                other => format!("{}", other),
+            })
+            .collect::<Vec<_>>(),
+        other => panic!("system()[1] expected a list, found {}", other),
+    };
+
+    if let Ok(out) = cmd.args(&args).output() {
+        let stdout = String::from_utf8(out.stdout)
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+
+        let stderr = String::from_utf8(out.stderr)
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+
+        let list = list::List::new();
+        let list = list.prepend(Str(stderr));
+        let list = list.prepend(Str(stdout));
+
+        return List(list);
     }
     Nil
 }
+
 fn exists_file(args: &[Constant]) -> Constant {
     use Constant::*;
+
     match &args[0] {
-        Str(ref filename) => {
-            if fs::File::open(filename).is_ok() {
-                return Bool(true);
-            }
-        }
+        Str(ref filename) => Bool(fs::File::open(filename).is_ok()),
         other => panic!("file_exists() expected str, found {}", other),
     }
-    Bool(false)
 }
+
 fn remove_file(args: &[Constant]) -> Constant {
     use Constant::*;
+
     match &args[0] {
         Str(ref filename) => {
-            let _ = fs::remove_file(filename);
+            fs::remove_file(filename).ok();
         }
         other => panic!("file_remove() expected str, found {}", other),
     }
+
     Nil
 }
 fn read_file(args: &[Constant]) -> Constant {
     use Constant::*;
+
     match &args[0] {
         Str(filename) => match fs::read_to_string(filename) {
             Ok(v) => Str(v),
@@ -182,6 +198,7 @@ fn read_file(args: &[Constant]) -> Constant {
         other => panic!("file_read() str, found {}", other),
     }
 }
+
 fn r#type(args: &[Constant]) -> Constant {
     Constant::Str(
         match &args[0] {
@@ -207,7 +224,7 @@ fn int(args: &[Constant]) -> Constant {
     let str = match &args[0] {
         Constant::Sym(symbol) => symbol.to_str(),
         Constant::Str(ref str) => str,
-        other => crate::panic!("Expected a string or a symbol, found {}", other),
+        other => panic!("Expected a string or a symbol, found {}", other),
     };
 
     match str.parse::<f64>() {
@@ -218,32 +235,37 @@ fn int(args: &[Constant]) -> Constant {
 
 fn get_args(_args: &[Constant]) -> Constant {
     use Constant::*;
+
     let mut args = list::List::new();
     for i in env::args().into_iter().rev() {
         args = args.prepend(Constant::Str(i.to_owned()));
     }
-    return List(args);
-}
 
+    List(args)
+}
 
 fn str_split(args: &[Constant]) -> Constant {
     use Constant::*;
-    let pat = match &args[0] {
-        Str(ref pat) => pat,
-        other => panic!("split() expected str, found {}", other),
-    };
-    let str = match &args[1] {
+
+    let str = match &args[0] {
         Str(ref str) => str,
         other => panic!("split(), expected str, found {}", other),
     };
+
+    let pat = match &args[1] {
+        Str(ref pat) => pat,
+        other => panic!("split() expected str, found {}", other),
+    };
+
     let splited = str.split(pat).collect::<Vec<&str>>();
+
     let mut list = list::List::new();
     for i in splited.into_iter().rev() {
         list = list.prepend(Str(i.to_string()));
     }
+
     List(list)
 }
-
 
 pub fn prelude() -> Table {
     let mut prelude = Table::new();
