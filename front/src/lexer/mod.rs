@@ -61,6 +61,11 @@ impl Lexer {
         self.current()
     }
 
+    fn back(&mut self) -> char {
+        self.idx -= 1;
+        self.current()
+    }
+
     fn take_while(&mut self, cond: fn(char) -> bool) -> Result<String, ParseError> {
         let mut item = String::from(self.get_char(self.idx));
 
@@ -75,6 +80,69 @@ impl Lexer {
 
             self.next();
             item.push(self.current());
+        }
+        Ok(item)
+    }
+
+    fn take_unicode(&mut self, len: usize) -> Result<char, ParseError> {
+        self.next();
+        let mut unicode = String::new();
+        while unicode.len() < len {
+            if !self.current().is_ascii_hexdigit() {
+                return ParseError::throw(
+                    self.line,
+                    self.column,
+                    "malformed Unicode character escape sequence".into(),
+                );
+            }
+            unicode.push(self.current());
+            self.next();
+        }
+        self.back();
+        let unicode = u32::from_str_radix(&unicode, 16).unwrap();
+        let unicode = char::from_u32(unicode).unwrap();
+        Ok(unicode)
+    }
+
+    fn escape_char(&mut self) -> Result<String, ParseError> {
+        let char = match self.current() {
+            'n' => '\n',
+            't' => '\t',
+            'u' => self.take_unicode(4)?,
+            'x' => self.take_unicode(2)?,
+            'U' => self.take_unicode(8)?,
+            '0' => EOF,
+            '\\' => '\\',
+            '"' => '"',
+            'r' => '\r',
+            _ => todo!(),
+        };
+        self.next();
+        Ok(char.into())
+    }
+
+    fn take_str(&mut self) -> Result<String, ParseError> {
+        let mut item = String::new();
+
+        while self.current() != '"' {
+            let chr = match self.current() {
+                '\\' => {
+                    self.next();
+                    self.escape_char()?
+                }
+                EOF => ParseError::throw(
+                    self.line,
+                    self.column,
+                    "Unclosed delimiter opened here".into(),
+                )?,
+                other => {
+                    let other = other.to_string();
+                    self.next();
+                    other
+                }
+            };
+
+            item.push_str(&chr);
         }
         Ok(item)
     }
@@ -144,7 +212,7 @@ impl Lexer {
             }
             '"' => {
                 self.next();
-                let a = TokenType::Str(self.take_while(|c| c != '"')?);
+                let a = TokenType::Str(self.take_str()?);
                 self.next();
                 a
             }
