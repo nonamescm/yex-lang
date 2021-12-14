@@ -73,7 +73,7 @@ impl List {
         }
         count
     }
-	/// Converts list to Vec
+    /// Converts list to Vec
     pub fn to_vec(&self) -> Vec<Constant> {
         let mut vec = vec![];
         let mut head = self.clone();

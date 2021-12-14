@@ -1,5 +1,5 @@
 #[cfg(test)]
-use vm::{Constant, OpCode, OpCodeMetadata, Symbol, List};
+use vm::{Constant, List, OpCode, OpCodeMetadata, Symbol};
 
 #[test]
 fn lex_test() {
@@ -110,7 +110,8 @@ fn test_compiler() {
     use crate::compile;
     use OpCode::*;
 
-    let bytecode = compile("let _ = let oi = (((10))) in oi * 20").expect("Should be a valid syntax");
+    let bytecode =
+        compile("let _ = let oi = (((10))) in oi * 20").expect("Should be a valid syntax");
     let oi = Symbol::new("oi");
 
     assert_eq!(

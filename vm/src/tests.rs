@@ -1,4 +1,4 @@
-use crate::{Constant, OpCode, OpCodeMetadata, VirtualMachine, list::List};
+use crate::{list::List, Constant, OpCode, OpCodeMetadata, VirtualMachine};
 
 macro_rules! vecm {
     ($($tt:tt)*) => {
