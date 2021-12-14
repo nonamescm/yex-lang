@@ -1,4 +1,5 @@
 use crate::{env::Table, list, panic, Constant};
+use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
@@ -188,6 +189,15 @@ fn int(args: &[Constant]) -> Constant {
     }
 }
 
+fn get_args(_args: &[Constant]) -> Constant {
+    use Constant::*;
+    let mut args = list::List::new();
+    for i in env::args().into_iter().rev() {
+        args = args.prepend(Constant::Str(i.to_owned()));
+    }
+    return List(args);
+}
+
 pub fn prelude() -> Table {
     let mut prelude = Table::new();
     macro_rules! insert_fn {
@@ -221,6 +231,6 @@ pub fn prelude() -> Table {
     insert_fn!("creat", create_file);
     insert_fn!("exists", exists_file);
     insert_fn!("system", system, 2);
-
+    insert_fn!("get_args", get_args);
     prelude
 }

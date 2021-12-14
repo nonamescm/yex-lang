@@ -1,0 +1,2 @@
+let _ = 
+	puts(get_args(nil))
