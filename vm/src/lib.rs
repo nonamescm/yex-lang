@@ -2,22 +2,20 @@
 //! Virtual Machine implementation for the yex programming language
 #[cfg(test)]
 mod tests;
-
+mod prelude;
 mod env;
 mod list;
 mod literal;
 mod opcode;
 mod stack;
 
-use std::{
-    cmp::Ordering,
-    io::{self, Write},
-    mem,
-};
+use either::Either;
+use std::{cmp::Ordering, mem};
 
 use crate::{
     env::{Env, Table},
     stack::StackVec,
+    literal::NativeFun,
 };
 
 pub use crate::{
@@ -32,11 +30,13 @@ const RECURSION_LIMIT: usize = 768;
 static mut LINE: usize = 1;
 static mut COLUMN: usize = 1;
 
+#[macro_export]
+#[doc(hidden)]
 macro_rules! panic {
     ($($tt:tt)+) => {
         unsafe {
             let msg = format!($($tt)+);
-            std::eprintln!("[{}:{}] {}", LINE, COLUMN, msg);
+            std::eprintln!("[{}:{}] {}", $crate::LINE, $crate::COLUMN, msg);
             std::panic::set_hook(Box::new(|_| {}));
             std::panic!()
         }
@@ -178,11 +178,6 @@ impl VirtualMachine {
                 Call(carity) => self.call(carity),
                 TCall(carity) => self.tcall(carity),
 
-                Cnll(fun) => {
-                    let ret = fun(self.pop());
-                    self.push(ret)
-                }
-
                 Prep => {
                     let val = self.pop();
                     let xs = match self.pop() {
@@ -230,22 +225,7 @@ impl VirtualMachine {
 
                 Neg => unaop!(-),
                 Len => {
-                    let len = match self.pop() {
-                        Constant::List(xs) => xs.len(),
-                        Constant::Num(_) => std::mem::size_of::<f64>(),
-                        Constant::Sym(_) => std::mem::size_of::<Symbol>(),
-                        Constant::Str(s) => s.len(),
-                        Constant::Fun { arity, body } => {
-                            mem::size_of_val(&body) + mem::size_of_val(&arity)
-                        }
-                        Constant::PartialFun { arity, body, args } => {
-                            mem::size_of_val(&body)
-                                + mem::size_of_val(&arity)
-                                + mem::size_of_val(&args)
-                        }
-                        Constant::Bool(_) => std::mem::size_of::<bool>(),
-                        Constant::Nil => 4,
-                    };
+                    let len = self.pop().len();
                     self.push(Constant::Num(len as f64))
                 }
                 Not => {
@@ -260,15 +240,16 @@ impl VirtualMachine {
         Constant::Nil
     }
 
-    fn call_helper(&mut self, carity: usize) -> (Bytecode, usize, Vec<Constant>) {
+    fn call_helper(&mut self, carity: usize) -> (Either<Bytecode, NativeFun>, usize, Vec<Constant>) {
         let mut fargs = vec![];
 
         let (farity, body) = match self.pop() {
-            Constant::Fun { arity, body } => (arity, body),
+            Constant::Fun { arity, body } => (arity, Either::Left(body)),
             Constant::PartialFun { arity, body, args } => {
                 fargs = args;
                 (arity, body)
             }
+            Constant::NativeFun { arity, fp } => (arity, Either::Right(fp)),
             other => panic!("Can't call {}", other),
         };
 
@@ -295,10 +276,17 @@ impl VirtualMachine {
                 args: fargs,
             }),
             Ordering::Equal => {
-                fargs.into_iter().for_each(|it| self.push(it));
-
                 let curr_env = mem::replace(&mut self.variables, Env::new());
-                self.run(body);
+                match body {
+                    Either::Left(bytecode) => {
+                        fargs.into_iter().for_each(|it| self.push(it));
+                        self.run(bytecode);
+                    }
+                    Either::Right(fp) => {
+                        let ret = fp(fargs);
+                        self.push(ret)
+                    }
+                }
                 self.variables = curr_env;
             }
         }
@@ -318,7 +306,7 @@ impl VirtualMachine {
             Ordering::Equal => {
                 fargs.into_iter().for_each(|it| self.push(it));
 
-                if &body == self.bytecode() {
+                if body.as_ref() == Either::Left(self.bytecode()) {
                     *self.ip() = 0;
                 } else {
                     panic!("Can't use tail calls with different functions")
@@ -377,122 +365,7 @@ impl VirtualMachine {
 
 impl Default for VirtualMachine {
     fn default() -> Self {
-        let mut prelude = Table::new();
-
-        macro_rules! vecop {
-            ($($elems: expr),*) => {{
-                let mut vec = Vec::new();
-                $({
-                    vec.push($elems)
-                })*;
-                vec.into_iter().map(|opcode| OpCodeMetadata {
-                    line: 0,
-                    column: 0,
-                    opcode,
-                }
-                ).collect::<Vec<_>>()
-            }}
-        }
-
-        macro_rules! nativefn {
-            ($closure: expr) => {
-                Constant::Fun {
-                    arity: 1,
-                    body: vecop![OpCode::Cnll($closure)],
-                }
-            };
-        }
-
-        prelude.insert(
-            Symbol::new("puts"),
-            nativefn!(|c| {
-                match c {
-                    Constant::Str(s) => println!("{}", s),
-                    other => println!("{}", other),
-                };
-                Constant::Nil
-            }),
-        );
-
-        prelude.insert(
-            Symbol::new("print"),
-            nativefn!(|c| {
-                match c {
-                    Constant::Str(s) => print!("{}", s),
-                    other => print!("{}", other),
-                };
-                Constant::Nil
-            }),
-        );
-
-        prelude.insert(
-            Symbol::new("input"),
-            nativefn!(|c| {
-                match c {
-                    Constant::Str(s) => print!("{}", s),
-                    other => print!("{}", other),
-                };
-                if io::stdout().flush().is_err() {
-                    panic!("Error flushing stdout")
-                }
-                let mut input = String::new();
-                if io::stdin().read_line(&mut input).is_err() {
-                    panic!("Error reading line")
-                }
-                input.pop();
-                Constant::Str(input)
-            }),
-        );
-
-        prelude.insert(
-            Symbol::new("head"),
-            nativefn!(|xs| {
-                match xs {
-                    Constant::List(xs) => match xs.head() {
-                        Some(x) => x.clone(),
-                        None => Constant::Nil,
-                    },
-                    other => panic!("head() expected a list, found {}", other),
-                }
-            }),
-        );
-
-        prelude.insert(
-            Symbol::new("tail"),
-            nativefn!(|xs| {
-                match xs {
-                    Constant::List(xs) => Constant::List(xs.tail()),
-                    other => panic!("tail() expected a list, found {}", other),
-                }
-            }),
-        );
-
-        prelude.insert(
-            Symbol::new("str"),
-            nativefn!(|xs| Constant::Str(format!("{}", xs))),
-        );
-
-        prelude.insert(
-            Symbol::new("type"),
-            nativefn!(|it| Constant::Str(
-                match it {
-                    Constant::List(_) => "list",
-                    Constant::Str(_) => "str",
-                    Constant::Num(_) => "num",
-                    Constant::Bool(_) => "bool",
-                    Constant::Sym(_) => "symbol",
-                    Constant::Nil => "nil",
-                    Constant::Fun { .. } => "fn",
-                    Constant::PartialFun { .. } => "fn",
-                }
-                .into()
-            )),
-        );
-
-        prelude.insert(
-            Symbol::new("inspect"),
-            nativefn!(|it| { Constant::Str(format!("{:#?}", it)) }),
-        );
+        let prelude = prelude::prelude();
 
         Self {
             constants: vec![],

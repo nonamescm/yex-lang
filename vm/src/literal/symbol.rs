@@ -72,4 +72,9 @@ impl Symbol {
             hash,
         }
     }
+    
+    /// Returns the intern symbol str
+    pub fn to_str(&self) -> &str {
+        self.string
+    }
 }

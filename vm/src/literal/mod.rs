@@ -1,8 +1,12 @@
-use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub};
+use std::{
+    mem,
+    ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
+};
 pub mod symbol;
-use symbol::Symbol;
-
 use crate::{list::List, Bytecode};
+use symbol::Symbol;
+use either::Either;
+pub type NativeFun = fn(Vec<Constant>) -> Constant;
 
 /// Immediate values that can be consumed
 #[derive(Debug, PartialEq, Clone)]
@@ -27,9 +31,16 @@ pub enum Constant {
         /// The number of argument the function receives
         arity: usize,
         /// The function body
-        body: Bytecode,
+        body: Either<Bytecode, NativeFun>,
         /// The arguments that where already passed to the function
         args: Vec<Constant>,
+    },
+    /// A native rust function
+    NativeFun {
+        /// The function's arity
+        arity: usize,
+        /// The function pointer
+        fp: NativeFun,
     },
 
     /// Yex lists
@@ -42,6 +53,23 @@ impl Constant {
     /// checks if the constant is `nil`
     pub fn is_nil(&self) -> bool {
         self == &Self::Nil
+    }
+
+    /// Returns the size of `self`
+    pub fn len(&self) -> usize {
+        match self {
+            Constant::List(xs) => xs.len(),
+            Constant::Num(_) => std::mem::size_of::<f64>(),
+            Constant::Sym(_) => std::mem::size_of::<Symbol>(),
+            Constant::Str(s) => s.len(),
+            Constant::Fun { arity, body } => mem::size_of_val(&body) + mem::size_of_val(&arity),
+            Constant::PartialFun { arity, body, args } => {
+                mem::size_of_val(&body) + mem::size_of_val(&arity) + mem::size_of_val(&args)
+            }
+            Constant::NativeFun { arity, fp } => mem::size_of_val(&arity) + mem::size_of_val(&fp),
+            Constant::Bool(_) => std::mem::size_of::<bool>(),
+            Constant::Nil => 4,
+        }
     }
 }
 
@@ -73,7 +101,9 @@ impl std::fmt::Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Constant::*;
         let tk = match self {
-            Fun { arity, .. } | PartialFun { arity, .. } => format!("<fun({})>", arity),
+            Fun { arity, .. } | PartialFun { arity, .. } | NativeFun { arity, .. } => {
+                format!("<fun({})>", arity)
+            }
             Nil => "nil".to_string(),
             List(xs) => format!("{}", xs),
             Str(s) => "\"".to_owned() + s + "\"",

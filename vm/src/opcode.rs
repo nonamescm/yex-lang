@@ -1,4 +1,4 @@
-use crate::{Constant, Symbol};
+use crate::Symbol;
 
 /// OpCodes for the virtualMachine
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
@@ -71,11 +71,6 @@ pub enum OpCode {
     /// The stack layout before running this opcode: [fun, ...args]
     /// The stack layout after running it: [return-value]
     TCall(usize),
-
-    /// Calls a native rust function
-    /// The stack layout before running this opcode: [arg]
-    /// The stack layout after running it: [return-value]
-    Cnll(fn(Constant) -> Constant),
 
     /// Prepends a value to a list, pushing a new list
     /// The stack layout before running this opcode: [list, value]
