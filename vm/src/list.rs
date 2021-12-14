@@ -62,6 +62,17 @@ impl List {
             }
         }
     }
+
+    /// Returns the list length
+    pub fn len(&self) -> usize {
+        let mut xs = self.head.as_ref();
+        let mut count = 0;
+        while xs != None {
+            xs = xs.unwrap().next.as_ref();
+            count += 1;
+        }
+        count
+    }
 }
 
 impl std::fmt::Display for List {

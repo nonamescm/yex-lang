@@ -113,12 +113,17 @@ pub enum OpCode {
     Div,
 
     /// Negates the value on the stack top
-    /// The stack layout before running this opcode: [const1, const2]
+    /// The stack layout before running this opcode: [const]
     /// The stack layout after running it: [result]
     Neg,
 
+    /// Returns the len of the value on the stack top
+    /// The stack layout before running this opcode: [const]
+    /// The stack layout after running it: [result]
+    Len,
+
     /// Apply a unary not to the stack top
-    /// The stack layout before running this opcode: [const1, const2]
+    /// The stack layout before running this opcode: [const]
     /// The stack layout after running it: [result]
     Not,
 

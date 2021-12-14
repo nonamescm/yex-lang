@@ -229,6 +229,25 @@ impl VirtualMachine {
                 }
 
                 Neg => unaop!(-),
+                Len => {
+                    let len = match self.pop() {
+                        Constant::List(xs) => xs.len(),
+                        Constant::Num(_) => std::mem::size_of::<f64>(),
+                        Constant::Sym(_) => std::mem::size_of::<Symbol>(),
+                        Constant::Str(s) => s.len(),
+                        Constant::Fun { arity, body } => {
+                            mem::size_of_val(&body) + mem::size_of_val(&arity)
+                        }
+                        Constant::PartialFun { arity, body, args } => {
+                            mem::size_of_val(&body)
+                                + mem::size_of_val(&arity)
+                                + mem::size_of_val(&args)
+                        }
+                        Constant::Bool(_) => std::mem::size_of::<bool>(),
+                        Constant::Nil => 4,
+                    };
+                    self.push(Constant::Num(len as f64))
+                }
                 Not => {
                     let right = self.pop();
                     self.push(!right)

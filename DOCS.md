@@ -46,7 +46,7 @@ Yex has the following primitive types:
   * `bool` - Booleans (true and false)
   * `list` - Singly linked lists
 
-Them all support the equality `==` operator.
+Them all support the equality `==` operator and the `#` len operator.
 
 #### Numbers
 Open the repl and start typing:
@@ -209,6 +209,7 @@ Lists support the following operations:
   * `tail()` - returns the tail of the list, (all elements except for the first)
   * `::` - This is the cons operator, it add a new element at the start of the
     list without mutating it.
+  * `#` - Returns the list length
 
 On the repl:
 
@@ -219,6 +220,8 @@ yex> tail([1, 2, 3])
 >> [2, 3]
 yex> 0 :: [1, 2, 3]
 >> [0, 1, 2, 3]
+yex> #[1, 2, 3]
+>> 3
 ```
 
 ## Functions

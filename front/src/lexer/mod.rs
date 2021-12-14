@@ -94,6 +94,7 @@ impl Lexer {
             }
 
             '+' => TokenType::Add,
+            '#' => TokenType::Len,
             '-' => TokenType::Sub,
             '/' => TokenType::Div,
             '*' => TokenType::Mul,

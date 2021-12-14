@@ -470,10 +470,11 @@ impl Compiler {
     fn unary(&mut self) -> ParseResult {
         use OpCode::*;
 
-        if matches!(self.current.token, Tkt::Sub | Tkt::Not) {
+        if matches!(self.current.token, Tkt::Sub | Tkt::Not | Tkt::Len) {
             let operator = match self.current.token {
                 Tkt::Sub => Neg,
                 Tkt::Not => Not,
+                Tkt::Len => Len,
                 _ => unreachable!(),
             };
             self.next()?;
