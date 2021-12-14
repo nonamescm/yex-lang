@@ -3,8 +3,8 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
 };
 pub mod symbol;
+use crate::Either;
 use crate::{list::List, Bytecode};
-use either::Either;
 use symbol::Symbol;
 pub type NativeFun = fn(Vec<Constant>) -> Constant;
 
