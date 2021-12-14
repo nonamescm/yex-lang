@@ -495,11 +495,13 @@ impl Compiler {
         while self.current.token != Tkt::Rparen {
             self.expression()?;
             *arity += 1;
-            if !matches!(&self.current.token, Tkt::Colon | Tkt::Rparen) {
-                self.throw(format!(
+            match &self.current.token {
+                Tkt::Rparen => break,
+                Tkt::Colon => self.next()?,
+                other => self.throw(format!(
                     "Expected `,`, `)` or other token, found `{}`",
-                    &self.current.token
-                ))?
+                    other
+                ))?,
             }
         }
 
