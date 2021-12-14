@@ -225,6 +225,7 @@ fn get_args(_args: &[Constant]) -> Constant {
     return List(args);
 }
 
+
 fn str_split(args: &[Constant]) -> Constant {
     use Constant::*;
     let pat = match &args[0] {
@@ -242,6 +243,7 @@ fn str_split(args: &[Constant]) -> Constant {
     }
     List(list)
 }
+
 
 pub fn prelude() -> Table {
     let mut prelude = Table::new();
