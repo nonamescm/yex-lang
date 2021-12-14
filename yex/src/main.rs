@@ -30,7 +30,6 @@ fn eval_file(file: &str) -> Result<i32, front::ParseError> {
 
 fn start(args: Vec<String>) -> i32 {
     let mut vm = VirtualMachine::default();
-    #[cfg(not(feature = "lite"))]
     let mut repl = Editor::<()>::new();
 
     if args.len() > 1 {
@@ -42,17 +41,7 @@ fn start(args: Vec<String>) -> i32 {
             }
         };
     }
-    #[cfg(feature = "lite")]
-	let read = || {
-		use std::io::Write;
-		let mut buf = String::new();
-		print!("yex> ");
-		std::io::stdout().flush().unwrap();
-		std::io::stdin().read_line(&mut buf).unwrap();
-		buf.trim().to_string()
-	};
     loop {
-   		#[cfg(not(feature = "lite"))]
         let line = match repl.readline("yex> ").map(|it| it.trim().to_string()) {
             Ok(str) => {
                 repl.add_history_entry(&str);
@@ -60,8 +49,6 @@ fn start(args: Vec<String>) -> i32 {
             }
             Err(_) => return 0,
         };
-        #[cfg(feature = "lite")]
-		let line = read();
         if line.is_empty() {
             continue;
         }
@@ -91,6 +78,27 @@ fn start(args: Vec<String>) -> i32 {
     }
 }
 
+#[cfg(not(feature = "lite"))]
 fn main() {
-    exit(start(args().collect()))
+    let args = args().collect();
+    exit(start(args));
+}
+
+#[cfg(feature = "lite")]
+fn main() {
+    let file = match args.get(1) {
+        Some(file) => eval_file(file),
+        None => {
+            eprintln!("Error: expected file name");
+            exit(1);
+        }
+    };
+
+    match file {
+        Ok(n) => exit(n),
+        Err(e) => {
+            eprintln!("{}", e);
+            exit(1)
+        }
+    }
 }
