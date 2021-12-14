@@ -144,6 +144,7 @@ impl Lexer {
 
             item.push_str(&chr);
         }
+        self.back();
         Ok(item)
     }
 
