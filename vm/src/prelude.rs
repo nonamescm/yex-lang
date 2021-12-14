@@ -231,6 +231,6 @@ pub fn prelude() -> Table {
     insert_fn!("creat", create_file);
     insert_fn!("exists", exists_file);
     insert_fn!("system", system, 2);
-    insert_fn!("get_args", get_args);
+    insert_fn!("getargs", get_args);
     prelude
 }
