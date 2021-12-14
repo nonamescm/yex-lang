@@ -490,14 +490,10 @@ impl Compiler {
 
     fn call_args(&mut self, arity: &mut usize) -> ParseResult {
         self.next()?;
+        self.next()?;
 
-        loop {
-            if matches!(self.current.token, Tkt::Rparen) {
-                break;
-            }
-            self.next()?;
-
-            self.expression()?; // compiles the argument
+        while self.current.token != Tkt::Rparen {
+            self.expression()?;
             *arity += 1;
             if !matches!(&self.current.token, Tkt::Colon | Tkt::Rparen) {
                 self.throw(format!(
@@ -506,6 +502,7 @@ impl Compiler {
                 ))?
             }
         }
+
         Ok(())
     }
 
