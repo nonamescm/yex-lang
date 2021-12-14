@@ -212,11 +212,12 @@ pub fn prelude() -> Table {
     insert_fn!("type", r#type);
     insert_fn!("inspect", inspect);
     insert_fn!("int", int);
+
     insert_fn!("fread", read_file);
     insert_fn!("fwrite", write_file, 2);
-    insert_fn!("fremove", remove_file);
-    insert_fn!("crate", create_file);
-    insert_fn!("fexists", exists_file);
+    insert_fn!("remove", remove_file);
+    insert_fn!("creat", create_file);
+    insert_fn!("exists", exists_file);
     insert_fn!("system", system);
     prelude
 }
