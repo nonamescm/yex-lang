@@ -1,7 +1,6 @@
 use crate::{env::Table, list, panic, Constant};
 use std::env;
 use std::fs;
-use std::env;
 use std::io::{self, Write};
 use std::process::Command;
 
@@ -83,7 +82,7 @@ fn write_file(args: &[Constant]) -> Constant {
 }
 fn getenv(args: &[Constant]) -> Constant {
     use Constant::*;
-    
+
     match &args[0] {
         Str(ref env_var) => {
             if let Ok(evar) = env::var(env_var) {
@@ -96,16 +95,14 @@ fn getenv(args: &[Constant]) -> Constant {
 }
 fn setenv(args: &[Constant]) -> Constant {
     use Constant::*;
-    
+
     match &args[0] {
-        Str(ref env_value) => {
-            match &args[1] {
-                Str(ref env_name) => {
-                    env::set_var(env_name, env_value);
-                }
-                other => panic!("setenv()[1] expected str, found {}", other)
+        Str(ref env_value) => match &args[1] {
+            Str(ref env_name) => {
+                env::set_var(env_name, env_value);
             }
-        }
+            other => panic!("setenv()[1] expected str, found {}", other),
+        },
         other => panic!("getenv() expected str, found {}", other),
     }
     Nil

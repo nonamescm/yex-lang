@@ -1,2 +1,2 @@
 let _ = 
-	puts(get_args(nil))
+	puts(getargs(nil))
