@@ -15,9 +15,8 @@ Yex is a functional scripting language written in rust. <!--TODO: More informati
 ## Installation
 
 First, [install rust](https://doc.rust-lang.org/book/ch01-01-installation.html),
-after that, clone this repository on your machine and run `cargo build --release`.
-If you want to have it avaible on your path, run `cargo install --path yex` and
-it should be avaible.
+after that, run `cargo install --git https://github.com/nonamescm/yex-lang.git`.
+Done, yex is now installed!
 
 ## How to
 
