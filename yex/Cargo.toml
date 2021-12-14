@@ -8,4 +8,7 @@ edition = "2021"
 [dependencies]
 vm = { path = "../vm" }
 front = { path = "../front" }
-rustyline = "9.0.0"
+rustyline = { version = "9.0.0", optional = true } 
+[features]
+lite = []
+default = ["rustyline"]
