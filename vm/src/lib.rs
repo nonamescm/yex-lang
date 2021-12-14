@@ -286,7 +286,7 @@ impl VirtualMachine {
                         self.run(bytecode);
                     }
                     Either::Right(fp) => {
-                        let ret = fp(fargs);
+                        let ret = fp(fargs.into_iter().rev().collect());
                         self.push(ret)
                     }
                 }
