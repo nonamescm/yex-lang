@@ -1,21 +1,21 @@
 #![deny(missing_docs)]
 //! Virtual Machine implementation for the yex programming language
-#[cfg(test)]
-mod tests;
-mod prelude;
 mod env;
 mod list;
 mod literal;
 mod opcode;
+mod prelude;
 mod stack;
+#[cfg(test)]
+mod tests;
 
 use either::Either;
 use std::{cmp::Ordering, mem};
 
 use crate::{
     env::{Env, Table},
-    stack::StackVec,
     literal::NativeFun,
+    stack::StackVec,
 };
 
 pub use crate::{
@@ -240,7 +240,10 @@ impl VirtualMachine {
         Constant::Nil
     }
 
-    fn call_helper(&mut self, carity: usize) -> (Either<Bytecode, NativeFun>, usize, Vec<Constant>) {
+    fn call_helper(
+        &mut self,
+        carity: usize,
+    ) -> (Either<Bytecode, NativeFun>, usize, Vec<Constant>) {
         let mut fargs = vec![];
 
         let (farity, body) = match self.pop() {
