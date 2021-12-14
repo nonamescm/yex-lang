@@ -252,6 +252,6 @@ pub fn prelude() -> Table {
     insert_fn!("exists", exists_file);
     insert_fn!("system", system, 2);
     insert_fn!("getenv", getenv);
-    insert_fn!("setenv", setenv);
+    insert_fn!("setenv", setenv, 2);
     prelude
 }
