@@ -103,11 +103,11 @@ fn system(args: &[Constant]) -> Constant {
             let proc_command = Command::new(command).args(&command_args).output();
             if let Ok(out) = proc_command {
                 let stdout = String::from_utf8(out.stdout)
-                    .unwrap_or(String::new())
+                    .unwrap_or_default()
                     .trim()
                     .to_string();
                 let stderr = String::from_utf8(out.stderr)
-                    .unwrap_or(String::new())
+                    .unwrap_or_default()
                     .trim()
                     .to_string();
 
