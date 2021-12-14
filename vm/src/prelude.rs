@@ -219,6 +219,6 @@ pub fn prelude() -> Table {
     insert_fn!("fremove", remove_file);
     insert_fn!("fcreate", create_file);
     insert_fn!("fexists", exists_file);
-    insert_fn!("system", system);
+    insert_fn!("system", system, 2);
     prelude
 }
