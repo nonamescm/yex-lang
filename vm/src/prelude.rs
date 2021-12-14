@@ -81,16 +81,26 @@ fn write_file(args: &[Constant]) -> Constant {
 }
 fn system(args: &[Constant]) -> Constant {
     use Constant::*;
-    match &args[0] {
+    match &args[1] {
         Str(ref command) => {
             let mut command_pieces = command.split_whitespace();
             let command = match command_pieces.next() {
                 Some(v) => v,
                 _ => return Nil,
             };
-
-            let args = command_pieces.collect::<Vec<_>>();
-            let proc_command = Command::new(command).args(&args).output();
+            let mut command_args = vec![];
+            match &args[0] {
+                List(list) => {
+                    let list_vec = list.to_vec();
+                    list_vec.into_iter().for_each(|val| {
+                        if let Str(s) = val {
+                            command_args.push(s);
+                        }
+                    })
+                }
+                other => panic!("system()[1] expected a list, found {}", other),
+            }
+            let proc_command = Command::new(command).args(&command_args).output();
             if let Ok(out) = proc_command {
                 let stdout = String::from_utf8(out.stdout)
                     .unwrap_or(String::new())
@@ -100,6 +110,7 @@ fn system(args: &[Constant]) -> Constant {
                     .unwrap_or(String::new())
                     .trim()
                     .to_string();
+
                 let list = list::List::new();
                 let list = list.prepend(Str(stderr));
                 let list = list.prepend(Str(stdout));

@@ -73,6 +73,16 @@ impl List {
         }
         count
     }
+	/// Converts list to Vec
+    pub fn to_vec(&self) -> Vec<Constant> {
+        let mut vec = vec![];
+        let mut head = self.clone();
+        while head.head().is_some() {
+            vec.push(head.head().unwrap().to_owned());
+            head = head.tail();
+        }
+        vec
+    }
 }
 
 impl std::fmt::Display for List {
@@ -81,10 +91,12 @@ impl std::fmt::Display for List {
         let str = loop {
             let mut str = String::from('[');
             str.push_str(&match self.head() {
-                Some(s) => if self.tail().is_empty() {
-                    format!("{}", s)
-                } else {
-                    format!("{}, ", s)
+                Some(s) => {
+                    if self.tail().is_empty() {
+                        format!("{}", s)
+                    } else {
+                        format!("{}, ", s)
+                    }
                 }
                 None => break str + "]",
             });
