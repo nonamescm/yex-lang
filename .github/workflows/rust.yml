@@ -45,31 +45,6 @@ jobs:
              ~/.cargo/git/db/
              target/
             key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-   build_macos:
-     name: Build on MacOS 11
-     runs-on: macos-11
-
-     steps:
-     - uses: actions/checkout@v2
-     - uses: actions/cache@v2
-       with:
-         path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-     - name: Install Rust
-       run: curl -sSf "https://sh.rustup.rs" > ./rustup-init.sh &&  sh ./rustup-init.sh --default-toolchain=stable -y
-     - name: Fetch Deps
-       run: cargo fetch
-     - name: Build Project
-       run: cargo build --verbose --features lite --no-default-features --offline
-     - name: Run Tests
-       run: cargo test --verbose --all --features lite --no-default-features
-     - name: Run Clippy 
-       run: cargo clippy --verbose --features lite --no-default-features -- -D warnings
 
    build:
     name: Build on Linux (Ubuntu)
