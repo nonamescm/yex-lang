@@ -128,7 +128,7 @@ fn write_file(args: &[ConstantRef]) -> ConstantRef {
     };
     match res {
         Ok(_) => ok(),
-        Err(e) => err_tuple!("{:?}", e),
+        Err(e) => err_tuple!("{:?}", e.kind()),
     }
 }
 
@@ -201,7 +201,7 @@ fn system(args: &[ConstantRef]) -> ConstantRef {
 
             return GcRef::new(List(list));
         }
-        Err(e) => err_tuple!("{:?}", e),
+        Err(e) => err_tuple!("{:?}", e.kind()),
     }
 }
 
@@ -220,18 +220,19 @@ fn remove_file(args: &[ConstantRef]) -> ConstantRef {
     match args[0].get() {
         Str(filename) => match fs::remove_file(filename) {
             Ok(_) => ok(),
-            Err(e) => err_tuple!("{:?}", e),
+            Err(e) => err_tuple!("{:?}", e.kind()),
         },
         other => err_tuple!("file_remove() expected str, found {}", other),
     }
 }
+
 fn read_file(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
 
     match args[0].get() {
         Str(filename) => match fs::read_to_string(filename) {
             Ok(v) => GcRef::new(Str(v)),
-            Err(e) => err_tuple!("{:?}", e),
+            Err(e) => err_tuple!("{:?}", e.kind()),
         },
         other => err_tuple!("file_read() expected str, found {}", other),
     }
