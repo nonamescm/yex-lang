@@ -1,4 +1,4 @@
-use std::{cell::Cell, ptr::NonNull};
+use std::{cell::Cell, ptr::NonNull, fmt};
 
 #[derive(Debug)]
 struct Ref<T> {
@@ -7,7 +7,7 @@ struct Ref<T> {
 }
 
 #[derive(Debug)]
-pub(crate) struct GcRef<T> {
+pub struct GcRef<T> {
     inner: NonNull<Ref<T>>,
 }
 
@@ -59,12 +59,13 @@ impl<T> Clone for GcRef<T> {
 impl<T> Drop for GcRef<T> {
     fn drop(&mut self) {
         self.dec_ref();
-        println!("Reference counting: {}", self.ref_count());
+
         if self.ref_count() == 0 {
             unsafe { drop(Box::from_raw(self.inner.as_ptr())) };
         }
     }
 }
+
 
 impl<T: PartialEq> PartialEq for GcRef<T> {
     fn eq(&self, other: &Self) -> bool {
