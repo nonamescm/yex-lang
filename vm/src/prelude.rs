@@ -81,11 +81,11 @@ fn create_file(args: &[ConstantRef]) -> ConstantRef {
 fn write_file(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
 
-    let content = match args[0].get() {
+    let content = match args[1].get() {
         Str(ref content) => content,
         other => panic!("file_write() expected str, found {}", other),
     };
-    match args[1].get() {
+    match args[0].get() {
         Str(ref filename) => {
             fs::write(filename, content).ok();
         }
@@ -140,7 +140,7 @@ fn system(args: &[ConstantRef]) -> ConstantRef {
         other => panic!("system() expected str, found {}", other),
     };
 
-    let args = match args[0].get() {
+    let args = match args[1].get() {
         List(list) => list
             .to_vec()
             .into_iter()
@@ -323,7 +323,7 @@ pub fn prelude() -> Table {
     insert_fn!("creat", create_file);
     insert_fn!("exists", exists_file);
     insert_fn!("system", system, 2);
-    insert_fn!("getargs", get_args);
+    insert_fn!("getargs", get_args, 0);
     insert_fn!("getenv", getenv);
     insert_fn!("setenv", setenv, 2);
     insert_fn!("split", str_split, 2);
