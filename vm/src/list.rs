@@ -1,6 +1,9 @@
-use crate::literal::{nil, ConstantRef};
+use crate::{
+    gc::GcRef,
+    literal::{nil, ConstantRef},
+};
 
-type Link = Option<Box<Node>>;
+type Link = Option<GcRef<Node>>;
 #[derive(Clone, Debug, PartialEq)]
 /// Yex lists implementation
 pub struct List {
@@ -25,7 +28,7 @@ impl List {
 
     /// Prepends a value to the end, returning the list
     pub fn prepend(&self, elem: ConstantRef) -> Self {
-        let node = Box::new(Node {
+        let node = GcRef::new(Node {
             elem,
             next: self.head.clone(),
         });
@@ -34,7 +37,7 @@ impl List {
 
     /// Returns the list tail
     pub fn tail(&self) -> Self {
-        let tail = self.head.as_ref().map(|node| node.as_ref().next.clone());
+        let tail = self.head.as_ref().map(|node| node.get().next.clone());
         let tail = match tail {
             Some(v) => v,
             None => None,
@@ -47,8 +50,7 @@ impl List {
     pub fn head(&self) -> Option<ConstantRef> {
         self.head
             .as_ref()
-            .map(|node| Some(&node.as_ref().elem))?
-            .cloned()
+            .map(|node| GcRef::clone(&node.get().elem))
     }
 
     /// Returns a index into the list
@@ -70,7 +72,7 @@ impl List {
         let mut xs = self.head.as_ref();
         let mut count = 0;
         while xs != None {
-            xs = xs.unwrap().next.as_ref();
+            xs = xs.unwrap().get().next.as_ref();
             count += 1;
         }
         count
@@ -85,6 +87,24 @@ impl List {
             head = head.tail();
         }
         vec
+    }
+
+    /// Iterate over all elements of `self`
+    pub fn iter(&self) -> Iter {
+        Iter {
+            next: self.head.as_ref().map(|node| GcRef::clone(node)),
+        }
+    }
+
+    /// Reverses `self` without consuming it
+    pub fn rev(&self) -> Self {
+        let mut node = self.head.as_ref();
+        let mut list = Self::new();
+        while let Some(elem) = node {
+            list = list.prepend(GcRef::clone(&elem.get().elem));
+            node = elem.get().next.as_ref()
+        }
+        list
     }
 }
 
@@ -120,5 +140,29 @@ impl std::fmt::Display for List {
         };
 
         write!(f, "{}", str)
+    }
+}
+
+pub struct Iter {
+    next: Option<GcRef<Node>>,
+}
+
+impl Iterator for Iter {
+    type Item = ConstantRef;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.clone().map(|node| {
+            self.next = node.get().next.clone();
+            node.get().elem.clone()
+        })
+    }
+}
+
+impl FromIterator<ConstantRef> for List {
+    fn from_iter<T: IntoIterator<Item = ConstantRef>>(iter: T) -> Self {
+        let mut list = Self::new();
+        for item in iter.into_iter() {
+            list = list.prepend(item)
+        }
+        list
     }
 }

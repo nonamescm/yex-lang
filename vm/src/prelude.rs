@@ -1,9 +1,9 @@
 use crate::{
     env::Table,
     gc::GcRef,
-    list,
+    list::{self, List},
     literal::{nil, ConstantRef},
-    panic, Constant,
+    panic, Constant, VirtualMachine,
 };
 use std::env;
 use std::fs;
@@ -270,6 +270,53 @@ fn str_split(args: &[ConstantRef]) -> ConstantRef {
     GcRef::new(List(list))
 }
 
+fn map(vm: &mut VirtualMachine, args: &[ConstantRef]) -> ConstantRef {
+    let fun = GcRef::clone(&args[0]);
+    let xs = match args[1].get() {
+        Constant::List(xs) => xs,
+        other => panic!("map[1] expected a list, but found `{}`", other),
+    };
+
+    let xs = xs
+        .iter()
+        .map(|it| {
+            vm.push_gc_ref(it);
+            vm.push_gc_ref(GcRef::clone(&fun));
+            vm.call(1);
+            vm.pop()
+        })
+        .collect::<List>();
+
+    GcRef::new(Constant::List(xs.rev()))
+}
+
+fn fold(vm: &mut VirtualMachine, args: &[ConstantRef]) -> ConstantRef {
+    let mut acc = GcRef::clone(&args[0]);
+    let fun = GcRef::clone(&args[1]);
+    let xs = match args[2].get() {
+        Constant::List(xs) => xs,
+        other => panic!("fold[2] expected a list, but found `{}`", other),
+    };
+
+    for it in xs.iter() {
+        vm.push_gc_ref(acc);
+        vm.push_gc_ref(it);
+        vm.push_gc_ref(GcRef::clone(&fun));
+        vm.call(2);
+        acc = vm.pop()
+    }
+
+    acc
+}
+
+fn rev(args: &[ConstantRef]) -> ConstantRef {
+    let xs = match args[2].get() {
+        Constant::List(xs) => xs,
+        other => panic!("rev[0] expected a list, but found `{}`", other),
+    };
+    GcRef::new(Constant::List(xs.rev()))
+}
+
 pub fn prelude() -> Table {
     let mut prelude = Table::new();
     macro_rules! insert_fn {
@@ -282,7 +329,20 @@ pub fn prelude() -> Table {
                 $crate::GcRef::new(Constant::Fun {
                     arity: $arity,
                     args: vec![],
-                    body: GcRef::new($crate::Either::Right(|it| $fn(&*it))),
+                    body: GcRef::new($crate::Either::Right(|_, it| $fn(&*it))),
+                }),
+            )
+        };
+
+        (@vm $name: expr, $fn: expr, $arity:expr) => {
+            prelude.insert(
+                $crate::Symbol::new($name),
+                $crate::GcRef::new(Constant::Fun {
+                    arity: $arity,
+                    args: vec![],
+                    body: GcRef::new($crate::Either::Right(|vm, it| {
+                        $fn(unsafe { vm.as_mut().unwrap() }, &*it)
+                    })),
                 }),
             )
         };
@@ -297,6 +357,8 @@ pub fn prelude() -> Table {
     insert_fn!("type", r#type);
     insert_fn!("inspect", inspect);
     insert_fn!("int", int);
+    insert_fn!("split", str_split, 2);
+
     insert_fn!("fread", read_file);
     insert_fn!("fwrite", write_file, 2);
     insert_fn!("remove", remove_file);
@@ -306,6 +368,10 @@ pub fn prelude() -> Table {
     insert_fn!("getargs", get_args, 0);
     insert_fn!("getenv", getenv);
     insert_fn!("setenv", setenv, 2);
-    insert_fn!("split", str_split, 2);
+
+    insert_fn!(@vm "map", map, 2);
+    insert_fn!(@vm "fold", fold, 3);
+    insert_fn!("rev", rev, 1);
+
     prelude
 }

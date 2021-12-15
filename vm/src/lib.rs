@@ -310,7 +310,7 @@ impl VirtualMachine {
                         self.run(bytecode.clone());
                     }
                     Either::Right(fp) => {
-                        let ret = fp(fargs.into_iter().rev().collect());
+                        let ret = fp(self, fargs.into_iter().rev().collect());
                         self.push_gc_ref(ret)
                     }
                 }
