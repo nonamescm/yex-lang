@@ -282,7 +282,18 @@ pub fn prelude() -> Table {
                 $crate::GcRef::new(Constant::Fun {
                     arity: $arity,
                     args: vec![],
-                    body: GcRef::new($crate::Either::Right(|it| $fn(&*it))),
+                    body: GcRef::new($crate::Either::Right(|_, it| $fn(&*it))),
+                }),
+            )
+        };
+
+        (@vm $name: expr, $fn: expr, $arity:expr) => {
+            prelude.insert(
+                $crate::Symbol::new($name),
+                $crate::GcRef::new(Constant::Fun {
+                    arity: $arity,
+                    args: vec![],
+                    body: GcRef::new($crate::Either::Right(|vm, it| $fn(unsafe { &*vm }, &*it))),
                 }),
             )
         };
