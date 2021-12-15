@@ -3,7 +3,7 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
 };
 pub mod symbol;
-use crate::{gc::GcRef, Either, VirtualMachine};
+use crate::{Either, VirtualMachine, error::InterpretResult, gc::GcRef};
 use crate::{list::List, Bytecode};
 use symbol::Symbol;
 pub type NativeFun = fn(*mut VirtualMachine, Vec<ConstantRef>) -> ConstantRef;
@@ -70,11 +70,18 @@ impl Default for Constant {
     }
 }
 
-type ConstantErr = Result<Constant, String>;
+type ConstantErr = InterpretResult<Constant>;
 
-macro_rules! err {
-    ($($tt: tt),+) => {
-        Err(format!($($tt),+))
+macro_rules! panic {
+    ($($tt:tt)+) => {
+        unsafe {
+            let msg = format!($($tt)+);
+            Err($crate::error::InterpretError {
+                line: $crate::LINE,
+                column: $crate::COLUMN,
+                err: msg
+            })
+        }
     }
 }
 
@@ -113,7 +120,7 @@ impl Add for Constant {
         match (self, rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x + y)),
             (Self::Str(x), Self::Str(y)) => Ok(Self::Str(x + &y)),
-            (s, r) => err!("Can't apply `+` operator between {} and {}", s, r),
+            (s, r) => panic!("Can't apply `+` operator between {} and {}", s, r),
         }
     }
 }
@@ -127,7 +134,7 @@ impl Add for &Constant {
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x + y)),
             (Str(x), Str(y)) => Ok(Str(x.to_string() + y)),
-            (s, r) => err!("Can't apply `+` operator between {} and {}", s, r),
+            (s, r) => panic!("Can't apply `+` operator between {} and {}", s, r),
         }
     }
 }
@@ -138,7 +145,7 @@ impl Sub for Constant {
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x - y)),
-            (s, r) => err!("Can't apply `-` operator between {} and {}", s, r),
+            (s, r) => panic!("Can't apply `-` operator between {} and {}", s, r),
         }
     }
 }
@@ -151,7 +158,7 @@ impl Sub for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x - y)),
-            (s, r) => err!("Can't apply `-` operator between {} and {}", s, r),
+            (s, r) => panic!("Can't apply `-` operator between {} and {}", s, r),
         }
     }
 }
@@ -162,7 +169,7 @@ impl Mul for Constant {
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x * y)),
-            (s, r) => err!("Can't apply `*` operator between {} and {}", s, r),
+            (s, r) => panic!("Can't apply `*` operator between {} and {}", s, r),
         }
     }
 }
@@ -175,7 +182,7 @@ impl Mul for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x * y)),
-            (s, r) => err!("Can't apply `*` operator between {} and {}", s, r),
+            (s, r) => panic!("Can't apply `*` operator between {} and {}", s, r),
         }
     }
 }
@@ -186,7 +193,7 @@ impl Div for Constant {
     fn div(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x / y)),
-            (s, r) => err!("Can't apply `/` operator between {} and {}", s, r),
+            (s, r) => panic!("Can't apply `/` operator between {} and {}", s, r),
         }
     }
 }
@@ -199,7 +206,7 @@ impl Div for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x / y)),
-            (s, r) => err!("Can't apply `/` operator between {} and {}", s, r),
+            (s, r) => panic!("Can't apply `/` operator between {} and {}", s, r),
         }
     }
 }
@@ -210,7 +217,7 @@ impl Neg for Constant {
     fn neg(self) -> Self::Output {
         match self {
             Self::Num(n) => Ok(Self::Num(-n)),
-            s => err!("Can't apply unary `-` operator on {}", s),
+            s => panic!("Can't apply unary `-` operator on {}", s),
         }
     }
 }
@@ -223,7 +230,7 @@ impl Neg for &Constant {
 
         match self {
             Num(n) => Ok(Num(-n)),
-            s => err!("Can't apply unary `-` operator on {}", s),
+            s => panic!("Can't apply unary `-` operator on {}", s),
         }
     }
 }
@@ -275,7 +282,7 @@ impl BitXor for Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise `^` between {} and {}", x, y),
+            (x, y) => panic!("Can't apply bitwise `^` between {} and {}", x, y),
         }
     }
 }
@@ -288,7 +295,7 @@ impl BitXor for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise `^` between {} and {}", x, y),
+            (x, y) => panic!("Can't apply bitwise `^` between {} and {}", x, y),
         }
     }
 }
@@ -301,7 +308,7 @@ impl BitAnd for Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise `&` between {} and {}", x, y),
+            (x, y) => panic!("Can't apply bitwise `&` between {} and {}", x, y),
         }
     }
 }
@@ -314,7 +321,7 @@ impl BitAnd for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise `&` between {} and {}", x, y),
+            (x, y) => panic!("Can't apply bitwise `&` between {} and {}", x, y),
         }
     }
 }
@@ -327,7 +334,7 @@ impl BitOr for Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise `|` between {} and {}", x, y),
+            (x, y) => panic!("Can't apply bitwise `|` between {} and {}", x, y),
         }
     }
 }
@@ -340,7 +347,7 @@ impl BitOr for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise `|` between {} and {}", x, y),
+            (x, y) => panic!("Can't apply bitwise `|` between {} and {}", x, y),
         }
     }
 }
@@ -353,7 +360,7 @@ impl Shr for Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise `>>` between {} and {}", x, y),
+            (x, y) => panic!("Can't apply bitwise `>>` between {} and {}", x, y),
         }
     }
 }
@@ -366,7 +373,7 @@ impl Shr for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise `>>` between {} and {}", x, y),
+            (x, y) => panic!("Can't apply bitwise `>>` between {} and {}", x, y),
         }
     }
 }
@@ -379,7 +386,7 @@ impl Shl for Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise `<<` between {} and {}", x, y),
+            (x, y) => panic!("Can't apply bitwise `<<` between {} and {}", x, y),
         }
     }
 }
@@ -392,7 +399,7 @@ impl Shl for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
-            (x, y) => err!("Can't apply bitwise `<<` between {} and {}", x, y),
+            (x, y) => panic!("Can't apply bitwise `<<` between {} and {}", x, y),
         }
     }
 }

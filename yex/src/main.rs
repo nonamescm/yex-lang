@@ -1,9 +1,7 @@
 use front::compile;
 
 #[cfg(feature = "repl")]
-use front::compile_expr;
-#[cfg(feature = "repl")]
-use rustyline::Editor;
+use {front::compile_expr, rustyline::Editor};
 
 use std::{env::args, fs::read_to_string, process::exit};
 use vm::VirtualMachine;
@@ -27,7 +25,9 @@ fn eval_file(file: &str) -> Result<i32, front::ParseError> {
         println!("constants: {:#?}", &constants);
     }
     vm.set_consts(constants);
-    vm.run(bytecode);
+    if let Err(e) = vm.run(bytecode) {
+        eprintln!("{}", e)
+    }
 
     Ok(0)
 }
@@ -76,7 +76,9 @@ fn start(args: Vec<String>) -> i32 {
             println!("constants: {:#?}", &constants);
         }
         vm.set_consts(constants);
-        vm.run(bytecode);
+        if let Err(e) = vm.run(bytecode) {
+            eprintln!("{}", e)
+        }
 
         println!(">> {}", vm.pop_last());
         vm.reset();

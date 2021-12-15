@@ -3,19 +3,56 @@ use crate::{
     gc::GcRef,
     list::{self, List},
     literal::{nil, ConstantRef},
-    panic, Constant, VirtualMachine,
+    Constant, VirtualMachine,
 };
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
 
+fn ok() -> ConstantRef {
+    GcRef::new(Constant::Sym(crate::Symbol::new("ok")))
+}
+
+fn err() -> ConstantRef {
+    GcRef::new(Constant::Sym(crate::Symbol::new("err")))
+}
+
+macro_rules! tuple {
+    (@err $reason: expr) => {{
+        let mut xs = $crate::List::new();
+        xs = xs.prepend(GcRef::new(Constant::Str($reason.into())));
+        xs = xs.prepend(err());
+        GcRef::new(Constant::List(xs))
+    }};
+
+    (@ok $reason: expr) => {{
+        let mut xs = $crate::List::new();
+        xs = xs.prepend($reason);
+        xs = xs.prepend(ok());
+        GcRef::new(Constant::List(xs))
+    }};
+}
+
+macro_rules! err_tuple {
+    ($($tt:tt)+) => {{
+        let msg = format!($($tt)+);
+        return tuple!(@err msg)
+    }}
+}
+
+macro_rules! ok_tuple {
+    ($ret:expr) => {
+        return tuple!(@ok $ret)
+    };
+}
+
 fn puts(args: &[ConstantRef]) -> ConstantRef {
     match args[0].get() {
         Constant::Str(s) => println!("{}", s),
         other => println!("{}", other),
     };
-    nil()
+    ok()
 }
 
 fn print(args: &[ConstantRef]) -> ConstantRef {
@@ -23,7 +60,7 @@ fn print(args: &[ConstantRef]) -> ConstantRef {
         Constant::Str(s) => print!("{}", s),
         other => print!("{}", other),
     };
-    nil()
+    ok()
 }
 
 fn input(args: &[ConstantRef]) -> ConstantRef {
@@ -33,16 +70,16 @@ fn input(args: &[ConstantRef]) -> ConstantRef {
     };
 
     if io::stdout().flush().is_err() {
-        panic!("Error flushing stdout")
+        err_tuple!("Error flushing stdout");
     }
 
     let mut input = String::new();
     if io::stdin().read_line(&mut input).is_err() {
-        panic!("Error reading line")
+        err_tuple!("Error reading line");
     }
 
     input.pop();
-    GcRef::new(Constant::Str(input))
+    ok_tuple!(GcRef::new(Constant::Str(input)))
 }
 
 fn head(args: &[ConstantRef]) -> ConstantRef {
@@ -51,14 +88,14 @@ fn head(args: &[ConstantRef]) -> ConstantRef {
             Some(x) => x,
             None => nil(),
         },
-        other => panic!("head() expected a list, found {}", other),
+        other => err_tuple!("head() expected a list, found {}", other),
     }
 }
 
 fn tail(args: &[ConstantRef]) -> ConstantRef {
     match args[0].get() {
         Constant::List(xs) => GcRef::new(Constant::List(xs.tail())),
-        other => panic!("tail() expected a list, found {}", other),
+        other => err_tuple!("tail() expected a list, found {}", other),
     }
 }
 
@@ -70,12 +107,12 @@ fn create_file(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
 
     match args[0].get() {
-        Str(ref filename) => {
-            fs::File::create(filename).ok();
-        }
-        other => panic!("file_create() expected str, found {}", other),
+        Str(ref filename) => match fs::File::create(filename) {
+            Ok(_) => ok(),
+            Err(e) => err_tuple!("{:?}", e.kind()),
+        },
+        other => err_tuple!("file_create() expected str, found {}", other),
     }
-    nil()
 }
 
 fn write_file(args: &[ConstantRef]) -> ConstantRef {
@@ -83,15 +120,16 @@ fn write_file(args: &[ConstantRef]) -> ConstantRef {
 
     let content = match args[1].get() {
         Str(ref content) => content,
-        other => panic!("file_write() expected str, found {}", other),
+        other => err_tuple!("file_write()[0] expected str, found {}", other),
     };
-    match args[0].get() {
-        Str(ref filename) => {
-            fs::write(filename, content).ok();
-        }
-        other => panic!("file_write()[1] expected str, found {}", other),
+    let res = match args[0].get() {
+        Str(ref filename) => fs::write(filename, content),
+        other => err_tuple!("file_write()[1] expected str, found {}", other),
+    };
+    match res {
+        Ok(_) => ok(),
+        Err(e) => err_tuple!("{:?}", e),
     }
-    nil()
 }
 
 fn getenv(args: &[ConstantRef]) -> ConstantRef {
@@ -103,7 +141,7 @@ fn getenv(args: &[ConstantRef]) -> ConstantRef {
                 return GcRef::new(Str(evar));
             }
         }
-        other => panic!("getenv() expected str, found {}", other),
+        other => err_tuple!("getenv() expected str, found {}", other),
     }
     nil()
 }
@@ -113,14 +151,14 @@ fn setenv(args: &[ConstantRef]) -> ConstantRef {
 
     let var = match args[0].get() {
         Str(var) => var,
-        other => panic!("getenv() expected str, found {}", other),
+        other => err_tuple!("getenv() expected str, found {}", other),
     };
 
     match args[0].get() {
         Str(value) => {
             env::set_var(var, value);
         }
-        other => panic!("getenv()[1] expected str, found {}", other),
+        other => err_tuple!("getenv()[1] expected str, found {}", other),
     }
 
     nil()
@@ -129,15 +167,8 @@ fn setenv(args: &[ConstantRef]) -> ConstantRef {
 fn system(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
     let mut cmd = match args[0].get() {
-        Str(command) => {
-            let mut command_pieces = command.split_whitespace();
-            let command = match command_pieces.next() {
-                Some(v) => v,
-                _ => return nil(),
-            };
-            Command::new(command)
-        }
-        other => panic!("system() expected str, found {}", other),
+        Str(command) => Command::new(command),
+        other => err_tuple!("system() expected str, found {}", other),
     };
 
     let args = match args[1].get() {
@@ -149,27 +180,29 @@ fn system(args: &[ConstantRef]) -> ConstantRef {
                 other => format!("{}", other),
             })
             .collect::<Vec<_>>(),
-        other => panic!("system()[1] expected a list, found {}", other),
+        other => err_tuple!("system()[1] expected a list, found {}", other),
     };
 
-    if let Ok(out) = cmd.args(&args).output() {
-        let stdout = String::from_utf8(out.stdout)
-            .unwrap_or_default()
-            .trim()
-            .to_string();
+    match cmd.args(&args).output() {
+        Ok(out) => {
+            let stdout = String::from_utf8(out.stdout)
+                .unwrap_or_default()
+                .trim()
+                .to_string();
 
-        let stderr = String::from_utf8(out.stderr)
-            .unwrap_or_default()
-            .trim()
-            .to_string();
+            let stderr = String::from_utf8(out.stderr)
+                .unwrap_or_default()
+                .trim()
+                .to_string();
 
-        let list = list::List::new();
-        let list = list.prepend(GcRef::new(Str(stderr)));
-        let list = list.prepend(GcRef::new(Str(stdout)));
+            let list = list::List::new();
+            let list = list.prepend(GcRef::new(Str(stderr)));
+            let list = list.prepend(GcRef::new(Str(stdout)));
 
-        return GcRef::new(List(list));
+            return GcRef::new(List(list));
+        }
+        Err(e) => err_tuple!("{:?}", e),
     }
-    nil()
 }
 
 fn exists_file(args: &[ConstantRef]) -> ConstantRef {
@@ -177,7 +210,7 @@ fn exists_file(args: &[ConstantRef]) -> ConstantRef {
 
     match args[0].get() {
         Str(filename) => GcRef::new(Bool(fs::File::open(filename).is_ok())),
-        other => panic!("file_exists() expected str, found {}", other),
+        other => err_tuple!("file_exists() expected str, found {}", other),
     }
 }
 
@@ -185,13 +218,12 @@ fn remove_file(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
 
     match args[0].get() {
-        Str(filename) => {
-            fs::remove_file(filename).ok();
-        }
-        other => panic!("file_remove() expected str, found {}", other),
+        Str(filename) => match fs::remove_file(filename) {
+            Ok(_) => ok(),
+            Err(e) => err_tuple!("{:?}", e),
+        },
+        other => err_tuple!("file_remove() expected str, found {}", other),
     }
-
-    nil()
 }
 fn read_file(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
@@ -199,9 +231,9 @@ fn read_file(args: &[ConstantRef]) -> ConstantRef {
     match args[0].get() {
         Str(filename) => match fs::read_to_string(filename) {
             Ok(v) => GcRef::new(Str(v)),
-            Err(_) => nil(),
+            Err(e) => err_tuple!("{:?}", e),
         },
-        other => panic!("file_read() str, found {}", other),
+        other => err_tuple!("file_read() expected str, found {}", other),
     }
 }
 
@@ -229,12 +261,12 @@ fn int(args: &[ConstantRef]) -> ConstantRef {
     let str = match args[0].get() {
         Constant::Sym(symbol) => symbol.to_str(),
         Constant::Str(str) => str,
-        other => panic!("Expected a string or a symbol, found {}", other),
+        other => err_tuple!("Expected a string or a symbol, found {}", other),
     };
 
     match str.parse::<f64>() {
         Ok(n) => GcRef::new(Constant::Num(n)),
-        Err(_) => nil(),
+        Err(e) => err_tuple!("{:?}", e),
     }
 }
 
@@ -254,12 +286,12 @@ fn str_split(args: &[ConstantRef]) -> ConstantRef {
 
     let str = match args[0].get() {
         Str(str) => str,
-        other => panic!("split() expected str, found {}", other),
+        other => err_tuple!("split() expected str, found {}", other),
     };
 
     let pat = match args[1].get() {
         Str(pat) => pat,
-        other => panic!("split() expected str, found {}", other),
+        other => err_tuple!("split() expected str, found {}", other),
     };
 
     let mut list = list::List::new();
@@ -274,7 +306,7 @@ fn map(vm: &mut VirtualMachine, args: &[ConstantRef]) -> ConstantRef {
     let fun = GcRef::clone(&args[0]);
     let xs = match args[1].get() {
         Constant::List(xs) => xs,
-        other => panic!("map[1] expected a list, but found `{}`", other),
+        other => err_tuple!("map[1] expected a list, but found `{}`", other),
     };
 
     let xs = xs
@@ -282,7 +314,9 @@ fn map(vm: &mut VirtualMachine, args: &[ConstantRef]) -> ConstantRef {
         .map(|it| {
             vm.push_gc_ref(it);
             vm.push_gc_ref(GcRef::clone(&fun));
-            vm.call(1);
+            if let Err(e) = vm.call(1) {
+                err_tuple!("{}", e)
+            }
             vm.pop()
         })
         .collect::<List>();
@@ -295,14 +329,16 @@ fn fold(vm: &mut VirtualMachine, args: &[ConstantRef]) -> ConstantRef {
     let fun = GcRef::clone(&args[1]);
     let xs = match args[2].get() {
         Constant::List(xs) => xs,
-        other => panic!("fold[2] expected a list, but found `{}`", other),
+        other => err_tuple!("fold[2] expected a list, but found `{}`", other),
     };
 
     for it in xs.iter() {
         vm.push_gc_ref(acc);
         vm.push_gc_ref(it);
         vm.push_gc_ref(GcRef::clone(&fun));
-        vm.call(2);
+        if let Err(e) = vm.call(1) {
+            err_tuple!("{}", e)
+        }
         acc = vm.pop()
     }
 
@@ -320,11 +356,11 @@ fn starts_with(args: &[ConstantRef]) -> ConstantRef {
 
     let str = match args[0].get() {
         Str(string) => string,
-        other => panic!("starts_with() expected str, found {}", other),
+        other => err_tuple!("starts_with()[0] expected str, found {}", other),
     };
     let pattern = match args[1].get() {
         Str(pat) => pat,
-        other => panic!("starts_with() expected str, found {}", other),
+        other => err_tuple!("starts_with()[1] expected str, found {}", other),
     };
     GcRef::new(Bool(str.starts_with(pattern)))
 }
@@ -340,11 +376,11 @@ fn ends_with(args: &[ConstantRef]) -> ConstantRef {
 
     let str = match args[0].get() {
         Str(string) => string,
-        other => panic!("ends_with() expected str, found {}", other),
+        other => err_tuple!("ends_with() expected str, found {}", other),
     };
     let pattern = match args[1].get() {
         Str(pat) => pat,
-        other => panic!("ends_with() expected str, found {}", other),
+        other => err_tuple!("ends_with() expected str, found {}", other),
     };
     GcRef::new(Bool(str.ends_with(pattern)))
 }
@@ -352,27 +388,29 @@ fn ends_with(args: &[ConstantRef]) -> ConstantRef {
 fn rev(args: &[ConstantRef]) -> ConstantRef {
     let xs = match args[2].get() {
         Constant::List(xs) => xs,
-        other => panic!("rev[0] expected a list, but found `{}`", other),
+        other => err_tuple!("rev[0] expected a list, but found `{}`", other),
     };
     GcRef::new(Constant::List(xs.rev()))
 }
+
 fn replace(args: &[ConstantRef]) -> ConstantRef {
     let str = match args[0].get() {
         Constant::Str(str) => str,
-        other => panic!("replace()[0] expected a str, but found `{}`", other),
+        other => err_tuple!("replace()[0] expected a str, but found `{}`", other),
     };
     let s_match = match args[1].get() {
         Constant::Str(str) => str,
-        other => panic!("replace()[1] expected a str, but found `{}`", other),
+        other => err_tuple!("replace()[1] expected a str, but found `{}`", other),
     };
 
     let s_match2 = match args[2].get() {
         Constant::Str(str) => str,
-        other => panic!("replace()[2] expected a str, but found `{}`", other),
+        other => err_tuple!("replace()[2] expected a str, but found `{}`", other),
     };
 
     GcRef::new(Constant::Str(str.replace(s_match, s_match2)))
 }
+
 pub fn prelude() -> Table {
     let mut prelude = Table::new();
     macro_rules! insert_fn {
