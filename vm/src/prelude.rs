@@ -140,7 +140,7 @@ fn system(args: &[ConstantRef]) -> ConstantRef {
         other => panic!("system() expected str, found {}", other),
     };
 
-    let args = match args[0].get() {
+    let args = match args[1].get() {
         List(list) => list
             .to_vec()
             .into_iter()
