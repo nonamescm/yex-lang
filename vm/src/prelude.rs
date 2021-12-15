@@ -270,26 +270,6 @@ fn str_split(args: &[ConstantRef]) -> ConstantRef {
     GcRef::new(List(list))
 }
 
-
-fn str_split(args: &[Constant]) -> Constant {
-    use Constant::*;
-    let pat = match &args[0] {
-        Str(ref pat) => pat,
-        other => panic!("split() expected str, found {}", other),
-    };
-    let str = match &args[1] {
-        Str(ref str) => str,
-        other => panic!("split(), expected str, found {}", other),
-    };
-    let splited = str.split(pat).collect::<Vec<&str>>();
-    let mut list = list::List::new();
-    for i in splited.into_iter().rev() {
-        list = list.prepend(Str(i.to_string()));
-    }
-    List(list)
-}
-
-
 pub fn prelude() -> Table {
     let mut prelude = Table::new();
     macro_rules! insert_fn {
