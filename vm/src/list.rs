@@ -92,7 +92,7 @@ impl List {
     /// Iterate over all elements of `self`
     pub fn iter(&self) -> Iter {
         Iter {
-            next: self.head.as_ref().map(|node| GcRef::clone(node)),
+            next: self.head.as_ref().map(GcRef::clone),
         }
     }
 

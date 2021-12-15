@@ -309,6 +309,46 @@ fn fold(vm: &mut VirtualMachine, args: &[ConstantRef]) -> ConstantRef {
     acc
 }
 
+fn starts_with(args: &[ConstantRef]) -> ConstantRef {
+    /*
+    args:
+        number | name    | type
+        0      | str     |(do i need to say?)
+        1      | pattern | str
+     */
+    use Constant::*;
+
+    let str = match args[0].get() {
+        Str(string) => string,
+        other => panic!("starts_with() expected str, found {}", other),
+    };
+    let pattern = match args[1].get() {
+        Str(pat) => pat,
+        other => panic!("starts_with() expected str, found {}", other),
+    };
+    GcRef::new(Bool(str.starts_with(pattern)))
+}
+
+fn ends_with(args: &[ConstantRef]) -> ConstantRef {
+    /*
+    args:
+        number | name    | type
+        0      | str     |(do i need to say?)
+        1      | pattern | str
+     */
+    use Constant::*;
+
+    let str = match args[0].get() {
+        Str(string) => string,
+        other => panic!("ends_with() expected str, found {}", other),
+    };
+    let pattern = match args[1].get() {
+        Str(pat) => pat,
+        other => panic!("ends_with() expected str, found {}", other),
+    };
+    GcRef::new(Bool(str.ends_with(pattern)))
+}
+
 fn rev(args: &[ConstantRef]) -> ConstantRef {
     let xs = match args[2].get() {
         Constant::List(xs) => xs,
@@ -372,6 +412,7 @@ pub fn prelude() -> Table {
     insert_fn!(@vm "map", map, 2);
     insert_fn!(@vm "fold", fold, 3);
     insert_fn!("rev", rev, 1);
-
+    insert_fn!("starts_with", starts_with, 2);
+    insert_fn!("ends_with", ends_with, 2);
     prelude
 }
