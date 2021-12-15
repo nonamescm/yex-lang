@@ -1,4 +1,4 @@
-use crate::{StackVec, Symbol, literal::ConstantRef};
+use crate::{literal::ConstantRef, StackVec, Symbol};
 
 const MAX_TABLE_ENTRIES: usize = 256;
 

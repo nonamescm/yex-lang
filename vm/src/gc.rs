@@ -66,7 +66,6 @@ impl<T> Drop for GcRef<T> {
     }
 }
 
-
 impl<T: PartialEq> PartialEq for GcRef<T> {
     fn eq(&self, other: &Self) -> bool {
         self.get() == other.get()

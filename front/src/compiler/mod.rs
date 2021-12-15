@@ -262,7 +262,11 @@ impl Compiler {
         self.expression()?;
         let body = self.proxies.pop().unwrap();
 
-        self.emit_const_push(Constant::Fun { body: GcRef::new(Either::Left(body)), arity, args: vec![] });
+        self.emit_const_push(Constant::Fun {
+            body: GcRef::new(Either::Left(body)),
+            arity,
+            args: vec![],
+        });
 
         Ok(())
     }

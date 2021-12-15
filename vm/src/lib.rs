@@ -1,12 +1,12 @@
 #![deny(missing_docs)]
 //! Virtual Machine implementation for the yex programming language
 mod env;
+#[doc(hidden)]
+pub mod gc;
 mod list;
 mod literal;
 mod opcode;
 mod prelude;
-#[doc(hidden)]
-pub mod gc;
 mod stack;
 #[cfg(test)]
 mod tests;
@@ -265,10 +265,7 @@ impl VirtualMachine {
         Constant::Nil
     }
 
-    fn call_helper(
-        &mut self,
-        carity: usize,
-    ) -> (FunBody, usize, Vec<ConstantRef>) {
+    fn call_helper(&mut self, carity: usize) -> (FunBody, usize, Vec<ConstantRef>) {
         let mut fargs;
 
         let (farity, body) = match self.pop().get() {
