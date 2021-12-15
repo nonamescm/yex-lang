@@ -81,11 +81,11 @@ fn create_file(args: &[ConstantRef]) -> ConstantRef {
 fn write_file(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
 
-    let content = match args[0].get() {
+    let content = match args[1].get() {
         Str(ref content) => content,
         other => panic!("file_write() expected str, found {}", other),
     };
-    match args[1].get() {
+    match args[0].get() {
         Str(ref filename) => {
             fs::write(filename, content).ok();
         }

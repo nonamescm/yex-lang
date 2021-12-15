@@ -1,2 +1,4 @@
 /target
 callgrind.out.*
+perf.data*
+flamegraph.svg
