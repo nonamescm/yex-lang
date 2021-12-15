@@ -1,4 +1,4 @@
-use crate::{gc::GcRef, Constant};
+use crate::literal::{nil, ConstantRef};
 
 type Link = Option<Box<Node>>;
 #[derive(Clone, Debug, PartialEq)]
@@ -8,7 +8,7 @@ pub struct List {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct Node {
-    elem: GcRef<Constant>,
+    elem: ConstantRef,
     next: Link,
 }
 
@@ -24,7 +24,7 @@ impl List {
     }
 
     /// Prepends a value to the end, returning the list
-    pub fn prepend(&self, elem: GcRef<Constant>) -> Self {
+    pub fn prepend(&self, elem: ConstantRef) -> Self {
         let node = Box::new(Node {
             elem,
             next: self.head.clone(),
@@ -44,7 +44,7 @@ impl List {
     }
 
     /// Returns the current element
-    pub fn head(&self) -> Option<GcRef<Constant>> {
+    pub fn head(&self) -> Option<ConstantRef> {
         self.head
             .as_ref()
             .map(|node| Some(&node.as_ref().elem))?
@@ -52,14 +52,13 @@ impl List {
     }
 
     /// Returns a index into the list
-    pub fn index(&self, index: usize) -> GcRef<Constant> {
-        use Constant::Nil;
+    pub fn index(&self, index: usize) -> ConstantRef {
         if index == 0 {
-            self.head().unwrap_or_else(|| GcRef::new(Nil))
+            self.head().unwrap_or_else(nil)
         } else {
             let tail = self.tail();
             if tail.is_empty() {
-                GcRef::new(Nil)
+                nil()
             } else {
                 tail.index(index - 1)
             }
@@ -76,8 +75,9 @@ impl List {
         }
         count
     }
+
     /// Converts list to Vec
-    pub fn to_vec(&self) -> Vec<GcRef<Constant>> {
+    pub fn to_vec(&self) -> Vec<ConstantRef> {
         let mut vec = vec![];
         let mut head = self.clone();
         while head.head().is_some() {

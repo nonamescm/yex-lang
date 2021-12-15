@@ -387,7 +387,7 @@ impl VirtualMachine {
     }
 
     #[track_caller]
-    fn pop(&mut self) -> GcRef<Constant> {
+    fn pop(&mut self) -> ConstantRef {
         self.stack.pop()
     }
 
