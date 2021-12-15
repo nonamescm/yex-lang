@@ -1,5 +1,7 @@
 #![deny(missing_docs)]
 //! Compiler for the yex language
+#[doc(hidden)]
+pub static YEX_EXTENSIONS: [&str; 2] = [".yex", ".ml"];
 mod compiler;
 mod error;
 mod lexer;

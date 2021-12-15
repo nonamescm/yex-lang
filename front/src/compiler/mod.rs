@@ -108,12 +108,19 @@ impl Compiler {
     fn open(&mut self) -> ParseResult {
         assert_eq!(self.current.token, Tkt::Open);
         self.next()?;
-        let file_name = match &self.current.token {
-            Tkt::Str(ref s) => s,
+        let mut file_name = match &self.current.token {
+            Tkt::Str(s) => s,
             other => {
                 return self.throw(format!("Expected file name after `open`, found {}", other))
             }
-        };
+        }
+        .to_owned();
+
+        for ext in crate::YEX_EXTENSIONS {
+            if std::fs::File::open(format!("{}{}", file_name, ext)).is_ok() {
+                file_name = format!("{}{}", file_name, ext);
+            }
+        }
         let file = match std::fs::read_to_string(&file_name) {
             Ok(f) => f,
             Err(_) => return self.throw(format!("File `{}` not found", file_name)),

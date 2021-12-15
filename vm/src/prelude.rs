@@ -414,7 +414,6 @@ pub fn prelude() -> Table {
     insert_fn!("inspect", inspect);
     insert_fn!("int", int);
     insert_fn!("split", str_split, 2);
-
     insert_fn!("fread", read_file);
     insert_fn!("fwrite", write_file, 2);
     insert_fn!("remove", remove_file);
@@ -424,9 +423,9 @@ pub fn prelude() -> Table {
     insert_fn!("getargs", get_args, 0);
     insert_fn!("getenv", getenv);
     insert_fn!("setenv", setenv, 2);
-
     insert_fn!(@vm "map", map, 2);
     insert_fn!(@vm "fold", fold, 3);
+
     insert_fn!("rev", rev, 1);
     insert_fn!("starts_with", starts_with, 2);
     insert_fn!("ends_with", ends_with, 2);
