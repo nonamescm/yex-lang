@@ -6,7 +6,7 @@ pub mod symbol;
 use crate::{gc::GcRef, Either, VirtualMachine};
 use crate::{list::List, Bytecode};
 use symbol::Symbol;
-pub type NativeFun = fn(*const VirtualMachine, Vec<ConstantRef>) -> ConstantRef;
+pub type NativeFun = fn(*mut VirtualMachine, Vec<ConstantRef>) -> ConstantRef;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
 
 pub(crate) type ConstantRef = GcRef<Constant>;
