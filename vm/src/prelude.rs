@@ -326,7 +326,7 @@ fn starts_with(args: &[ConstantRef]) -> ConstantRef {
         Str(pat) => pat,
         other => panic!("starts_with() expected str, found {}", other),
     };
-    return GcRef::new(Bool(str.starts_with(pattern)));
+    GcRef::new(Bool(str.starts_with(pattern)))
 }
 
 fn ends_with(args: &[ConstantRef]) -> ConstantRef {
@@ -346,7 +346,7 @@ fn ends_with(args: &[ConstantRef]) -> ConstantRef {
         Str(pat) => pat,
         other => panic!("ends_with() expected str, found {}", other),
     };
-    return GcRef::new(Bool(str.ends_with(pattern)));
+    GcRef::new(Bool(str.ends_with(pattern)))
 }
 
 fn rev(args: &[ConstantRef]) -> ConstantRef {
