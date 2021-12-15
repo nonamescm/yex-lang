@@ -356,7 +356,23 @@ fn rev(args: &[ConstantRef]) -> ConstantRef {
     };
     GcRef::new(Constant::List(xs.rev()))
 }
+fn replace(args: &[ConstantRef]) -> ConstantRef {
+    let str = match args[0].get() {
+        Constant::Str(str) => str,
+        other => panic!("replace()[0] expected a str, but found `{}`", other),
+    };
+    let s_match = match args[1].get() {
+        Constant::Str(str) => str,
+        other => panic!("replace()[1] expected a str, but found `{}`", other),
+    };
 
+    let s_match2 = match args[2].get() {
+        Constant::Str(str) => str,
+        other => panic!("replace()[2] expected a str, but found `{}`", other),
+    };
+
+    GcRef::new(Constant::Str(str.replace(s_match, s_match2)))
+}
 pub fn prelude() -> Table {
     let mut prelude = Table::new();
     macro_rules! insert_fn {
@@ -414,5 +430,6 @@ pub fn prelude() -> Table {
     insert_fn!("rev", rev, 1);
     insert_fn!("starts_with", starts_with, 2);
     insert_fn!("ends_with", ends_with, 2);
+    insert_fn!("replace", replace, 3);
     prelude
 }
