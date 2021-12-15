@@ -8,9 +8,9 @@ use vm::{gc::GcRef, Bytecode, Constant, Either, List, OpCode, OpCodeMetadata, Sy
 
 type ParseResult = Result<(), ParseError>;
 
-fn patch_bytecode(len: usize, bt_len: usize, bytecode: &Bytecode) -> Bytecode {
+fn patch_bytecode(len: usize, bt_len: usize, bytecode: &[OpCodeMetadata]) -> Bytecode {
     bytecode
-        .into_iter()
+        .iter()
         .copied()
         .map(|mut it| {
             it.opcode = match it.opcode {

@@ -48,7 +48,7 @@ fn input(args: &[ConstantRef]) -> ConstantRef {
 fn head(args: &[ConstantRef]) -> ConstantRef {
     match args[0].get() {
         Constant::List(xs) => match xs.head() {
-            Some(x) => x.clone(),
+            Some(x) => x,
             None => nil(),
         },
         other => panic!("head() expected a list, found {}", other),
@@ -262,10 +262,8 @@ fn str_split(args: &[ConstantRef]) -> ConstantRef {
         other => panic!("split() expected str, found {}", other),
     };
 
-    let splited = str.split(pat).collect::<Vec<&str>>();
-
     let mut list = list::List::new();
-    for i in splited.into_iter().rev() {
+    for i in str.rsplit(pat) {
         list = list.prepend(GcRef::new(Str(i.to_string())));
     }
 
