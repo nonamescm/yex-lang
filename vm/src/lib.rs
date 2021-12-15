@@ -30,7 +30,7 @@ impl<L, R> Either<L, R> {
     }
 }
 
-use std::{cmp::Ordering, mem};
+use std::cmp::Ordering;
 
 use gc::GcRef;
 use literal::ConstantRef;
@@ -299,7 +299,7 @@ impl VirtualMachine {
                 args: fargs,
             }),
             Ordering::Equal => {
-                let curr_env = mem::replace(&mut self.variables, Env::new());
+                //let curr_env = mem::replace(&mut self.variables, Env::new());
                 match body.get() {
                     Either::Left(bytecode) => {
                         fargs.into_iter().for_each(|it| self.push_gc_ref(it));
@@ -310,7 +310,7 @@ impl VirtualMachine {
                         self.push_gc_ref(ret)
                     }
                 }
-                self.variables = curr_env;
+                //self.variables = curr_env;
             }
         }
     }
