@@ -27,7 +27,7 @@ jobs:
     - name: Fetch Deps
       run: cargo fetch
     - name: Build Project
-      run: cargo build --verbose -offline
+      run: cargo build --verbose --offline
     - name: Run Tests
       run: cargo test --verbose --all 
     - name: Run Clippy 
