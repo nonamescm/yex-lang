@@ -19,7 +19,7 @@ after that, run `cargo install --git https://github.com/nonamescm/yex-lang.git`.
 Done, yex is now installed!
 
 ### NOTE
-if you want the repl install it with this command `cargo install --git https://github.com/nonamescm/yex-lang.git`
+if you want the repl install it with this command `cargo install --git https://github.com/nonamescm/yex-lang.git --features=repl`
 
 ## How to
 
