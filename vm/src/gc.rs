@@ -1,4 +1,4 @@
-use std::{cell::Cell, ptr::NonNull, fmt};
+use std::{cell::Cell, ptr::NonNull};
 
 #[derive(Debug)]
 struct Ref<T> {
