@@ -3,8 +3,10 @@ use vm::{Constant, List, OpCode, OpCodeMetadata, Symbol};
 
 #[test]
 fn lex_test() {
-    use crate::lexer::Lexer;
-    use crate::tokens::{Token, TokenType::*};
+    use crate::{
+        lexer::Lexer,
+        tokens::{Token, TokenType::*},
+    };
 
     assert_eq!(
         Lexer::lex("1 + 1".chars().collect()),
@@ -30,8 +32,10 @@ fn lex_test() {
 
 #[test]
 fn lex_test_2() {
-    use crate::lexer::Lexer;
-    use crate::tokens::{Token, TokenType::*};
+    use crate::{
+        lexer::Lexer,
+        tokens::{Token, TokenType::*},
+    };
 
     assert_eq!(
         Lexer::lex("(1+1) * 2 - (2.2/3)".chars().collect()),

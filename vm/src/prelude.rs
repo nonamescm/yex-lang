@@ -5,10 +5,11 @@ use crate::{
     literal::{nil, ConstantRef},
     panic, Constant,
 };
-use std::env;
-use std::fs;
-use std::io::{self, Write};
-use std::process::Command;
+use std::{
+    env, fs,
+    io::{self, Write},
+    process::Command,
+};
 
 fn puts(args: &[ConstantRef]) -> ConstantRef {
     match args[0].get() {

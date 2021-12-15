@@ -3,8 +3,7 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
 };
 pub mod symbol;
-use crate::{gc::GcRef, Either};
-use crate::{list::List, Bytecode};
+use crate::{gc::GcRef, list::List, Bytecode, Either};
 use symbol::Symbol;
 pub type NativeFun = fn(Vec<ConstantRef>) -> ConstantRef;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;

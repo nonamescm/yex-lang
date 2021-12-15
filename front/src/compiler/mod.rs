@@ -641,7 +641,8 @@ impl Compiler {
             }};
         }
 
-        use {Constant::*, OpCode::*};
+        use Constant::*;
+        use OpCode::*;
         match take(&mut self.current.token) {
             Tkt::Num(n) => push!(Num(n)),
             Tkt::Str(str) => push!(Str(str)),

@@ -1,5 +1,7 @@
-use crate::error::ParseError;
-use crate::tokens::{fetch_keyword, Token, TokenType};
+use crate::{
+    error::ParseError,
+    tokens::{fetch_keyword, Token, TokenType},
+};
 
 const EOF: char = '\0';
 
