@@ -151,6 +151,10 @@ impl VirtualMachine {
             match inst.opcode {
                 Halt => break 'main,
                 Push(n) => {
+                    if self.constants.len() <= n {
+                        panic!("err: can't find consts. Are you in repl?");
+                    }
+
                     let val = self.constants[n].clone();
                     self.push_gc_ref(val)
                 }
