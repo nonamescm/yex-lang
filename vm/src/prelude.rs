@@ -215,10 +215,8 @@ fn r#type(args: &[ConstantRef]) -> ConstantRef {
             Constant::Sym(_) => "symbol",
             Constant::Nil => "nil",
             Constant::Fun { .. } => "fn",
-            Constant::PartialFun { .. } => "fn",
-            Constant::NativeFun { .. } => "native fn",
         }
-        .into()
+        .into(),
     );
     GcRef::new(type_name)
 }
@@ -283,9 +281,10 @@ pub fn prelude() -> Table {
         ($name: expr, $fn: expr, $arity:expr) => {
             prelude.insert(
                 $crate::Symbol::new($name),
-                $crate::GcRef::new(Constant::NativeFun {
+                $crate::GcRef::new(Constant::Fun {
                     arity: $arity,
-                    fp: |it| $fn(&*it),
+                    args: vec![],
+                    body: GcRef::new($crate::Either::Right(|it| $fn(&*it))),
                 }),
             )
         };

@@ -37,7 +37,7 @@ use literal::ConstantRef;
 
 use crate::{
     env::{Env, Table},
-    literal::NativeFun,
+    literal::FunBody,
     stack::StackVec,
 };
 
@@ -268,16 +268,14 @@ impl VirtualMachine {
     fn call_helper(
         &mut self,
         carity: usize,
-    ) -> (Either<Bytecode, NativeFun>, usize, Vec<ConstantRef>) {
-        let mut fargs = vec![];
+    ) -> (FunBody, usize, Vec<ConstantRef>) {
+        let mut fargs;
 
         let (farity, body) = match self.pop().get() {
-            Constant::Fun { arity, body } => (*arity, Either::Left(body.to_vec())),
-            Constant::PartialFun { arity, body, args } => {
-                fargs = args.to_vec();
+            Constant::Fun { arity, body, args } => {
+                fargs = args.clone();
                 (*arity, body.clone())
             }
-            Constant::NativeFun { arity, fp } => (*arity, Either::Right(*fp)),
             other => panic!("Can't call {}", other),
         };
 
@@ -298,17 +296,17 @@ impl VirtualMachine {
                 "function expected {} arguments, but received {}",
                 farity, carity
             ),
-            Ordering::Less => self.push(Constant::PartialFun {
+            Ordering::Less => self.push(Constant::Fun {
                 arity: farity - carity,
                 body,
                 args: fargs,
             }),
             Ordering::Equal => {
                 let curr_env = mem::replace(&mut self.variables, Env::new());
-                match body {
+                match body.get() {
                     Either::Left(bytecode) => {
                         fargs.into_iter().for_each(|it| self.push_gc_ref(it));
-                        self.run(bytecode);
+                        self.run(bytecode.clone());
                     }
                     Either::Right(fp) => {
                         let ret = fp(fargs.into_iter().rev().collect());
@@ -334,7 +332,7 @@ impl VirtualMachine {
             Ordering::Equal => {
                 fargs.into_iter().for_each(|it| self.push_gc_ref(it));
 
-                if body.as_ref() == Either::Left(self.bytecode()) {
+                if body.get().as_ref() == Either::Left(self.bytecode()) {
                     *self.ip() = 0;
                 } else {
                     panic!("Can't use tail calls with different functions")
