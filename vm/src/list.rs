@@ -1,4 +1,4 @@
-use crate::Constant;
+use crate::literal::{nil, ConstantRef};
 
 type Link = Option<Box<Node>>;
 #[derive(Clone, Debug, PartialEq)]
@@ -8,7 +8,7 @@ pub struct List {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct Node {
-    elem: Constant,
+    elem: ConstantRef,
     next: Link,
 }
 
@@ -24,7 +24,7 @@ impl List {
     }
 
     /// Prepends a value to the end, returning the list
-    pub fn prepend(&self, elem: Constant) -> Self {
+    pub fn prepend(&self, elem: ConstantRef) -> Self {
         let node = Box::new(Node {
             elem,
             next: self.head.clone(),
@@ -44,19 +44,21 @@ impl List {
     }
 
     /// Returns the current element
-    pub fn head(&self) -> Option<&Constant> {
-        self.head.as_ref().map(|node| Some(&node.as_ref().elem))?
+    pub fn head(&self) -> Option<ConstantRef> {
+        self.head
+            .as_ref()
+            .map(|node| Some(&node.as_ref().elem))?
+            .cloned()
     }
 
     /// Returns a index into the list
-    pub fn index(&self, index: usize) -> Constant {
-        use Constant::Nil;
+    pub fn index(&self, index: usize) -> ConstantRef {
         if index == 0 {
-            self.head().cloned().unwrap_or(Nil)
+            self.head().unwrap_or_else(nil)
         } else {
             let tail = self.tail();
             if tail.is_empty() {
-                Nil
+                nil()
             } else {
                 tail.index(index - 1)
             }
@@ -73,8 +75,9 @@ impl List {
         }
         count
     }
+
     /// Converts list to Vec
-    pub fn to_vec(&self) -> Vec<Constant> {
+    pub fn to_vec(&self) -> Vec<ConstantRef> {
         let mut vec = vec![];
         let mut head = self.clone();
         while head.head().is_some() {
@@ -93,9 +96,9 @@ impl std::fmt::Display for List {
             str.push_str(&match self.head() {
                 Some(s) => {
                     if self.tail().is_empty() {
-                        format!("{}", s)
+                        format!("{}", s.get())
                     } else {
-                        format!("{}, ", s)
+                        format!("{}, ", s.get())
                     }
                 }
                 None => break str + "]",
@@ -104,9 +107,9 @@ impl std::fmt::Display for List {
             let mut head = self.tail();
             while head.head() != None {
                 if head.tail().is_empty() {
-                    str.push_str(&format!("{}", head.head().unwrap()));
+                    str.push_str(&format!("{}", head.head().unwrap().get()));
                 } else {
-                    str.push_str(&format!("{}, ", head.head().unwrap()));
+                    str.push_str(&format!("{}, ", head.head().unwrap().get()));
                 }
                 head = head.tail();
             }

@@ -1,11 +1,11 @@
-use crate::{Constant, StackVec, Symbol};
+use crate::{literal::ConstantRef, StackVec, Symbol};
 
 const MAX_TABLE_ENTRIES: usize = 256;
 
 #[derive(Debug)]
 struct Entry {
     pub key: Symbol,
-    pub value: Constant,
+    pub value: ConstantRef,
 }
 
 #[derive(Debug)]
@@ -38,16 +38,16 @@ impl Table {
         None
     }
 
-    pub fn insert(&mut self, key: Symbol, value: Constant) {
+    pub fn insert(&mut self, key: Symbol, value: ConstantRef) {
         match self.find_entry(&key) {
             Some(entry) => *entry = Entry { key, value },
             None => self.entries.push(Entry { key, value }),
         }
     }
 
-    pub fn get(&mut self, key: &Symbol) -> Option<&Constant> {
+    pub fn get(&mut self, key: &Symbol) -> Option<ConstantRef> {
         match self.find_entry(key) {
-            Some(entry) => Some(&entry.value),
+            Some(entry) => Some(entry.value.clone()),
             None => None,
         }
     }
@@ -83,12 +83,12 @@ impl Env {
         }
     }
 
-    pub fn insert(&mut self, key: Symbol, value: Constant) -> Option<()> {
+    pub fn insert(&mut self, key: Symbol, value: ConstantRef) -> Option<()> {
         self.top().insert(key, value);
         Some(())
     }
 
-    pub fn get(&mut self, key: &Symbol) -> Option<&Constant> {
+    pub fn get(&mut self, key: &Symbol) -> Option<ConstantRef> {
         for entry in self.entries.iter_mut().rev() {
             if let Some(value) = entry.get(key) {
                 return Some(value);

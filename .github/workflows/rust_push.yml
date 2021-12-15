@@ -1,0 +1,138 @@
+name: Rust 
+
+on:
+  push:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+   build_windows:
+    name: Build on Windows
+    runs-on: windows-latest
+    env:
+      RUSTFLAGS: -Ctarget-feature=+crt-static
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-pc-windows-msvc
+          - i686-pc-windows-msvc # skip-pr skip-master
+          - aarch64-pc-windows-msvc # skip-pr skip-stable
+          - x86_64-pc-windows-gnu # skip-pr
+          - i686-pc-windows-gnu # skip-pr skip-master
+        include:
+          - target: x86_64-pc-windows-gnu
+            mingw: https://ci-mirrors.rust-lang.org/rustc/x86_64-6.3.0-release-posix-seh-rt_v5-rev2.7z
+            mingwdir: mingw64
+          - target: i686-pc-windows-gnu
+            mingwdir: mingw32
+            mingw: https://ci-mirrors.rust-lang.org/rustc/i686-6.3.0-release-posix-dwarf-rt_v5-rev2.7z
+          - target: aarch64-pc-windows-msvc # skip-pr skip-stable
+            skip_tests: yes # skip-pr skip-stable
+
+    steps:
+        - uses: actions/checkout@v2
+        - uses: actions/cache@v2
+          with:
+            path: |
+             ~/.cargo/bin/
+             ~/.cargo/registry/index/
+             ~/.cargo/registry/cache/
+             ~/.cargo/git/db/
+             target/
+            key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        - name: Install mingw
+          run: |
+            # We retrieve mingw from the Rust CI buckets
+            # Disable the download progress bar which can cause perf issues
+            $ProgressPreference = "SilentlyContinue"
+            Invoke-WebRequest ${{ matrix.mingw }} -OutFile mingw.7z
+            7z x -y mingw.7z -oC:\msys64 | Out-Null
+            del mingw.7z
+            echo "C:\msys64\usr\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+            echo "C:\msys64\${{ matrix.mingwdir }}\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+          shell: powershell
+          if: matrix.mingw != ''
+        - name: Set environment variables appropriately for the build
+          shell: powershell
+          run: |
+            echo "%USERPROFILE%\.cargo\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+            echo "TARGET=${{ matrix.target }}" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
+            echo "SKIP_TESTS=${{ matrix.skip_tests }}" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
+        - name: Install Rustup using win.rustup.rs
+          shell: powershell
+          run: |
+            # Disable the download progress bar which can cause perf issues
+            $ProgressPreference = "SilentlyContinue"
+            Invoke-WebRequest https://win.rustup.rs/ -OutFile rustup-init.exe
+            .\rustup-init.exe -y --default-host=x86_64-pc-windows-msvc 
+            del rustup-init.exe
+        - name: Ensure stable toolchain is up to date
+          run: rustup update stable
+          shell: bash
+        - name: Install the target
+          run: |
+            rustup target install ${{ matrix.target }}
+        - name: Fetch Deps
+          run: cargo fetch
+          shell: bash
+        - name: Build Project
+          run: cargo build --verbose --offline
+          shell: bash
+        - name: Run Tests
+          run: cargo test --verbose --all
+          shell: bash
+        - name: Run Clippy 
+          run: cargo clippy --verbose -- -D warnings
+          shell: bash
+   build_macos:
+     name: Build on MacOS 11
+     runs-on: macos-11
+
+     steps:
+     - uses: actions/checkout@v2
+     - uses: actions/cache@v2
+       with:
+         path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+     - name: Install Rust
+       run: curl -sSf "https://sh.rustup.rs" > ./rustup-init.sh &&  sh ./rustup-init.sh --default-toolchain=stable -y
+     - name: Fetch Deps
+       run: cargo fetch
+     - name: Build Project
+       run: cargo build --verbose --offline
+     - name: Run Tests
+       run: cargo test --verbose --all 
+     - name: Run Clippy 
+       run: cargo clippy --verbose -- -D warnings
+
+   build:
+    name: Build on Linux (Ubuntu)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/cache@v2
+      with:
+        path: |
+         ~/.cargo/bin/
+         ~/.cargo/registry/index/
+         ~/.cargo/registry/cache/
+         ~/.cargo/git/db/
+         target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Fetch Deps
+      run: cargo fetch
+    - name: Build Project
+      run: cargo build --verbose --offline
+    - name: Run Tests
+      run: cargo test --verbose --all 
+    - name: Run Clippy 
+      run: cargo clippy --verbose -- -D warnings

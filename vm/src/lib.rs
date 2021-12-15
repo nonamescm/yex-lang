@@ -1,6 +1,8 @@
 #![deny(missing_docs)]
 //! Virtual Machine implementation for the yex programming language
 mod env;
+#[doc(hidden)]
+pub mod gc;
 mod list;
 mod literal;
 mod opcode;
@@ -9,12 +11,33 @@ mod stack;
 #[cfg(test)]
 mod tests;
 
-use either::Either;
+#[derive(PartialEq, Debug, Clone)]
+/// Either left or right value
+pub enum Either<L, R> {
+    /// The left value
+    Left(L),
+    /// The right value
+    Right(R),
+}
+
+impl<L, R> Either<L, R> {
+    /// Returns self by reference
+    pub fn as_ref(&self) -> Either<&L, &R> {
+        match *self {
+            Self::Left(ref inner) => Either::Left(inner),
+            Self::Right(ref inner) => Either::Right(inner),
+        }
+    }
+}
+
 use std::{cmp::Ordering, mem};
+
+use gc::GcRef;
+use literal::ConstantRef;
 
 use crate::{
     env::{Env, Table},
-    literal::NativeFun,
+    literal::FunBody,
     stack::StackVec,
 };
 
@@ -55,7 +78,7 @@ impl CallFrame {
 }
 
 type CallStack = StackVec<CallFrame, RECURSION_LIMIT>;
-type Stack = StackVec<Constant, STACK_SIZE>;
+type Stack = StackVec<ConstantRef, STACK_SIZE>;
 
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
@@ -64,7 +87,7 @@ pub type Bytecode = Vec<OpCodeMetadata>;
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
 pub struct VirtualMachine {
-    constants: Vec<Constant>,
+    constants: Vec<ConstantRef>,
     call_stack: CallStack,
     stack: Stack,
     variables: Env,
@@ -80,12 +103,15 @@ impl VirtualMachine {
 
     /// sets the constants for execution
     pub fn set_consts(&mut self, constants: Vec<Constant>) {
-        self.constants = constants;
+        self.constants = constants.into_iter().map(GcRef::new).collect();
     }
 
     /// Pop's the last value on the stack
     pub fn pop_last(&self) -> &Constant {
-        self.stack.last().unwrap_or(&Constant::Nil)
+        self.stack
+            .last()
+            .map(|it| it.get())
+            .unwrap_or(&Constant::Nil)
     }
 
     /// Executes a given set of bytecode instructions
@@ -97,7 +123,7 @@ impl VirtualMachine {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push(self.try_do(left $op right))
+                self.push(self.try_do(left.get() $op right.get()))
             }}
         }
 
@@ -105,7 +131,7 @@ impl VirtualMachine {
             ($op:tt) => {{
                 let right = self.pop();
 
-                self.push(self.try_do($op right))
+                self.push(self.try_do($op right.get()))
             }};
         }
 
@@ -126,7 +152,7 @@ impl VirtualMachine {
                 Halt => break 'main,
                 Push(n) => {
                     let val = self.constants[n].clone();
-                    self.push(val)
+                    self.push_gc_ref(val)
                 }
                 Pop => {
                     self.pop();
@@ -151,7 +177,7 @@ impl VirtualMachine {
                         },
                     };
 
-                    self.push(val);
+                    self.push_gc_ref(val);
                 }
 
                 Drop(val) => {
@@ -161,7 +187,7 @@ impl VirtualMachine {
                 Drpg(val) => self.globals.remove(&val),
 
                 Jmf(offset) => {
-                    if Into::<bool>::into(!self.pop()) {
+                    if Into::<bool>::into(!self.pop().get()) {
                         *self.ip() = offset;
                         continue;
                     }
@@ -180,31 +206,30 @@ impl VirtualMachine {
 
                 Prep => {
                     let val = self.pop();
-                    let xs = match self.pop() {
-                        Constant::List(xs) => xs,
+
+                    match self.pop().get() {
+                        Constant::List(xs) => self.push(Constant::List(xs.prepend(val))),
                         other => panic!("Expected a list, found a `{}`", other),
                     };
-                    self.push(Constant::List(xs.prepend(val)))
                 }
 
                 Index => {
-                    let index = match self.pop() {
-                        Constant::Num(n) if n.fract() == 0.0 && n >= 0.0 => n as usize,
+                    let index = match self.pop().get() {
+                        Constant::Num(n) if n.fract() == 0.0 && *n >= 0.0 => *n as usize,
                         other => panic!("Expected a integer to use as index, found a `{}`", other),
                     };
-                    let xs = match self.pop() {
-                        Constant::List(xs) => xs,
+
+                    match self.pop().get() {
+                        Constant::List(xs) => self.push_gc_ref(xs.index(index)),
                         other => panic!("Expected a list to index, found a `{}`", other),
                     };
-
-                    self.push(xs.index(index))
                 }
 
                 Rev => {
                     let a = self.pop();
                     let b = self.pop();
-                    self.push(a);
-                    self.push(b);
+                    self.push_gc_ref(a);
+                    self.push_gc_ref(b);
                 }
 
                 Add => binop!(+),
@@ -225,12 +250,12 @@ impl VirtualMachine {
 
                 Neg => unaop!(-),
                 Len => {
-                    let len = self.pop().len();
+                    let len = self.pop().get().len();
                     self.push(Constant::Num(len as f64))
                 }
                 Not => {
                     let right = self.pop();
-                    self.push(!right)
+                    self.push(!right.get())
                 }
             }
         }
@@ -240,19 +265,14 @@ impl VirtualMachine {
         Constant::Nil
     }
 
-    fn call_helper(
-        &mut self,
-        carity: usize,
-    ) -> (Either<Bytecode, NativeFun>, usize, Vec<Constant>) {
-        let mut fargs = vec![];
+    fn call_helper(&mut self, carity: usize) -> (FunBody, usize, Vec<ConstantRef>) {
+        let mut fargs;
 
-        let (farity, body) = match self.pop() {
-            Constant::Fun { arity, body } => (arity, Either::Left(body)),
-            Constant::PartialFun { arity, body, args } => {
-                fargs = args;
-                (arity, body)
+        let (farity, body) = match self.pop().get() {
+            Constant::Fun { arity, body, args } => {
+                fargs = args.clone();
+                (*arity, body.clone())
             }
-            Constant::NativeFun { arity, fp } => (arity, Either::Right(fp)),
             other => panic!("Can't call {}", other),
         };
 
@@ -273,21 +293,21 @@ impl VirtualMachine {
                 "function expected {} arguments, but received {}",
                 farity, carity
             ),
-            Ordering::Less => self.push(Constant::PartialFun {
+            Ordering::Less => self.push(Constant::Fun {
                 arity: farity - carity,
                 body,
                 args: fargs,
             }),
             Ordering::Equal => {
                 let curr_env = mem::replace(&mut self.variables, Env::new());
-                match body {
+                match body.get() {
                     Either::Left(bytecode) => {
-                        fargs.into_iter().for_each(|it| self.push(it));
-                        self.run(bytecode);
+                        fargs.into_iter().for_each(|it| self.push_gc_ref(it));
+                        self.run(bytecode.clone());
                     }
                     Either::Right(fp) => {
-                        let ret = fp(fargs);
-                        self.push(ret)
+                        let ret = fp(fargs.into_iter().rev().collect());
+                        self.push_gc_ref(ret)
                     }
                 }
                 self.variables = curr_env;
@@ -307,9 +327,9 @@ impl VirtualMachine {
                 panic!("Can't use partial application in a tail call")
             }
             Ordering::Equal => {
-                fargs.into_iter().for_each(|it| self.push(it));
+                fargs.into_iter().for_each(|it| self.push_gc_ref(it));
 
-                if body.as_ref() == Either::Left(self.bytecode()) {
+                if body.get().as_ref() == Either::Left(self.bytecode()) {
                     *self.ip() = 0;
                 } else {
                     panic!("Can't use tail calls with different functions")
@@ -330,7 +350,11 @@ impl VirtualMachine {
 
         eprintln!(
             "stack: {:#?}\nnext instruction: {:?}\n",
-            self.stack.iter().rev().collect::<Vec<&Constant>>(),
+            self.stack
+                .iter()
+                .rev()
+                .map(|it| it.get())
+                .collect::<Vec<&Constant>>(),
             stack.bytecode.get(stack.ip).map(|it| it.opcode),
         );
     }
@@ -341,7 +365,11 @@ impl VirtualMachine {
 
     #[track_caller]
     fn push(&mut self, constant: Constant) {
-        self.stack.push(constant)
+        self.stack.push(GcRef::new(constant))
+    }
+
+    fn push_gc_ref(&mut self, const_ref: ConstantRef) {
+        self.stack.push(const_ref)
     }
 
     fn ip(&mut self) -> &mut usize {
@@ -354,7 +382,7 @@ impl VirtualMachine {
     }
 
     #[track_caller]
-    fn pop(&mut self) -> Constant {
+    fn pop(&mut self) -> ConstantRef {
         self.stack.pop()
     }
 

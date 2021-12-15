@@ -1,4 +1,4 @@
-use crate::{list::List, Constant, OpCode, OpCodeMetadata, VirtualMachine};
+use crate::{list::List, Constant, GcRef, OpCode, OpCodeMetadata, VirtualMachine};
 
 macro_rules! vecm {
     ($($tt:tt)*) => {
@@ -50,14 +50,18 @@ fn test_list() {
     let list = List::new();
     assert_eq!(list.head(), None);
 
-    let list = list.prepend(Num(1.0)).prepend(Num(2.0)).prepend(Num(3.0));
-    assert_eq!(list.head(), Some(&Num(3.0)));
+    let list = list
+        .prepend(GcRef::new(Num(1.0)))
+        .prepend(GcRef::new(Num(2.0)))
+        .prepend(GcRef::new(Num(3.0)));
+
+    assert_eq!(list.head(), Some(GcRef::new(Num(3.0))));
 
     let list = list.tail();
-    assert_eq!(list.head(), Some(&Num(2.0)));
+    assert_eq!(list.head(), Some(GcRef::new(Num(2.0))));
 
     let list = list.tail();
-    assert_eq!(list.head(), Some(&Num(1.0)));
+    assert_eq!(list.head(), Some(GcRef::new(Num(1.0))));
 
     let list = list.tail();
     assert_eq!(list.head(), None);

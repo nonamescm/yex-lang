@@ -1,27 +1,33 @@
-use crate::{env::Table, list, panic, Constant};
+use crate::{
+    env::Table,
+    gc::GcRef,
+    list,
+    literal::{nil, ConstantRef},
+    panic, Constant,
+};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
 
-fn puts(args: &[Constant]) -> Constant {
-    match args[0] {
-        Constant::Str(ref s) => println!("{}", s),
-        ref other => println!("{}", other),
+fn puts(args: &[ConstantRef]) -> ConstantRef {
+    match args[0].get() {
+        Constant::Str(s) => println!("{}", s),
+        other => println!("{}", other),
     };
-    Constant::Nil
+    nil()
 }
 
-fn print(args: &[Constant]) -> Constant {
-    match &args[0] {
+fn print(args: &[ConstantRef]) -> ConstantRef {
+    match args[0].get() {
         Constant::Str(s) => print!("{}", s),
         other => print!("{}", other),
     };
-    Constant::Nil
+    nil()
 }
 
-fn input(args: &[Constant]) -> Constant {
-    match &args[0] {
+fn input(args: &[ConstantRef]) -> ConstantRef {
+    match args[0].get() {
         Constant::Str(s) => print!("{}", s),
         other => print!("{}", other),
     };
@@ -29,162 +35,179 @@ fn input(args: &[Constant]) -> Constant {
     if io::stdout().flush().is_err() {
         panic!("Error flushing stdout")
     }
+
     let mut input = String::new();
     if io::stdin().read_line(&mut input).is_err() {
         panic!("Error reading line")
     }
+
     input.pop();
-    Constant::Str(input)
+    GcRef::new(Constant::Str(input))
 }
 
-fn head(args: &[Constant]) -> Constant {
-    match &args[0] {
+fn head(args: &[ConstantRef]) -> ConstantRef {
+    match args[0].get() {
         Constant::List(xs) => match xs.head() {
-            Some(x) => x.clone(),
-            None => Constant::Nil,
+            Some(x) => x,
+            None => nil(),
         },
         other => panic!("head() expected a list, found {}", other),
     }
 }
 
-fn tail(args: &[Constant]) -> Constant {
-    match &args[0] {
-        Constant::List(xs) => Constant::List(xs.tail()),
+fn tail(args: &[ConstantRef]) -> ConstantRef {
+    match args[0].get() {
+        Constant::List(xs) => GcRef::new(Constant::List(xs.tail())),
         other => panic!("tail() expected a list, found {}", other),
     }
 }
 
-fn str(args: &[Constant]) -> Constant {
-    Constant::Str(format!("{}", &args[0]))
+fn str(args: &[ConstantRef]) -> ConstantRef {
+    GcRef::new(Constant::Str(format!("{}", args[0].get())))
 }
-fn create_file(args: &[Constant]) -> Constant {
+
+fn create_file(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
-    match &args[0] {
+
+    match args[0].get() {
         Str(ref filename) => {
-            let _ = fs::File::create(filename);
+            fs::File::create(filename).ok();
         }
         other => panic!("file_create() expected str, found {}", other),
     }
-    Nil
+    nil()
 }
-fn write_file(args: &[Constant]) -> Constant {
-    use Constant::*;
-    match &args[0] {
-        Str(ref content) => match &args[1] {
-            Str(ref filename) => {
-                let _ = fs::write(filename, content);
-            }
-            other => panic!("file_write()[1] expected str, found {}", other),
-        },
-        other => panic!("file_write() expected str, found {}", other),
-    }
-    Nil
-}
-fn getenv(args: &[Constant]) -> Constant {
+
+fn write_file(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
 
-    match &args[0] {
-        Str(ref env_var) => {
+    let content = match args[0].get() {
+        Str(ref content) => content,
+        other => panic!("file_write() expected str, found {}", other),
+    };
+    match args[1].get() {
+        Str(ref filename) => {
+            fs::write(filename, content).ok();
+        }
+        other => panic!("file_write()[1] expected str, found {}", other),
+    }
+    nil()
+}
+
+fn getenv(args: &[ConstantRef]) -> ConstantRef {
+    use Constant::*;
+
+    match args[0].get() {
+        Str(env_var) => {
             if let Ok(evar) = env::var(env_var) {
-                return Str(evar);
+                return GcRef::new(Str(evar));
             }
         }
         other => panic!("getenv() expected str, found {}", other),
     }
-    Nil
+    nil()
 }
-fn setenv(args: &[Constant]) -> Constant {
+
+fn setenv(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
 
-    match &args[0] {
-        Str(ref env_value) => match &args[1] {
-            Str(ref env_name) => {
-                env::set_var(env_name, env_value);
-            }
-            other => panic!("setenv()[1] expected str, found {}", other),
-        },
+    let var = match args[0].get() {
+        Str(var) => var,
         other => panic!("getenv() expected str, found {}", other),
+    };
+
+    match args[0].get() {
+        Str(value) => {
+            env::set_var(var, value);
+        }
+        other => panic!("getenv()[1] expected str, found {}", other),
     }
-    Nil
+
+    nil()
 }
-fn system(args: &[Constant]) -> Constant {
+
+fn system(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
-    match &args[1] {
-        Str(ref command) => {
+    let mut cmd = match args[0].get() {
+        Str(command) => {
             let mut command_pieces = command.split_whitespace();
             let command = match command_pieces.next() {
                 Some(v) => v,
-                _ => return Nil,
+                _ => return nil(),
             };
-            let mut command_args = vec![];
-            match &args[0] {
-                List(list) => {
-                    let list_vec = list.to_vec();
-                    list_vec.into_iter().for_each(|val| {
-                        if let Str(s) = val {
-                            command_args.push(s);
-                        }
-                    })
-                }
-                other => panic!("system()[1] expected a list, found {}", other),
-            }
-            let proc_command = Command::new(command).args(&command_args).output();
-            if let Ok(out) = proc_command {
-                let stdout = String::from_utf8(out.stdout)
-                    .unwrap_or_default()
-                    .trim()
-                    .to_string();
-                let stderr = String::from_utf8(out.stderr)
-                    .unwrap_or_default()
-                    .trim()
-                    .to_string();
-
-                let list = list::List::new();
-                let list = list.prepend(Str(stderr));
-                let list = list.prepend(Str(stdout));
-
-                return List(list);
-            }
+            Command::new(command)
         }
         other => panic!("system() expected str, found {}", other),
+    };
+
+    let args = match args[0].get() {
+        List(list) => list
+            .to_vec()
+            .into_iter()
+            .map(|it| match it.get() {
+                Str(s) => s.to_string(),
+                other => format!("{}", other),
+            })
+            .collect::<Vec<_>>(),
+        other => panic!("system()[1] expected a list, found {}", other),
+    };
+
+    if let Ok(out) = cmd.args(&args).output() {
+        let stdout = String::from_utf8(out.stdout)
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+
+        let stderr = String::from_utf8(out.stderr)
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+
+        let list = list::List::new();
+        let list = list.prepend(GcRef::new(Str(stderr)));
+        let list = list.prepend(GcRef::new(Str(stdout)));
+
+        return GcRef::new(List(list));
     }
-    Nil
+    nil()
 }
-fn exists_file(args: &[Constant]) -> Constant {
+
+fn exists_file(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
-    match &args[0] {
-        Str(ref filename) => {
-            if fs::File::open(filename).is_ok() {
-                return Bool(true);
-            }
-        }
+
+    match args[0].get() {
+        Str(filename) => GcRef::new(Bool(fs::File::open(filename).is_ok())),
         other => panic!("file_exists() expected str, found {}", other),
     }
-    Bool(false)
 }
-fn remove_file(args: &[Constant]) -> Constant {
+
+fn remove_file(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
-    match &args[0] {
-        Str(ref filename) => {
-            let _ = fs::remove_file(filename);
+
+    match args[0].get() {
+        Str(filename) => {
+            fs::remove_file(filename).ok();
         }
         other => panic!("file_remove() expected str, found {}", other),
     }
-    Nil
+
+    nil()
 }
-fn read_file(args: &[Constant]) -> Constant {
+fn read_file(args: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
-    match &args[0] {
+
+    match args[0].get() {
         Str(filename) => match fs::read_to_string(filename) {
-            Ok(v) => Str(v),
-            Err(_) => Nil,
+            Ok(v) => GcRef::new(Str(v)),
+            Err(_) => nil(),
         },
         other => panic!("file_read() str, found {}", other),
     }
 }
-fn r#type(args: &[Constant]) -> Constant {
-    Constant::Str(
-        match &args[0] {
+
+fn r#type(args: &[ConstantRef]) -> ConstantRef {
+    let type_name = Constant::Str(
+        match args[0].get() {
             Constant::List(_) => "list",
             Constant::Str(_) => "str",
             Constant::Num(_) => "num",
@@ -192,37 +215,59 @@ fn r#type(args: &[Constant]) -> Constant {
             Constant::Sym(_) => "symbol",
             Constant::Nil => "nil",
             Constant::Fun { .. } => "fn",
-            Constant::PartialFun { .. } => "fn",
-            Constant::NativeFun { .. } => "native fn",
         }
         .into(),
-    )
+    );
+    GcRef::new(type_name)
 }
 
-fn inspect(args: &[Constant]) -> Constant {
-    Constant::Str(format!("{:#?}", &args[0]))
+fn inspect(args: &[ConstantRef]) -> ConstantRef {
+    GcRef::new(Constant::Str(format!("{:#?}", &args[0])))
 }
 
-fn int(args: &[Constant]) -> Constant {
-    let str = match &args[0] {
+fn int(args: &[ConstantRef]) -> ConstantRef {
+    let str = match args[0].get() {
         Constant::Sym(symbol) => symbol.to_str(),
-        Constant::Str(ref str) => str,
-        other => crate::panic!("Expected a string or a symbol, found {}", other),
+        Constant::Str(str) => str,
+        other => panic!("Expected a string or a symbol, found {}", other),
     };
 
     match str.parse::<f64>() {
-        Ok(n) => Constant::Num(n),
-        Err(_) => Constant::Nil,
+        Ok(n) => GcRef::new(Constant::Num(n)),
+        Err(_) => nil(),
     }
 }
 
-fn get_args(_args: &[Constant]) -> Constant {
+fn get_args(_: &[ConstantRef]) -> ConstantRef {
     use Constant::*;
+
     let mut args = list::List::new();
     for i in env::args().into_iter().rev() {
-        args = args.prepend(Constant::Str(i.to_owned()));
+        args = args.prepend(GcRef::new(Constant::Str(i.to_owned())));
     }
-    return List(args);
+
+    GcRef::new(List(args))
+}
+
+fn str_split(args: &[ConstantRef]) -> ConstantRef {
+    use Constant::*;
+
+    let str = match args[0].get() {
+        Str(str) => str,
+        other => panic!("split() expected str, found {}", other),
+    };
+
+    let pat = match args[1].get() {
+        Str(pat) => pat,
+        other => panic!("split() expected str, found {}", other),
+    };
+
+    let mut list = list::List::new();
+    for i in str.rsplit(pat) {
+        list = list.prepend(GcRef::new(Str(i.to_string())));
+    }
+
+    GcRef::new(List(list))
 }
 
 
@@ -254,10 +299,11 @@ pub fn prelude() -> Table {
         ($name: expr, $fn: expr, $arity:expr) => {
             prelude.insert(
                 $crate::Symbol::new($name),
-                Constant::NativeFun {
+                $crate::GcRef::new(Constant::Fun {
                     arity: $arity,
-                    fp: |it| $fn(&*it),
-                },
+                    args: vec![],
+                    body: GcRef::new($crate::Either::Right(|it| $fn(&*it))),
+                }),
             )
         };
     }

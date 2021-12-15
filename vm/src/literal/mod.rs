@@ -3,10 +3,17 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
 };
 pub mod symbol;
+use crate::{gc::GcRef, Either};
 use crate::{list::List, Bytecode};
-use either::Either;
 use symbol::Symbol;
-pub type NativeFun = fn(Vec<Constant>) -> Constant;
+pub type NativeFun = fn(Vec<ConstantRef>) -> ConstantRef;
+pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
+
+pub(crate) type ConstantRef = GcRef<Constant>;
+
+pub fn nil() -> ConstantRef {
+    GcRef::new(Constant::Nil)
+}
 
 /// Immediate values that can be consumed
 #[derive(Debug, PartialEq, Clone)]
@@ -24,25 +31,10 @@ pub enum Constant {
         /// The number of argument the function receives
         arity: usize,
         /// The function body
-        body: Bytecode,
-    },
-    /// Partially applied function
-    PartialFun {
-        /// The number of argument the function receives
-        arity: usize,
-        /// The function body
-        body: Either<Bytecode, NativeFun>,
+        body: FunBody,
         /// The arguments that where already passed to the function
-        args: Vec<Constant>,
+        args: Vec<ConstantRef>,
     },
-    /// A native rust function
-    NativeFun {
-        /// The function's arity
-        arity: usize,
-        /// The function pointer
-        fp: NativeFun,
-    },
-
     /// Yex lists
     List(List),
     /// null
@@ -63,11 +55,9 @@ impl Constant {
             Constant::Num(_) => std::mem::size_of::<f64>(),
             Constant::Sym(_) => std::mem::size_of::<Symbol>(),
             Constant::Str(s) => s.len(),
-            Constant::Fun { arity, body } => mem::size_of_val(&body) + mem::size_of_val(&arity),
-            Constant::PartialFun { arity, body, args } => {
+            Constant::Fun { arity, body, args } => {
                 mem::size_of_val(&body) + mem::size_of_val(&arity) + mem::size_of_val(&args)
             }
-            Constant::NativeFun { arity, fp } => mem::size_of_val(&arity) + mem::size_of_val(&fp),
             Constant::Bool(_) => std::mem::size_of::<bool>(),
             Constant::Nil => 4,
         }
@@ -102,7 +92,7 @@ impl std::fmt::Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Constant::*;
         let tk = match self {
-            Fun { arity, .. } | PartialFun { arity, .. } | NativeFun { arity, .. } => {
+            Fun { arity, .. } => {
                 format!("<fun({})>", arity)
             }
             Nil => "nil".to_string(),
@@ -259,20 +249,20 @@ impl Not for Constant {
 }
 
 impl Not for &Constant {
-    type Output = ConstantErr;
+    type Output = Constant;
 
     fn not(self) -> Self::Output {
         use Constant::*;
 
         match self {
-            Bool(true) => Ok(Constant::Bool(false)),
-            Bool(false) => Ok(Constant::Bool(true)),
-            Sym(_) => Ok(Constant::Bool(false)),
-            Str(s) if s.is_empty() => Ok(Constant::Bool(true)),
-            Str(_) => Ok(Constant::Bool(false)),
-            Num(n) if *n == 0.0 => Ok(Constant::Bool(true)),
-            Num(_) => Ok(Constant::Bool(false)),
-            Nil => Ok(Constant::Bool(true)),
+            Bool(true) => Constant::Bool(false),
+            Bool(false) => Constant::Bool(true),
+            Sym(_) => Constant::Bool(false),
+            Str(s) if s.is_empty() => Constant::Bool(true),
+            Str(_) => Constant::Bool(false),
+            Num(n) if *n == 0.0 => Constant::Bool(true),
+            Num(_) => Constant::Bool(false),
+            Nil => Constant::Bool(true),
             _ => unreachable!(),
         }
     }

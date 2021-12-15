@@ -4,13 +4,14 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 use std::{iter::Peekable, mem::take};
-use vm::{Bytecode, Constant, List, OpCode, OpCodeMetadata, Symbol};
+use vm::{gc::GcRef, Bytecode, Constant, Either, List, OpCode, OpCodeMetadata, Symbol};
 
 type ParseResult = Result<(), ParseError>;
 
-fn patch_bytecode(len: usize, bt_len: usize, bytecode: Bytecode) -> Bytecode {
+fn patch_bytecode(len: usize, bt_len: usize, bytecode: &[OpCodeMetadata]) -> Bytecode {
     bytecode
-        .into_iter()
+        .iter()
+        .copied()
         .map(|mut it| {
             it.opcode = match it.opcode {
                 OpCode::Push(idx) => OpCode::Push(idx + len),
@@ -132,14 +133,25 @@ impl Compiler {
         let bt_len = self.compiled_opcodes();
         constants.into_iter().for_each(|it| {
             self.constants.push(match it {
-                Constant::Fun { arity, body } => {
-                    let body = patch_bytecode(len, bt_len, body);
-                    Constant::Fun { arity, body }
+                Constant::Fun { arity, body, args } => {
+                    let body = patch_bytecode(
+                        len,
+                        bt_len,
+                        match body.get() {
+                            Either::Left(body) => body,
+                            _ => unreachable!(),
+                        },
+                    );
+                    Constant::Fun {
+                        arity,
+                        body: GcRef::new(Either::Left(body)),
+                        args,
+                    }
                 }
                 other => other,
             })
         });
-        let bytecode = patch_bytecode(len, bt_len, bytecode);
+        let bytecode = patch_bytecode(len, bt_len, &bytecode);
         bytecode.into_iter().for_each(|it| self.emit_metadata(it));
     }
 
@@ -250,7 +262,11 @@ impl Compiler {
         self.expression()?;
         let body = self.proxies.pop().unwrap();
 
-        self.emit_const_push(Constant::Fun { body, arity });
+        self.emit_const_push(Constant::Fun {
+            body: GcRef::new(Either::Left(body)),
+            arity,
+            args: vec![],
+        });
 
         Ok(())
     }
