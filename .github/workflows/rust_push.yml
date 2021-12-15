@@ -85,7 +85,7 @@ jobs:
           run: cargo test --verbose --all
           shell: bash
         - name: Run Clippy 
-          run: cargo clippy --verbose -- -D warnings
+          run: cargo clippy --verbose
           shell: bash
    build_macos:
      name: Build on MacOS 11
@@ -111,7 +111,7 @@ jobs:
      - name: Run Tests
        run: cargo test --verbose --all 
      - name: Run Clippy 
-       run: cargo clippy --verbose -- -D warnings
+       run: cargo clippy --verbose
 
    build:
     name: Build on Linux (Ubuntu)
@@ -135,4 +135,4 @@ jobs:
     - name: Run Tests
       run: cargo test --verbose --all 
     - name: Run Clippy 
-      run: cargo clippy --verbose -- -D warnings
+      run: cargo clippy --verbose
