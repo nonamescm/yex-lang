@@ -15,6 +15,14 @@ pub fn nil() -> ConstantRef {
     GcRef::new(Constant::Nil)
 }
 
+pub fn ok() -> ConstantRef {
+    GcRef::new(Constant::Sym(crate::Symbol::new("ok")))
+}
+
+pub fn err() -> ConstantRef {
+    GcRef::new(Constant::Sym(crate::Symbol::new("err")))
+}
+
 /// Immediate values that can be consumed
 #[derive(Debug, PartialEq, Clone)]
 pub enum Constant {
