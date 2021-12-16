@@ -164,11 +164,6 @@ impl Lexer {
                 TokenType::Eq
             }
 
-            '>' if self.peek_at(1) == '>' => {
-                self.next();
-                TokenType::Seq
-            }
-
             '|' if self.peek_at(1) == '>' => {
                 self.next();
                 TokenType::Pipe
@@ -178,6 +173,8 @@ impl Lexer {
             ')' => TokenType::Rparen,
             '[' => TokenType::Lbrack,
             ']' => TokenType::Rbrack,
+            '{' => TokenType::Lbrace,
+            '}' => TokenType::Rbrace,
             ':' if self.peek_at(1) == ':' => {
                 self.next();
                 TokenType::Cons
@@ -235,12 +232,18 @@ impl Lexer {
             '>' if self.peek_at(1) == '>' && self.peek_at(2) == '>' => {
                 self.next();
                 self.next();
-                TokenType::Shr
+                TokenType::Shl
             }
+
+            '>' if self.peek_at(1) == '>' => {
+                self.next();
+                TokenType::Seq
+            }
+
             '<' if self.peek_at(1) == '<' && self.peek_at(2) == '<' => {
                 self.next();
                 self.next();
-                TokenType::Shl
+                TokenType::Shr
             }
             '^' if self.peek_at(1) == '^' && self.peek_at(2) == '^' => {
                 self.next();

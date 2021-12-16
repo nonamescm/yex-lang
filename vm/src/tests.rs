@@ -1,4 +1,4 @@
-use crate::{list::List, Constant, GcRef, OpCode, OpCodeMetadata, VirtualMachine};
+use crate::{list::List, Constant, OpCode, OpCodeMetadata, VirtualMachine};
 
 macro_rules! vecm {
     ($($tt:tt)*) => {
@@ -25,21 +25,21 @@ fn test_ops() {
 
     vm.set_consts(vec![Constant::Num(1.0)]);
 
-    vm.run(vecm![Push(0), Push(0), Add]);
+    vm.run(vecm![Push(0), Push(0), Add]).unwrap();
     assert_eq!(vm.pop_last(), &Constant::Num(2.0));
     vm.reset();
 
-    vm.run(vecm![Push(0), Push(0), Sub]);
+    vm.run(vecm![Push(0), Push(0), Sub]).unwrap();
     assert_eq!(vm.pop_last(), &Constant::Num(0.0));
     vm.reset();
 
     vm.set_consts(vec![Constant::Num(2.0)]);
 
-    vm.run(vecm![Push(0), Push(0), Mul]);
+    vm.run(vecm![Push(0), Push(0), Mul]).unwrap();
     assert_eq!(vm.pop_last(), &Constant::Num(4.0));
     vm.reset();
 
-    vm.run(vecm![Push(0), Push(0), Div]);
+    vm.run(vecm![Push(0), Push(0), Div]).unwrap();
     assert_eq!(vm.pop_last(), &Constant::Num(1.0));
     vm.reset();
 }
@@ -51,17 +51,17 @@ fn test_list() {
     assert_eq!(list.head(), None);
 
     let list = list
-        .prepend(GcRef::new(Num(1.0)))
-        .prepend(GcRef::new(Num(2.0)))
-        .prepend(GcRef::new(Num(3.0)));
+        .prepend(Num(1.0))
+        .prepend(Num(2.0))
+        .prepend(Num(3.0));
 
-    assert_eq!(list.head(), Some(GcRef::new(Num(3.0))));
-
-    let list = list.tail();
-    assert_eq!(list.head(), Some(GcRef::new(Num(2.0))));
+    assert_eq!(list.head(), Some(Num(3.0)));
 
     let list = list.tail();
-    assert_eq!(list.head(), Some(GcRef::new(Num(1.0))));
+    assert_eq!(list.head(), Some(Num(2.0)));
+
+    let list = list.tail();
+    assert_eq!(list.head(), Some(Num(1.0)));
 
     let list = list.tail();
     assert_eq!(list.head(), None);

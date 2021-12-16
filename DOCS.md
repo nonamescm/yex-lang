@@ -17,6 +17,8 @@ already has the yex language installed.
 * [Lists](#lists)
   * [Creating lists](#creating-lists)
   * [Operating on lists](#operating-on-lists)
+* [Tables](#tables)
+  * [Creating tables](#creating-tables)
 * [Functions](#Functions)
   * [Creating functions](#creating-functions)
     * [Named functions](#named-functions)
@@ -222,6 +224,23 @@ yex> 0 :: [1, 2, 3]
 >> [0, 1, 2, 3]
 yex> #[1, 2, 3]
 >> 3
+```
+
+## Tables
+
+In yex, tables are implemented as HashMaps.
+
+### Creating tables
+
+Tables can be instantiated using curly braces, open the repl and type:
+
+```ml
+yex> type({})
+>> "table"
+yex> {:key = "value", :other_key = "other value"}
+>> {:key = "value", :other_key = "other value"}
+yex> {:key = "value", :other_key = "other value"}[:key]
+>> "value"
 ```
 
 ## Functions

@@ -43,6 +43,7 @@ impl<T, const S: usize> StackVec<T, S> {
         self.len
     }
 
+    #[allow(dead_code)]
     #[track_caller]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> + DoubleEndedIterator {
         self.array[0..self.len]
@@ -57,6 +58,7 @@ impl<T, const S: usize> StackVec<T, S> {
             .map(|it| unsafe { it.assume_init_ref() })
     }
 
+    #[allow(dead_code)]
     #[track_caller]
     pub fn remove(&mut self, index: usize) {
         if index >= S {
@@ -128,5 +130,14 @@ impl<T: std::fmt::Display, const S: usize> std::fmt::Display for StackVec<T, S> 
             }
         }
         write!(f, "]")
+    }
+}
+
+impl<T: PartialEq, const S: usize> PartialEq for StackVec<T, S> {
+    fn eq(&self, other: &Self) -> bool {
+        self.iter()
+            .zip(other.iter())
+            .fold(true, |acc, (this, other)| acc && this == other)
+            && self.len() == other.len()
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     gc::GcRef,
-    literal::{nil, ConstantRef},
+    literal::{nil, Constant},
 };
 
 type Link = Option<GcRef<Node>>;
@@ -11,7 +11,7 @@ pub struct List {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct Node {
-    elem: ConstantRef,
+    elem: Constant,
     next: Link,
 }
 
@@ -27,7 +27,7 @@ impl List {
     }
 
     /// Prepends a value to the end, returning the list
-    pub fn prepend(&self, elem: ConstantRef) -> Self {
+    pub fn prepend(&self, elem: Constant) -> Self {
         let node = GcRef::new(Node {
             elem,
             next: self.head.clone(),
@@ -47,14 +47,14 @@ impl List {
     }
 
     /// Returns the current element
-    pub fn head(&self) -> Option<ConstantRef> {
+    pub fn head(&self) -> Option<Constant> {
         self.head
             .as_ref()
-            .map(|node| GcRef::clone(&node.get().elem))
+            .map(|node| node.get().elem.clone())
     }
 
     /// Returns a index into the list
-    pub fn index(&self, index: usize) -> ConstantRef {
+    pub fn index(&self, index: usize) -> Constant {
         if index == 0 {
             self.head().unwrap_or_else(nil)
         } else {
@@ -79,7 +79,7 @@ impl List {
     }
 
     /// Converts list to Vec
-    pub fn to_vec(&self) -> Vec<ConstantRef> {
+    pub fn to_vec(&self) -> Vec<Constant> {
         let mut vec = vec![];
         let mut head = self.clone();
         while head.head().is_some() {
@@ -101,7 +101,7 @@ impl List {
         let mut node = self.head.as_ref();
         let mut list = Self::new();
         while let Some(elem) = node {
-            list = list.prepend(GcRef::clone(&elem.get().elem));
+            list = list.prepend(elem.get().elem.clone());
             node = elem.get().next.as_ref()
         }
         list
@@ -111,35 +111,15 @@ impl List {
 impl std::fmt::Display for List {
     #[allow(clippy::never_loop)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = loop {
-            let mut str = String::from('[');
-            str.push_str(&match self.head() {
-                Some(s) => {
-                    if self.tail().is_empty() {
-                        format!("{}", s.get())
-                    } else {
-                        format!("{}, ", s.get())
-                    }
-                }
-                None => break str + "]",
-            });
-
-            let mut head = self.tail();
-            while head.head() != None {
-                if head.tail().is_empty() {
-                    str.push_str(&format!("{}", head.head().unwrap().get()));
-                } else {
-                    str.push_str(&format!("{}, ", head.head().unwrap().get()));
-                }
-                head = head.tail();
+        write!(f, "[")?;
+        for (len, value) in self.iter().enumerate() {
+            if len != self.len() - 1 {
+                write!(f, "{}, ", value)?;
+            } else {
+                write!(f, "{}", value)?;
             }
-
-            str.push(']');
-
-            break str;
-        };
-
-        write!(f, "{}", str)
+        }
+        write!(f, "]")
     }
 }
 
@@ -148,7 +128,7 @@ pub struct Iter {
 }
 
 impl Iterator for Iter {
-    type Item = ConstantRef;
+    type Item = Constant;
     fn next(&mut self) -> Option<Self::Item> {
         self.next.clone().map(|node| {
             self.next = node.get().next.clone();
@@ -157,8 +137,8 @@ impl Iterator for Iter {
     }
 }
 
-impl FromIterator<ConstantRef> for List {
-    fn from_iter<T: IntoIterator<Item = ConstantRef>>(iter: T) -> Self {
+impl FromIterator<Constant> for List {
+    fn from_iter<T: IntoIterator<Item = Constant>>(iter: T) -> Self {
         let mut list = Self::new();
         for item in iter.into_iter() {
             list = list.prepend(item)

@@ -1,22 +1,27 @@
-use crate::{literal::ConstantRef, StackVec, Symbol};
+use crate::{literal::Constant, Symbol};
 
-const MAX_TABLE_ENTRIES: usize = 256;
+// const MAX_TABLE_ENTRIES: usize = 256;
 
-#[derive(Debug)]
+type Key = Symbol;
+type Value = Constant;
+
+#[derive(Debug, PartialEq, Clone)]
 struct Entry {
-    pub key: Symbol,
-    pub value: ConstantRef,
+    pub key: Key,
+    pub value: Value,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
+/// A table of key-value pairs
 pub struct Table {
-    entries: StackVec<Entry, MAX_TABLE_ENTRIES>,
+    entries: Vec<Entry>,
 }
 
 impl Table {
+    /// Creates a new table
     pub fn new() -> Self {
         Self {
-            entries: StackVec::new(),
+            entries: Vec::new(),
         }
     }
 
@@ -29,7 +34,7 @@ impl Table {
         None
     }
 
-    fn find_entry(&mut self, key: &Symbol) -> Option<&mut Entry> {
+    fn find_entry_mut(&mut self, key: &Symbol) -> Option<&mut Entry> {
         for entry in self.entries.iter_mut() {
             if &entry.key == key {
                 return Some(entry);
@@ -38,24 +43,70 @@ impl Table {
         None
     }
 
-    pub fn insert(&mut self, key: Symbol, value: ConstantRef) {
-        match self.find_entry(&key) {
+    fn find_entry(&self, key: &Symbol) -> Option<&Entry> {
+        for entry in self.entries.iter() {
+            if &entry.key == key {
+                return Some(entry);
+            }
+        }
+        None
+    }
+
+    /// Inserts an item in the table
+    pub fn insert(&mut self, key: Symbol, value: Constant) {
+        match self.find_entry_mut(&key) {
             Some(entry) => *entry = Entry { key, value },
             None => self.entries.push(Entry { key, value }),
         }
     }
 
-    pub fn get(&mut self, key: &Symbol) -> Option<ConstantRef> {
-        match self.find_entry(key) {
-            Some(entry) => Some(entry.value.clone()),
-            None => None,
-        }
+    /// Indexes an item in the table
+    pub fn get(&self, key: &Symbol) -> Option<Constant> {
+        self.find_entry(key).map(|entry| entry.value.clone())
     }
 
+    /// Remove an item from the table
     pub fn remove(&mut self, key: &Symbol) {
         if let Some(idx) = self.find_entry_idx(key) {
             self.entries.remove(idx);
         }
+    }
+
+    /// Returns the underline table length
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Checks if the table is empty
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Iterates over the table
+    pub fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
+        self.entries
+            .iter()
+            .map(|it| (it.key, it.value.clone()))
+    }
+}
+
+impl std::fmt::Display for Table {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{")?;
+        for (len, (key, value)) in self.iter().enumerate() {
+            if len != self.len() - 1 {
+                write!(f, "{} = {}, ", key, value)?;
+            } else {
+                write!(f, "{} = {}", key, value)?;
+            }
+        }
+        write!(f, "}}")
+    }
+}
+
+impl Default for Table {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -83,12 +134,12 @@ impl Env {
         }
     }
 
-    pub fn insert(&mut self, key: Symbol, value: ConstantRef) -> Option<()> {
+    pub fn insert(&mut self, key: Symbol, value: Constant) -> Option<()> {
         self.top().insert(key, value);
         Some(())
     }
 
-    pub fn get(&mut self, key: &Symbol) -> Option<ConstantRef> {
+    pub fn get(&mut self, key: &Symbol) -> Option<Constant> {
         for entry in self.entries.iter_mut().rev() {
             if let Some(value) = entry.get(key) {
                 return Some(value);

@@ -1,5 +1,5 @@
 #[cfg(test)]
-use vm::{Constant, List, OpCode, OpCodeMetadata, Symbol};
+use vm::{Constant, List, OpCode, OpCodeMetadata, Symbol, gc::GcRef};
 
 #[test]
 fn lex_test() {
@@ -204,7 +204,7 @@ fn test_compiler() {
                 }
             ],
             vec![
-                Constant::List(List::new()),
+                Constant::List(GcRef::new(List::new())),
                 Constant::Num(1.0),
                 Constant::Num(2.0),
                 Constant::Num(3.0)
