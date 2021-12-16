@@ -1,6 +1,6 @@
-use crate::{err_tuple, Constant, ConstantRef, GcRef};
+use crate::{err_tuple, Constant, GcRef};
 
-pub fn str_split(args: &[ConstantRef]) -> ConstantRef {
+pub fn str_split(args: &[Constant]) -> Constant {
     use Constant::*;
 
     let str = match args[0].get() {
@@ -21,7 +21,7 @@ pub fn str_split(args: &[ConstantRef]) -> ConstantRef {
     GcRef::new(List(list))
 }
 
-pub fn starts_with(args: &[ConstantRef]) -> ConstantRef {
+pub fn starts_with(args: &[Constant]) -> Constant {
     /*
     args:
         number | name    | type
@@ -41,7 +41,7 @@ pub fn starts_with(args: &[ConstantRef]) -> ConstantRef {
     GcRef::new(Bool(str.starts_with(pattern)))
 }
 
-pub fn ends_with(args: &[ConstantRef]) -> ConstantRef {
+pub fn ends_with(args: &[Constant]) -> Constant {
     /*
     args:
         number | name    | type
@@ -61,7 +61,7 @@ pub fn ends_with(args: &[ConstantRef]) -> ConstantRef {
     GcRef::new(Bool(str.ends_with(pattern)))
 }
 
-pub fn replace(args: &[ConstantRef]) -> ConstantRef {
+pub fn replace(args: &[Constant]) -> Constant {
     let str = match args[0].get() {
         Constant::Str(str) => str,
         other => err_tuple!("replace()[0] expected a str, but found `{}`", other),

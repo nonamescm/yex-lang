@@ -4,7 +4,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 use std::{iter::Peekable, mem::take};
-use vm::{gc::GcRef, Bytecode, Constant, Either, List, OpCode, OpCodeMetadata, Symbol, Table};
+use vm::{gc::GcRef, Bytecode, Constant, Either, Fun, List, OpCode, OpCodeMetadata, Symbol, Table};
 
 type ParseResult = Result<(), ParseError>;
 
@@ -133,20 +133,20 @@ impl Compiler {
         let bt_len = self.compiled_opcodes();
         constants.into_iter().for_each(|it| {
             self.constants.push(match it {
-                Constant::Fun { arity, body, args } => {
+                Constant::Fun(f) => {
                     let body = patch_bytecode(
                         len,
                         bt_len,
-                        match body.get() {
+                        match f.body.get() {
                             Either::Left(body) => body,
                             _ => unreachable!(),
                         },
                     );
-                    Constant::Fun {
-                        arity,
+                    Constant::Fun(GcRef::new(Fun {
+                        arity: f.arity,
                         body: GcRef::new(Either::Left(body)),
-                        args,
-                    }
+                        args: f.args.clone(),
+                    }))
                 }
                 other => other,
             })
@@ -262,11 +262,11 @@ impl Compiler {
         self.expression()?;
         let body = self.proxies.pop().unwrap();
 
-        self.emit_const_push(Constant::Fun {
+        self.emit_const_push(Constant::Fun(GcRef::new(Fun {
             body: GcRef::new(Either::Left(body)),
             arity,
             args: vec![],
-        });
+        })));
 
         Ok(())
     }
@@ -588,7 +588,7 @@ impl Compiler {
 
     fn list(&mut self) -> ParseResult {
         let mut ret_vec = vec![];
-        self.emit_const_push(Constant::List(List::new()));
+        self.emit_const_push(Constant::List(GcRef::new(List::new())));
         loop {
             if matches!(self.current.token, Tkt::Rbrack) {
                 break;
@@ -621,7 +621,7 @@ impl Compiler {
     }
 
     fn table(&mut self) -> ParseResult {
-        self.emit_const_push(Constant::Table(Table::new()));
+        self.emit_const_push(Constant::Table(GcRef::new(Table::new())));
 
         loop {
             if matches!(self.current.token, Tkt::Rbrace) {
@@ -634,7 +634,9 @@ impl Compiler {
 
             let sym = match self.current.token {
                 Tkt::Sym(s) => s,
-                ref other => return self.throw(format!("Expected symbol to use as key, found `{}`", other)),
+                ref other => {
+                    return self.throw(format!("Expected symbol to use as key, found `{}`", other))
+                }
             };
 
             self.next()?;
@@ -681,7 +683,7 @@ impl Compiler {
         use {Constant::*, OpCode::*};
         match take(&mut self.current.token) {
             Tkt::Num(n) => push!(Num(n)),
-            Tkt::Str(str) => push!(Str(str)),
+            Tkt::Str(str) => push!(Str(GcRef::new(str))),
             Tkt::Sym(sym) => push!(Sym(sym)), // don't allow for duplicated symbols
             Tkt::True => push!(Bool(true)),
             Tkt::False => push!(Bool(false)),

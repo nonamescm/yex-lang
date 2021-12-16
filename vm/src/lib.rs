@@ -2,12 +2,19 @@
 //! Virtual Machine implementation for the yex programming language
 mod env;
 mod error;
+
 #[doc(hidden)]
 pub mod gc;
+
 mod list;
 mod literal;
 mod opcode;
-mod prelude;
+// mod prelude;
+mod prelude {
+    pub fn prelude() -> crate::Table {
+        crate::Table::new()
+    }
+}
 mod stack;
 #[cfg(test)]
 mod tests;
@@ -34,7 +41,6 @@ impl<L, R> Either<L, R> {
 use std::{cmp::Ordering, mem};
 
 use gc::GcRef;
-use literal::ConstantRef;
 
 use crate::{
     env::Env,
@@ -44,9 +50,9 @@ use crate::{
 };
 
 pub use crate::{
-    list::List,
     env::Table,
-    literal::{symbol::Symbol, Constant},
+    list::List,
+    literal::{symbol::Symbol, Constant, Fun},
     opcode::{OpCode, OpCodeMetadata},
 };
 
@@ -79,7 +85,7 @@ impl CallFrame {
 }
 
 type CallStack = StackVec<CallFrame, RECURSION_LIMIT>;
-type Stack = StackVec<ConstantRef, STACK_SIZE>;
+type Stack = StackVec<Constant, STACK_SIZE>;
 
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
@@ -88,7 +94,7 @@ pub type Bytecode = Vec<OpCodeMetadata>;
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
 pub struct VirtualMachine {
-    constants: Vec<ConstantRef>,
+    constants: Vec<Constant>,
     call_stack: CallStack,
     stack: Stack,
     variables: Env,
@@ -104,15 +110,12 @@ impl VirtualMachine {
 
     /// sets the constants for execution
     pub fn set_consts(&mut self, constants: Vec<Constant>) {
-        self.constants = constants.into_iter().map(GcRef::new).collect();
+        self.constants = constants.into_iter().collect();
     }
 
     /// Pop's the last value on the stack
     pub fn pop_last(&self) -> &Constant {
-        self.stack
-            .last()
-            .map(|it| it.get())
-            .unwrap_or(&Constant::Nil)
+        self.stack.last().unwrap_or(&Constant::Nil)
     }
 
     /// Executes a given set of bytecode instructions
@@ -124,7 +127,7 @@ impl VirtualMachine {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push((left.get() $op right.get())?)
+                self.push((left $op right)?)
             }}
         }
 
@@ -132,7 +135,7 @@ impl VirtualMachine {
             ($op:tt) => {{
                 let right = self.pop();
 
-                self.push(($op right.get())?)
+                self.push(($op right)?)
             }};
         }
 
@@ -157,7 +160,7 @@ impl VirtualMachine {
                     }
 
                     let val = self.constants[n].clone();
-                    self.push_gc_ref(val)
+                    self.push(val)
                 }
                 Pop => {
                     self.pop();
@@ -182,7 +185,7 @@ impl VirtualMachine {
                         },
                     };
 
-                    self.push_gc_ref(val);
+                    self.push(val);
                 }
 
                 Drop(val) => {
@@ -192,7 +195,7 @@ impl VirtualMachine {
                 Drpg(val) => self.globals.remove(&val),
 
                 Jmf(offset) => {
-                    if Into::<bool>::into(!self.pop().get()) {
+                    if Into::<bool>::into(!self.pop()) {
                         *self.ip() = offset;
                         continue;
                     }
@@ -212,8 +215,8 @@ impl VirtualMachine {
                 Prep => {
                     let val = self.pop();
 
-                    match self.pop().get() {
-                        Constant::List(xs) => self.push(Constant::List(xs.prepend(val))),
+                    match self.pop() {
+                        Constant::List(xs) => self.push(Constant::List(GcRef::new(xs.prepend(val)))),
                         other => return panic!("Expected a list, found a `{}`", other),
                     };
                 }
@@ -222,7 +225,7 @@ impl VirtualMachine {
                     let value = self.pop();
                     let len = self.stack.len() - 1;
 
-                    match &mut *self.stack[len] {
+                    match &mut self.stack[len] {
                         Constant::Table(ts) => {
                             ts.insert(key, value);
                         }
@@ -235,8 +238,8 @@ impl VirtualMachine {
                 Rev => {
                     let a = self.pop();
                     let b = self.pop();
-                    self.push_gc_ref(a);
-                    self.push_gc_ref(b);
+                    self.push(a);
+                    self.push(b);
                 }
 
                 Add => binop!(+),
@@ -257,12 +260,12 @@ impl VirtualMachine {
 
                 Neg => unaop!(-),
                 Len => {
-                    let len = self.pop().get().len();
+                    let len = self.pop().len();
                     self.push(Constant::Num(len as f64))
                 }
                 Not => {
                     let right = self.pop();
-                    self.push(!right.get())
+                    self.push(!right)
                 }
             }
         }
@@ -272,16 +275,13 @@ impl VirtualMachine {
         Ok(Constant::Nil)
     }
 
-    fn call_helper(
-        &mut self,
-        carity: usize,
-    ) -> InterpretResult<(FunBody, usize, Vec<ConstantRef>)> {
+    fn call_helper(&mut self, carity: usize) -> InterpretResult<(FunBody, usize, Vec<Constant>)> {
         let mut fargs;
 
-        let (farity, body) = match self.pop().get() {
-            Constant::Fun { arity, body, args } => {
-                fargs = args.clone();
-                (*arity, body.clone())
+        let (farity, body) = match self.pop() {
+            Constant::Fun(f) => {
+                fargs = f.args.clone();
+                (f.arity, f.body.clone())
             }
             other => return panic!("Can't call {}", other),
         };
@@ -305,21 +305,21 @@ impl VirtualMachine {
                     farity, carity
                 )
             }
-            Ordering::Less => self.push(Constant::Fun {
+            Ordering::Less => self.push(Constant::Fun(GcRef::new(literal::Fun {
                 arity: farity - carity,
                 body,
                 args: fargs,
-            }),
+            }))),
             Ordering::Equal => {
                 let curr_env = mem::replace(&mut self.variables, Env::new());
                 match body.get() {
                     Either::Left(bytecode) => {
-                        fargs.into_iter().for_each(|it| self.push_gc_ref(it));
+                        fargs.into_iter().for_each(|it| self.push(it));
                         self.run(bytecode.clone())?;
                     }
                     Either::Right(fp) => {
                         let ret = fp(self, fargs.into_iter().rev().collect());
-                        self.push_gc_ref(ret)
+                        self.push(ret)
                     }
                 }
                 self.variables = curr_env;
@@ -338,7 +338,7 @@ impl VirtualMachine {
 
             Ordering::Less => panic!("Can't use partial application in a tail call")?,
             Ordering::Equal => {
-                fargs.into_iter().for_each(|it| self.push_gc_ref(it));
+                fargs.into_iter().for_each(|it| self.push(it));
 
                 if body.get().as_ref() == Either::Left(self.bytecode()) {
                     *self.ip() = 0;
@@ -351,15 +351,17 @@ impl VirtualMachine {
     }
 
     fn index(&mut self) -> InterpretResult<()> {
-        match self.pop().get() {
-            Constant::Num(n) if n.fract() == 0.0 && *n >= 0.0 => match &*self.pop() {
-                Constant::List(xs) => self.push_gc_ref(xs.index(*n as usize)),
+        match self.pop() {
+            Constant::Num(n) if n.fract() == 0.0 && n >= 0.0 => match &self.pop() {
+                Constant::List(xs) => self.push(xs.index(n as usize)),
                 other => panic!("Expected a list to index, found a `{}`", other)?,
             },
-            Constant::Sym(key) => match &*self.pop() {
-                Constant::Table(ts) => self.push_gc_ref(ts.get(key).unwrap_or_else(nil)),
+
+            Constant::Sym(key) => match &self.pop() {
+                Constant::Table(ts) => self.push(ts.get().get(&key).unwrap_or_else(nil)),
                 other => panic!("Expected a table to index, found a `{}`", other)?,
             },
+
             other => return panic!("Expected a integer to use as index, found a `{}`", other),
         };
         Ok(())
@@ -377,11 +379,7 @@ impl VirtualMachine {
 
         eprintln!(
             "stack: {:#?}\nnext instruction: {:?}\n",
-            self.stack
-                .iter()
-                .rev()
-                .map(|it| it.get())
-                .collect::<Vec<&Constant>>(),
+            self.stack.iter().rev().collect::<Vec<&Constant>>(),
             stack.bytecode.get(stack.ip).map(|it| it.opcode),
         );
     }
@@ -392,11 +390,7 @@ impl VirtualMachine {
 
     #[track_caller]
     fn push(&mut self, constant: Constant) {
-        self.stack.push(GcRef::new(constant))
-    }
-
-    fn push_gc_ref(&mut self, const_ref: ConstantRef) {
-        self.stack.push(const_ref)
+        self.stack.push(constant)
     }
 
     fn ip(&mut self) -> &mut usize {
@@ -409,7 +403,7 @@ impl VirtualMachine {
     }
 
     #[track_caller]
-    fn pop(&mut self) -> ConstantRef {
+    fn pop(&mut self) -> Constant {
         self.stack.pop()
     }
 }

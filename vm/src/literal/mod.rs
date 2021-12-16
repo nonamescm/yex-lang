@@ -6,21 +6,30 @@ pub mod symbol;
 use crate::{env::Table, error::InterpretResult, gc::GcRef, Either, VirtualMachine};
 use crate::{list::List, Bytecode};
 use symbol::Symbol;
-pub type NativeFun = fn(*mut VirtualMachine, Vec<ConstantRef>) -> ConstantRef;
+pub type NativeFun = fn(*mut VirtualMachine, Vec<Constant>) -> Constant;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
 
-pub(crate) type ConstantRef = GcRef<Constant>;
-
-pub fn nil() -> ConstantRef {
-    GcRef::new(Constant::Nil)
+pub fn nil() -> Constant {
+    Constant::Nil
 }
 
-pub fn ok() -> ConstantRef {
-    GcRef::new(Constant::Sym(crate::Symbol::new("ok")))
+pub fn ok() -> Constant {
+    Constant::Sym(crate::Symbol::new("ok"))
 }
 
-pub fn err() -> ConstantRef {
-    GcRef::new(Constant::Sym(crate::Symbol::new("err")))
+pub fn err() -> Constant {
+    Constant::Sym(crate::Symbol::new("err"))
+}
+
+#[derive(Debug, PartialEq)]
+/// Yex function struct
+pub struct Fun {
+    /// The number of argument the function receives
+    pub arity: usize,
+    /// The function body
+    pub body: FunBody,
+    /// The arguments that where already passed to the function
+    pub args: Vec<Constant>,
 }
 
 /// Immediate values that can be consumed
@@ -29,26 +38,36 @@ pub enum Constant {
     /// float-precision numbers
     Num(f64),
     /// Strings
-    Str(String),
+    Str(GcRef<String>),
     /// erlang-like atoms
     Sym(Symbol),
     /// Booleans
     Bool(bool),
     /// Functions
-    Fun {
-        /// The number of argument the function receives
-        arity: usize,
-        /// The function body
-        body: FunBody,
-        /// The arguments that where already passed to the function
-        args: Vec<ConstantRef>,
-    },
+    Fun(GcRef<Fun>),
     /// Yex lists
-    List(List),
+    List(GcRef<List>),
     /// Yex Tables
-    Table(Table),
+    Table(GcRef<Table>),
     /// null
     Nil,
+}
+
+impl Clone for Constant {
+    fn clone(&self) -> Self {
+        use Constant::*;
+
+        match self {
+            Num(n) => Num(*n),
+            Sym(s) => Sym(*s),
+            Bool(b) => Bool(*b),
+            Nil => Nil,
+            Str(ref_s) => Str(GcRef::clone(ref_s)),
+            List(xs) => List(GcRef::clone(xs)),
+            Table(ts) => Table(GcRef::clone(ts)),
+            Fun(f) => Fun(GcRef::clone(f)),
+        }
+    }
 }
 
 impl Constant {
@@ -66,8 +85,8 @@ impl Constant {
             Constant::Sym(_) => std::mem::size_of::<Symbol>(),
             Constant::Str(s) => s.len(),
             Constant::Table(ts) => ts.len(),
-            Constant::Fun { arity, body, args } => {
-                mem::size_of_val(&body) + mem::size_of_val(&arity) + mem::size_of_val(&args)
+            Constant::Fun(f) => {
+                mem::size_of_val(&f.arity) + mem::size_of_val(&f.body) + mem::size_of_val(&f.args)
             }
             Constant::Bool(_) => std::mem::size_of::<bool>(),
             Constant::Nil => 4,
@@ -110,12 +129,12 @@ impl std::fmt::Display for Constant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Constant::*;
         let tk = match self {
-            Fun { arity, .. } => {
-                format!("<fun({})>", arity)
+            Fun(f) => {
+                format!("<fun({})>", f.arity)
             }
             Nil => "nil".to_string(),
-            List(xs) => format!("{}", xs),
-            Table(ts) => format!("{}", ts),
+            List(xs) => format!("{}", xs.get()),
+            Table(ts) => format!("{}", ts.get()),
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
@@ -131,7 +150,7 @@ impl Add for Constant {
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x + y)),
-            (Self::Str(x), Self::Str(y)) => Ok(Self::Str(x + &y)),
+            (Self::Str(x), Self::Str(y)) => Ok(Self::Str(GcRef::new(x.get().to_string() + &y))),
             (s, r) => panic!("Can't apply `+` operator between {} and {}", s, r),
         }
     }
@@ -145,7 +164,7 @@ impl Add for &Constant {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x + y)),
-            (Str(x), Str(y)) => Ok(Str(x.to_string() + y)),
+            (Str(x), Str(y)) => Ok(Str(GcRef::new(x.get().to_string() + y))),
             (s, r) => panic!("Can't apply `+` operator between {} and {}", s, r),
         }
     }

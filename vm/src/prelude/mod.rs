@@ -1,8 +1,7 @@
 use crate::{
     env::Table,
     gc::GcRef,
-    literal::{ok, ConstantRef},
-    Constant,
+    literal::{ok, Constant},
 };
 use std::io::Write;
 mod io;
@@ -15,9 +14,9 @@ macro_rules! err_tuple {
     ($($tt:tt)+) => {{
         let msg = format!($($tt)+);
         let mut xs = $crate::List::new();
-        xs = xs.prepend(GcRef::new(Constant::Str(msg)));
+        xs = xs.prepend(Constant::Str(GcRef::new(msg)));
         xs = xs.prepend($crate::literal::err());
-        return GcRef::new(Constant::List(xs))
+        return Constant::List(xs);
     }}
 }
 
@@ -28,11 +27,11 @@ macro_rules! ok_tuple {
         let mut xs = $crate::List::new();
         xs = xs.prepend($reason);
         xs = xs.prepend($crate::literal::ok());
-        GcRef::new(Constant::List(xs))
+        Constant::List(xs)
     }};
 }
 
-fn puts(args: &[ConstantRef]) -> ConstantRef {
+fn puts(args: &[Constant]) -> Constant {
     match args[0].get() {
         Constant::Str(s) => println!("{}", s),
         other => println!("{}", other),
@@ -40,7 +39,7 @@ fn puts(args: &[ConstantRef]) -> ConstantRef {
     ok()
 }
 
-fn print(args: &[ConstantRef]) -> ConstantRef {
+fn print(args: &[Constant]) -> Constant {
     match args[0].get() {
         Constant::Str(s) => print!("{}", s),
         other => print!("{}", other),
@@ -48,7 +47,7 @@ fn print(args: &[ConstantRef]) -> ConstantRef {
     ok()
 }
 
-fn input(args: &[ConstantRef]) -> ConstantRef {
+fn input(args: &[Constant]) -> Constant {
     match args[0].get() {
         Constant::Str(s) => print!("{}", s),
         other => print!("{}", other),
@@ -67,11 +66,11 @@ fn input(args: &[ConstantRef]) -> ConstantRef {
     ok_tuple!(GcRef::new(Constant::Str(input)))
 }
 
-fn str(args: &[ConstantRef]) -> ConstantRef {
+fn str(args: &[Constant]) -> Constant {
     GcRef::new(Constant::Str(format!("{}", args[0].get())))
 }
 
-fn r#type(args: &[ConstantRef]) -> ConstantRef {
+fn r#type(args: &[Constant]) -> Constant {
     let type_name = Constant::Str(
         match args[0].get() {
             Constant::List(_) => "list",
@@ -88,11 +87,11 @@ fn r#type(args: &[ConstantRef]) -> ConstantRef {
     GcRef::new(type_name)
 }
 
-fn inspect(args: &[ConstantRef]) -> ConstantRef {
+fn inspect(args: &[Constant]) -> Constant {
     GcRef::new(Constant::Str(format!("{:#?}", &args[0])))
 }
 
-fn int(args: &[ConstantRef]) -> ConstantRef {
+fn int(args: &[Constant]) -> Constant {
     let str = match args[0].get() {
         Constant::Sym(symbol) => symbol.to_str(),
         Constant::Str(str) => str,
@@ -106,7 +105,7 @@ fn int(args: &[ConstantRef]) -> ConstantRef {
 }
 
 pub fn prelude() -> Table {
-    use {io::*, list::*, self::str::*};
+    use {self::str::*, io::*, list::*};
 
     let mut prelude = Table::new();
     macro_rules! insert_fn {
@@ -116,24 +115,26 @@ pub fn prelude() -> Table {
         ($name: expr, $fn: expr, $arity:expr) => {
             prelude.insert(
                 $crate::Symbol::new($name),
-                $crate::GcRef::new(Constant::Fun {
+                Constant::Fun(GcRef::new(crate::literal::Fun {
                     arity: $arity,
                     args: vec![],
-                    body: GcRef::new($crate::Either::Right(|_, it| $fn(&*it))),
-                }),
+                    body: GcRef::new($crate::Either::Right(|_, it| {
+                        $fn(&*it)
+                    })),
+                })),
             )
         };
 
         (@vm $name: expr, $fn: expr, $arity:expr) => {
             prelude.insert(
                 $crate::Symbol::new($name),
-                $crate::GcRef::new(Constant::Fun {
+                Constant::Fun(GcRef::new(crate::literal::Fun {
                     arity: $arity,
                     args: vec![],
                     body: GcRef::new($crate::Either::Right(|vm, it| {
                         $fn(unsafe { vm.as_mut().unwrap() }, &*it)
                     })),
-                }),
+                })),
             )
         };
     }

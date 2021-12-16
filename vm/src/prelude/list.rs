@@ -2,11 +2,11 @@ use crate::{
     err_tuple,
     gc::GcRef,
     list::List,
-    literal::{nil, ConstantRef},
-    Constant, VirtualMachine,
+    literal::{nil, Constant},
+    VirtualMachine,
 };
 
-pub fn rev(args: &[ConstantRef]) -> ConstantRef {
+pub fn rev(args: &[Constant]) -> Constant {
     let xs = match args[0].get() {
         Constant::List(xs) => xs,
         other => err_tuple!("rev[0] expected a list, but found `{}`", other),
@@ -14,7 +14,7 @@ pub fn rev(args: &[ConstantRef]) -> ConstantRef {
     GcRef::new(Constant::List(xs.rev()))
 }
 
-pub fn map(vm: &mut VirtualMachine, args: &[ConstantRef]) -> ConstantRef {
+pub fn map(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
     let fun = GcRef::clone(&args[0]);
     let xs = match args[1].get() {
         Constant::List(xs) => xs,
@@ -36,7 +36,7 @@ pub fn map(vm: &mut VirtualMachine, args: &[ConstantRef]) -> ConstantRef {
     GcRef::new(Constant::List(xs.rev()))
 }
 
-pub fn fold(vm: &mut VirtualMachine, args: &[ConstantRef]) -> ConstantRef {
+pub fn fold(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
     let mut acc = GcRef::clone(&args[0]);
     let fun = GcRef::clone(&args[1]);
     let xs = match args[2].get() {
@@ -57,7 +57,7 @@ pub fn fold(vm: &mut VirtualMachine, args: &[ConstantRef]) -> ConstantRef {
     acc
 }
 
-pub fn head(args: &[ConstantRef]) -> ConstantRef {
+pub fn head(args: &[Constant]) -> Constant {
     match args[0].get() {
         Constant::List(xs) => match xs.head() {
             Some(x) => x,
@@ -67,14 +67,14 @@ pub fn head(args: &[ConstantRef]) -> ConstantRef {
     }
 }
 
-pub fn tail(args: &[ConstantRef]) -> ConstantRef {
+pub fn tail(args: &[Constant]) -> Constant {
     match args[0].get() {
         Constant::List(xs) => GcRef::new(Constant::List(xs.tail())),
         other => err_tuple!("tail() expected a list, found {}", other),
     }
 }
 
-pub fn insert(args: &[ConstantRef]) -> ConstantRef {
+pub fn insert(args: &[Constant]) -> Constant {
     let key = match args[1].get() {
         Constant::Sym(s) => *s,
         other => err_tuple!("insert()[1] expected a symbol, found {}", other),

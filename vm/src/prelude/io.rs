@@ -3,14 +3,13 @@ use crate::err_tuple;
 use crate::{
     gc::GcRef,
     list,
-    literal::{nil, ConstantRef, ok},
-    Constant,
+    literal::{nil, Constant, ok},
 };
 use std::env;
 use std::fs;
 use std::process::Command;
 
-pub fn create_file(args: &[ConstantRef]) -> ConstantRef {
+pub fn create_file(args: &[Constant]) -> Constant {
     use Constant::*;
 
     match args[0].get() {
@@ -22,7 +21,7 @@ pub fn create_file(args: &[ConstantRef]) -> ConstantRef {
     }
 }
 
-pub fn write_file(args: &[ConstantRef]) -> ConstantRef {
+pub fn write_file(args: &[Constant]) -> Constant {
     use Constant::*;
 
     let content = match args[1].get() {
@@ -39,7 +38,7 @@ pub fn write_file(args: &[ConstantRef]) -> ConstantRef {
     }
 }
 
-pub fn getenv(args: &[ConstantRef]) -> ConstantRef {
+pub fn getenv(args: &[Constant]) -> Constant {
     use Constant::*;
 
     match args[0].get() {
@@ -53,7 +52,7 @@ pub fn getenv(args: &[ConstantRef]) -> ConstantRef {
     nil()
 }
 
-pub fn setenv(args: &[ConstantRef]) -> ConstantRef {
+pub fn setenv(args: &[Constant]) -> Constant {
     use Constant::*;
 
     let var = match args[0].get() {
@@ -71,7 +70,7 @@ pub fn setenv(args: &[ConstantRef]) -> ConstantRef {
     nil()
 }
 
-pub fn system(args: &[ConstantRef]) -> ConstantRef {
+pub fn system(args: &[Constant]) -> Constant {
     use Constant::*;
     let mut cmd = match args[0].get() {
         Str(command) => Command::new(command),
@@ -112,7 +111,7 @@ pub fn system(args: &[ConstantRef]) -> ConstantRef {
     }
 }
 
-pub fn exists_file(args: &[ConstantRef]) -> ConstantRef {
+pub fn exists_file(args: &[Constant]) -> Constant {
     use Constant::*;
 
     match args[0].get() {
@@ -121,7 +120,7 @@ pub fn exists_file(args: &[ConstantRef]) -> ConstantRef {
     }
 }
 
-pub fn remove_file(args: &[ConstantRef]) -> ConstantRef {
+pub fn remove_file(args: &[Constant]) -> Constant {
     use Constant::*;
 
     match args[0].get() {
@@ -133,7 +132,7 @@ pub fn remove_file(args: &[ConstantRef]) -> ConstantRef {
     }
 }
 
-pub fn read_file(args: &[ConstantRef]) -> ConstantRef {
+pub fn read_file(args: &[Constant]) -> Constant {
     use Constant::*;
 
     match args[0].get() {
@@ -145,7 +144,7 @@ pub fn read_file(args: &[ConstantRef]) -> ConstantRef {
     }
 }
 
-pub fn get_args(_: &[ConstantRef]) -> ConstantRef {
+pub fn get_args(_: &[Constant]) -> Constant {
     use Constant::*;
 
     let mut args = list::List::new();

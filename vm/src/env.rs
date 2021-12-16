@@ -1,9 +1,9 @@
-use crate::{literal::ConstantRef, GcRef, Symbol};
+use crate::{literal::Constant, Symbol};
 
 // const MAX_TABLE_ENTRIES: usize = 256;
 
 type Key = Symbol;
-type Value = ConstantRef;
+type Value = Constant;
 
 #[derive(Debug, PartialEq, Clone)]
 struct Entry {
@@ -53,7 +53,7 @@ impl Table {
     }
 
     /// Inserts an item in the table
-    pub fn insert(&mut self, key: Symbol, value: ConstantRef) {
+    pub fn insert(&mut self, key: Symbol, value: Constant) {
         match self.find_entry_mut(&key) {
             Some(entry) => *entry = Entry { key, value },
             None => self.entries.push(Entry { key, value }),
@@ -61,7 +61,7 @@ impl Table {
     }
 
     /// Indexes an item in the table
-    pub fn get(&self, key: &Symbol) -> Option<ConstantRef> {
+    pub fn get(&self, key: &Symbol) -> Option<Constant> {
         self.find_entry(key).map(|entry| entry.value.clone())
     }
 
@@ -86,7 +86,7 @@ impl Table {
     pub fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
         self.entries
             .iter()
-            .map(|it| (it.key, GcRef::clone(&it.value)))
+            .map(|it| (it.key, it.value.clone()))
     }
 }
 
@@ -95,9 +95,9 @@ impl std::fmt::Display for Table {
         write!(f, "{{")?;
         for (len, (key, value)) in self.iter().enumerate() {
             if len != self.len() - 1 {
-                write!(f, "{} = {}, ", key, value.get())?;
+                write!(f, "{} = {}, ", key, value)?;
             } else {
-                write!(f, "{} = {}", key, value.get())?;
+                write!(f, "{} = {}", key, value)?;
             }
         }
         write!(f, "}}")
@@ -134,12 +134,12 @@ impl Env {
         }
     }
 
-    pub fn insert(&mut self, key: Symbol, value: ConstantRef) -> Option<()> {
+    pub fn insert(&mut self, key: Symbol, value: Constant) -> Option<()> {
         self.top().insert(key, value);
         Some(())
     }
 
-    pub fn get(&mut self, key: &Symbol) -> Option<ConstantRef> {
+    pub fn get(&mut self, key: &Symbol) -> Option<Constant> {
         for entry in self.entries.iter_mut().rev() {
             if let Some(value) = entry.get(key) {
                 return Some(value);
