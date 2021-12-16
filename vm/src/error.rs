@@ -13,7 +13,7 @@ impl fmt::Display for InterpretError {
         writeln!(
             f,
             "[{}:{}:{}] {}",
-            self.file.as_ref().unwrap_or(&String::from("<unknown>")),
+            self.file.as_ref().map_or("<unknown>", |str| &**str),
             self.line,
             self.column,
             self.err,
@@ -25,7 +25,7 @@ impl fmt::Display for InterpretError {
                 writeln!(f, "at")?;
                 let lines = content.split('\n');
                 let lines = lines.collect::<Vec<_>>();
-                let current_line = lines.get(self.line - 1).unwrap_or(&"<CAN'T READ FILE>");
+                let current_line = lines.get(self.line - 1).map_or("<unknown>", |str| &**str);
                 writeln!(f, "  {}: {}", self.line, current_line)?;
                 writeln!(f, "{}↑", String::from(" ").repeat(self.column - 1))?;
             }
