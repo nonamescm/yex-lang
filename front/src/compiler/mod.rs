@@ -4,7 +4,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 use std::{iter::Peekable, mem::take};
-use vm::{gc::GcRef, Bytecode, Constant, Either, List, OpCode, OpCodeMetadata, Symbol};
+use vm::{gc::GcRef, Bytecode, Constant, Either, List, OpCode, OpCodeMetadata, Symbol, Table};
 
 type ParseResult = Result<(), ParseError>;
 
@@ -620,6 +620,43 @@ impl Compiler {
         Ok(())
     }
 
+    fn table(&mut self) -> ParseResult {
+        self.emit_const_push(Constant::Table(Table::new()));
+
+        loop {
+            if matches!(self.current.token, Tkt::Rbrace) {
+                break;
+            }
+            self.next()?;
+            if matches!(self.current.token, Tkt::Rbrace) {
+                break;
+            }
+
+            let sym = match self.current.token {
+                Tkt::Sym(s) => s,
+                ref other => return self.throw(format!("Expected symbol to use as key, found `{}`", other)),
+            };
+
+            self.next()?;
+            self.consume(
+                &[Tkt::Assign],
+                format!("Expected `=` after key, found {}", &self.current.token),
+            )?;
+
+            self.expression()?; // compiles the argument
+            self.emit(OpCode::Insert(sym));
+
+            if !matches!(&self.current.token, Tkt::Colon | Tkt::Rbrace) {
+                self.throw(format!(
+                    "Expected `,`, `]` or other token, found `{}`",
+                    &self.current.token
+                ))?;
+            }
+        }
+
+        Ok(())
+    }
+
     fn block(&mut self) -> ParseResult {
         assert_eq!(self.current.token, Tkt::Lparen);
 
@@ -654,6 +691,7 @@ impl Compiler {
             }
             Tkt::Nil => push!(Nil),
             Tkt::Lbrack => self.list()?,
+            Tkt::Lbrace => self.table()?,
             Tkt::Lparen => {
                 self.current.token = Tkt::Lparen; // `(` is needed for self.block() to work correctly
                 self.block()?;

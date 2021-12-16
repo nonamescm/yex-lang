@@ -37,7 +37,7 @@ use gc::GcRef;
 use literal::ConstantRef;
 
 use crate::{
-    env::{Env, Table},
+    env::Env,
     error::InterpretResult,
     literal::{nil, FunBody},
     stack::StackVec,
@@ -45,6 +45,7 @@ use crate::{
 
 pub use crate::{
     list::List,
+    env::Table,
     literal::{symbol::Symbol, Constant},
     opcode::{OpCode, OpCodeMetadata},
 };

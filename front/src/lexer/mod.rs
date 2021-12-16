@@ -178,6 +178,8 @@ impl Lexer {
             ')' => TokenType::Rparen,
             '[' => TokenType::Lbrack,
             ']' => TokenType::Rbrack,
+            '{' => TokenType::Lbrace,
+            '}' => TokenType::Rbrace,
             ':' if self.peek_at(1) == ':' => {
                 self.next();
                 TokenType::Cons
