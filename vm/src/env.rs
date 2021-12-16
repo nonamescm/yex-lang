@@ -12,11 +12,13 @@ struct Entry {
 }
 
 #[derive(Debug, PartialEq)]
+/// A table of key-value pairs
 pub struct Table {
     entries: StackVec<Entry, MAX_TABLE_ENTRIES>,
 }
 
 impl Table {
+    /// Creates a new table
     pub fn new() -> Self {
         Self {
             entries: StackVec::new(),
@@ -50,6 +52,7 @@ impl Table {
         None
     }
 
+    /// Inserts an item in the table
     pub fn insert(&mut self, key: Symbol, value: ConstantRef) {
         match self.find_entry_mut(&key) {
             Some(entry) => *entry = Entry { key, value },
@@ -57,6 +60,7 @@ impl Table {
         }
     }
 
+    /// Indexes an item in the table
     pub fn get(&self, key: &Symbol) -> Option<ConstantRef> {
         match self.find_entry(key) {
             Some(entry) => Some(entry.value.clone()),
@@ -64,16 +68,19 @@ impl Table {
         }
     }
 
+    /// Remove an item from the table
     pub fn remove(&mut self, key: &Symbol) {
         if let Some(idx) = self.find_entry_idx(key) {
             self.entries.remove(idx);
         }
     }
 
+    /// Returns the underline table length
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
+    /// Iterates over the table
     pub fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
         self.entries.iter().map(|it| (it.key, GcRef::clone(&it.value)))
     }
@@ -82,8 +89,12 @@ impl Table {
 impl std::fmt::Display for Table {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{")?;
-        for (key, value) in self.iter() {
-            write!(f, "{} => {}, ", key, value.get())?;
+        for (len, (key, value)) in self.iter().enumerate() {
+            if len != self.len() - 1 {
+                write!(f, "{} = {}, ", key, value.get())?;
+            } else {
+                write!(f, "{} = {}", key, value.get())?;
+            }
         }
         write!(f, "}}")
     }
