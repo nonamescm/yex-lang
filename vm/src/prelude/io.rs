@@ -1,9 +1,10 @@
 use crate::err_tuple;
 
 use crate::{
+    env::Table,
     gc::GcRef,
     list,
-    literal::{nil, Constant, ok},
+    literal::{nil, ok, symbol::Symbol, Constant},
 };
 use std::env;
 use std::fs;
@@ -152,4 +153,43 @@ pub fn get_args(_: &[Constant]) -> Constant {
     }
 
     List(GcRef::new(args))
+}
+
+pub fn read_dir(args: &[Constant]) -> Constant {
+    use Constant::*;
+    /*
+     * name    |  type  | description
+     * path    |  str   | path to read
+     */
+
+    let path = match &args[0] {
+        Str(path) => path.get(),
+        other => err_tuple!("readdir() expected str, found {}", other),
+    };
+
+    /*
+     * Return:
+     * Array of tables
+     * [{ filename: str, isdir: bool }]
+     */
+    if !std::path::Path::new(path).is_dir() {
+        // returns nil when path is not a dir
+        return Constant::Nil;
+    }
+    let mut dirs = list::List::new();
+
+    for file in fs::read_dir(path).unwrap() {
+        let entry = file.unwrap();
+        let mut table = crate::env::Table::new();
+        table.insert(
+            Symbol::new("filename"),
+            Constant::Str(GcRef::new(entry.file_name().into_string().unwrap())),
+        );
+        table.insert(
+            Symbol::new("isdir"),
+            Constant::Bool(entry.metadata().unwrap().is_dir()),
+        );
+        dirs = dirs.prepend(Constant::Table(GcRef::new(table)));
+    }
+    Constant::List(GcRef::new(dirs))
 }

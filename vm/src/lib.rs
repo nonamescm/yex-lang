@@ -39,7 +39,7 @@ use gc::GcRef;
 
 use crate::{
     env::Env,
-    error::InterpretResult,
+    error::{InterpretError, InterpretResult},
     literal::{nil, FunBody},
     stack::StackVec,
 };
@@ -211,7 +211,9 @@ impl VirtualMachine {
                     let val = self.pop();
 
                     match self.pop() {
-                        Constant::List(xs) => self.push(Constant::List(GcRef::new(xs.prepend(val)))),
+                        Constant::List(xs) => {
+                            self.push(Constant::List(GcRef::new(xs.prepend(val))))
+                        }
                         other => return panic!("Expected a list, found a `{}`", other),
                     };
                 }
