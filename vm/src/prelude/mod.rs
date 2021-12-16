@@ -162,6 +162,8 @@ pub fn prelude() -> Table {
     insert_fn!(@vm "map", map, 2);
     insert_fn!(@vm "fold", fold, 3);
     insert_fn!("rev", rev, 1);
+    insert_fn!("insert", insert, 3);
+
     insert_fn!("starts_with", starts_with, 2);
     insert_fn!("ends_with", ends_with, 2);
     insert_fn!("replace", replace, 3);

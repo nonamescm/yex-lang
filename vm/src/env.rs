@@ -5,13 +5,13 @@ use crate::{literal::ConstantRef, GcRef, Symbol};
 type Key = Symbol;
 type Value = ConstantRef;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 struct Entry {
     pub key: Key,
     pub value: Value,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 /// A table of key-value pairs
 pub struct Table {
     entries: Vec<Entry>,

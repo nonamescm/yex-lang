@@ -73,3 +73,20 @@ pub fn tail(args: &[ConstantRef]) -> ConstantRef {
         other => err_tuple!("tail() expected a list, found {}", other),
     }
 }
+
+pub fn insert(args: &[ConstantRef]) -> ConstantRef {
+    let key = match args[1].get() {
+        Constant::Sym(s) => *s,
+        other => err_tuple!("insert()[1] expected a symbol, found {}", other),
+    };
+    let value = GcRef::clone(&args[2]);
+
+    match args[0].get() {
+        Constant::Table(ts) => {
+            let mut ts = (*ts).clone();
+            ts.insert(key, value);
+            GcRef::new(Constant::Table(ts))
+        }
+        other => err_tuple!("insert()[0] expected a table, found {}", other),
+    }
+}
