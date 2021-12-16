@@ -1,4 +1,0 @@
-let _ = 
-	let x = 0 
-	in set(:x, 1) >>
-	puts(x)
