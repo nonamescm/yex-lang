@@ -78,7 +78,7 @@ pub fn replace(args: &[Constant]) -> Constant {
         other => err_tuple!("replace()[2] expected a str, but found `{}`", other),
     };
 
-    let str = str.replace(s_match, &s_match2);
+    let str = str.replace(s_match, s_match2);
 
     Constant::Str(GcRef::new(str))
 }
