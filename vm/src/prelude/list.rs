@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub fn rev(args: &[ConstantRef]) -> ConstantRef {
-    let xs = match args[2].get() {
+    let xs = match args[0].get() {
         Constant::List(xs) => xs,
         other => err_tuple!("rev[0] expected a list, but found `{}`", other),
     };
@@ -48,10 +48,10 @@ pub fn fold(vm: &mut VirtualMachine, args: &[ConstantRef]) -> ConstantRef {
         vm.push_gc_ref(acc);
         vm.push_gc_ref(it);
         vm.push_gc_ref(GcRef::clone(&fun));
-        if let Err(e) = vm.call(1) {
+        if let Err(e) = vm.call(2) {
             err_tuple!("{}", e)
         }
-        acc = vm.pop()
+        acc = vm.pop();
     }
 
     acc
