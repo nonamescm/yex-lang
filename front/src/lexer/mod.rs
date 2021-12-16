@@ -164,11 +164,6 @@ impl Lexer {
                 TokenType::Eq
             }
 
-            '>' if self.peek_at(1) == '>' => {
-                self.next();
-                TokenType::Seq
-            }
-
             '|' if self.peek_at(1) == '>' => {
                 self.next();
                 TokenType::Pipe
@@ -239,6 +234,12 @@ impl Lexer {
                 self.next();
                 TokenType::Shr
             }
+
+            '>' if self.peek_at(1) == '>' => {
+                self.next();
+                TokenType::Seq
+            }
+
             '<' if self.peek_at(1) == '<' && self.peek_at(2) == '<' => {
                 self.next();
                 self.next();
