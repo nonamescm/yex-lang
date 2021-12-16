@@ -1,4 +1,3 @@
-
 use crate::err_tuple;
 use crate::literal::FFINoArgFunction;
 use crate::literal::FFIFunction;
