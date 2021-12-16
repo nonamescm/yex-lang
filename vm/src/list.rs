@@ -109,7 +109,6 @@ impl List {
 }
 
 impl std::fmt::Display for List {
-    #[allow(clippy::never_loop)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;
         for (len, value) in self.iter().enumerate() {

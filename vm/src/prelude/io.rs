@@ -1,7 +1,6 @@
 use crate::err_tuple;
 
 use crate::{
-    env::Table,
     gc::GcRef,
     list,
     literal::{nil, ok, symbol::Symbol, Constant},
@@ -191,9 +190,9 @@ pub fn read_dir(args: &[Constant]) -> Constant {
             );
             dirs = dirs.prepend(Constant::Table(GcRef::new(table)));
         }
-        return Constant::List(GcRef::new(dirs));
+        Constant::List(GcRef::new(dirs))
     } else {
-        return nil();
+        nil()
     }
 }
 
