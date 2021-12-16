@@ -7,16 +7,16 @@ use crate::{
 };
 
 pub fn rev(args: &[Constant]) -> Constant {
-    let xs = match args[0].get() {
+    let xs = match &args[0] {
         Constant::List(xs) => xs,
         other => err_tuple!("rev[0] expected a list, but found `{}`", other),
     };
-    GcRef::new(Constant::List(xs.rev()))
+    Constant::List(GcRef::new(xs.rev()))
 }
 
 pub fn map(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
-    let fun = GcRef::clone(&args[0]);
-    let xs = match args[1].get() {
+    let fun = args[0].clone();
+    let xs = match &args[1] {
         Constant::List(xs) => xs,
         other => err_tuple!("map[1] expected a list, but found `{}`", other),
     };
@@ -24,8 +24,8 @@ pub fn map(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
     let xs = xs
         .iter()
         .map(|it| {
-            vm.push_gc_ref(it);
-            vm.push_gc_ref(GcRef::clone(&fun));
+            vm.push(it);
+            vm.push(fun.clone());
             if let Err(e) = vm.call(1) {
                 err_tuple!("{}", e)
             }
@@ -33,21 +33,21 @@ pub fn map(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
         })
         .collect::<List>();
 
-    GcRef::new(Constant::List(xs.rev()))
+    Constant::List(GcRef::new(xs.rev()))
 }
 
 pub fn fold(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
-    let mut acc = GcRef::clone(&args[0]);
-    let fun = GcRef::clone(&args[1]);
-    let xs = match args[2].get() {
+    let mut acc = args[0].clone();
+    let fun = args[1].clone();
+    let xs = match &args[2] {
         Constant::List(xs) => xs,
         other => err_tuple!("fold[2] expected a list, but found `{}`", other),
     };
 
     for it in xs.iter() {
-        vm.push_gc_ref(acc);
-        vm.push_gc_ref(it);
-        vm.push_gc_ref(GcRef::clone(&fun));
+        vm.push(acc);
+        vm.push(it);
+        vm.push(fun.clone());
         if let Err(e) = vm.call(2) {
             err_tuple!("{}", e)
         }
@@ -58,7 +58,7 @@ pub fn fold(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
 }
 
 pub fn head(args: &[Constant]) -> Constant {
-    match args[0].get() {
+    match &args[0] {
         Constant::List(xs) => match xs.head() {
             Some(x) => x,
             None => nil(),
@@ -68,24 +68,24 @@ pub fn head(args: &[Constant]) -> Constant {
 }
 
 pub fn tail(args: &[Constant]) -> Constant {
-    match args[0].get() {
-        Constant::List(xs) => GcRef::new(Constant::List(xs.tail())),
+    match &args[0] {
+        Constant::List(xs) => Constant::List(GcRef::new(xs.tail())),
         other => err_tuple!("tail() expected a list, found {}", other),
     }
 }
 
 pub fn insert(args: &[Constant]) -> Constant {
-    let key = match args[1].get() {
+    let key = match &args[1] {
         Constant::Sym(s) => *s,
         other => err_tuple!("insert()[1] expected a symbol, found {}", other),
     };
-    let value = GcRef::clone(&args[2]);
+    let value = args[2].clone();
 
-    match args[0].get() {
+    match &args[0] {
         Constant::Table(ts) => {
             let mut ts = (*ts).clone();
             ts.insert(key, value);
-            GcRef::new(Constant::Table(ts))
+            Constant::Table(ts)
         }
         other => err_tuple!("insert()[0] expected a table, found {}", other),
     }

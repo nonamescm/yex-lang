@@ -12,8 +12,8 @@ use std::process::Command;
 pub fn create_file(args: &[Constant]) -> Constant {
     use Constant::*;
 
-    match args[0].get() {
-        Str(ref filename) => match fs::File::create(filename) {
+    match &args[0] {
+        Str(ref filename) => match fs::File::create(filename.get()) {
             Ok(_) => ok(),
             Err(e) => err_tuple!("{:?}", e.kind()),
         },
@@ -24,12 +24,12 @@ pub fn create_file(args: &[Constant]) -> Constant {
 pub fn write_file(args: &[Constant]) -> Constant {
     use Constant::*;
 
-    let content = match args[1].get() {
-        Str(ref content) => content,
+    let content = match &args[1] {
+        Str(ref content) => content.get(),
         other => err_tuple!("file_write()[0] expected str, found {}", other),
     };
-    let res = match args[0].get() {
-        Str(ref filename) => fs::write(filename, content),
+    let res = match &args[0] {
+        Str(ref filename) => fs::write(filename.get(), content),
         other => err_tuple!("file_write()[1] expected str, found {}", other),
     };
     match res {
@@ -41,10 +41,10 @@ pub fn write_file(args: &[Constant]) -> Constant {
 pub fn getenv(args: &[Constant]) -> Constant {
     use Constant::*;
 
-    match args[0].get() {
+    match &args[0] {
         Str(env_var) => {
-            if let Ok(evar) = env::var(env_var) {
-                return GcRef::new(Str(evar));
+            if let Ok(evar) = env::var(env_var.get()) {
+                return Str(GcRef::new(evar));
             }
         }
         other => err_tuple!("getenv() expected str, found {}", other),
@@ -55,14 +55,14 @@ pub fn getenv(args: &[Constant]) -> Constant {
 pub fn setenv(args: &[Constant]) -> Constant {
     use Constant::*;
 
-    let var = match args[0].get() {
+    let var = match &args[0] {
         Str(var) => var,
         other => err_tuple!("getenv() expected str, found {}", other),
     };
 
-    match args[0].get() {
+    match &args[0] {
         Str(value) => {
-            env::set_var(var, value);
+            env::set_var(var.get(), value.get());
         }
         other => err_tuple!("getenv()[1] expected str, found {}", other),
     }
@@ -72,16 +72,15 @@ pub fn setenv(args: &[Constant]) -> Constant {
 
 pub fn system(args: &[Constant]) -> Constant {
     use Constant::*;
-    let mut cmd = match args[0].get() {
-        Str(command) => Command::new(command),
+    let mut cmd = match &args[0] {
+        Str(command) => Command::new(command.get()),
         other => err_tuple!("system() expected str, found {}", other),
     };
 
-    let args = match args[1].get() {
+    let args = match &args[1] {
         List(list) => list
-            .to_vec()
-            .into_iter()
-            .map(|it| match it.get() {
+            .iter()
+            .map(|it| match it {
                 Str(s) => s.to_string(),
                 other => format!("{}", other),
             })
@@ -102,10 +101,10 @@ pub fn system(args: &[Constant]) -> Constant {
                 .to_string();
 
             let list = list::List::new();
-            let list = list.prepend(GcRef::new(Str(stderr)));
-            let list = list.prepend(GcRef::new(Str(stdout)));
+            let list = list.prepend(Str(GcRef::new(stderr)));
+            let list = list.prepend(Str(GcRef::new(stdout)));
 
-            GcRef::new(List(list))
+            List(GcRef::new(list))
         }
         Err(e) => err_tuple!("{:?}", e.kind()),
     }
@@ -114,8 +113,8 @@ pub fn system(args: &[Constant]) -> Constant {
 pub fn exists_file(args: &[Constant]) -> Constant {
     use Constant::*;
 
-    match args[0].get() {
-        Str(filename) => GcRef::new(Bool(fs::File::open(filename).is_ok())),
+    match &args[0] {
+        Str(filename) => Bool(fs::File::open(filename.get()).is_ok()),
         other => err_tuple!("file_exists() expected str, found {}", other),
     }
 }
@@ -123,8 +122,8 @@ pub fn exists_file(args: &[Constant]) -> Constant {
 pub fn remove_file(args: &[Constant]) -> Constant {
     use Constant::*;
 
-    match args[0].get() {
-        Str(filename) => match fs::remove_file(filename) {
+    match &args[0] {
+        Str(filename) => match fs::remove_file(filename.get()) {
             Ok(_) => ok(),
             Err(e) => err_tuple!("{:?}", e.kind()),
         },
@@ -135,9 +134,9 @@ pub fn remove_file(args: &[Constant]) -> Constant {
 pub fn read_file(args: &[Constant]) -> Constant {
     use Constant::*;
 
-    match args[0].get() {
-        Str(filename) => match fs::read_to_string(filename) {
-            Ok(v) => GcRef::new(Str(v)),
+    match &args[0] {
+        Str(filename) => match fs::read_to_string(filename.get()) {
+            Ok(v) => Str(GcRef::new(v)),
             Err(e) => err_tuple!("{:?}", e.kind()),
         },
         other => err_tuple!("file_read() expected str, found {}", other),
@@ -149,8 +148,8 @@ pub fn get_args(_: &[Constant]) -> Constant {
 
     let mut args = list::List::new();
     for i in env::args().into_iter().rev() {
-        args = args.prepend(GcRef::new(Constant::Str(i.to_owned())));
+        args = args.prepend(Str(GcRef::new(i.to_owned())));
     }
 
-    GcRef::new(List(args))
+    List(GcRef::new(args))
 }

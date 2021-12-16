@@ -16,7 +16,7 @@ macro_rules! err_tuple {
         let mut xs = $crate::List::new();
         xs = xs.prepend(Constant::Str(GcRef::new(msg)));
         xs = xs.prepend($crate::literal::err());
-        return Constant::List(xs);
+        return Constant::List(GcRef::new(xs));
     }}
 }
 
@@ -27,29 +27,29 @@ macro_rules! ok_tuple {
         let mut xs = $crate::List::new();
         xs = xs.prepend($reason);
         xs = xs.prepend($crate::literal::ok());
-        Constant::List(xs)
+        Constant::List(GcRef::new(xs))
     }};
 }
 
 fn puts(args: &[Constant]) -> Constant {
-    match args[0].get() {
-        Constant::Str(s) => println!("{}", s),
+    match &args[0] {
+        Constant::Str(s) => println!("{}", s.get()),
         other => println!("{}", other),
     };
     ok()
 }
 
 fn print(args: &[Constant]) -> Constant {
-    match args[0].get() {
-        Constant::Str(s) => print!("{}", s),
+    match &args[0] {
+        Constant::Str(s) => print!("{}", s.get()),
         other => print!("{}", other),
     };
     ok()
 }
 
 fn input(args: &[Constant]) -> Constant {
-    match args[0].get() {
-        Constant::Str(s) => print!("{}", s),
+    match &args[0] {
+        Constant::Str(s) => print!("{}", s.get()),
         other => print!("{}", other),
     };
 
@@ -63,16 +63,16 @@ fn input(args: &[Constant]) -> Constant {
     }
 
     input.pop();
-    ok_tuple!(GcRef::new(Constant::Str(input)))
+    ok_tuple!(Constant::Str(GcRef::new(input)))
 }
 
 fn str(args: &[Constant]) -> Constant {
-    GcRef::new(Constant::Str(format!("{}", args[0].get())))
+    Constant::Str(GcRef::new(format!("{}", &args[0])))
 }
 
 fn r#type(args: &[Constant]) -> Constant {
-    let type_name = Constant::Str(
-        match args[0].get() {
+    let type_name = GcRef::new(
+        match &args[0] {
             Constant::List(_) => "list",
             Constant::Table(_) => "table",
             Constant::Str(_) => "str",
@@ -84,22 +84,22 @@ fn r#type(args: &[Constant]) -> Constant {
         }
         .into(),
     );
-    GcRef::new(type_name)
+    Constant::Str(type_name)
 }
 
 fn inspect(args: &[Constant]) -> Constant {
-    GcRef::new(Constant::Str(format!("{:#?}", &args[0])))
+    Constant::Str(GcRef::new(format!("{:#?}", &args[0])))
 }
 
 fn int(args: &[Constant]) -> Constant {
-    let str = match args[0].get() {
+    let str = match &args[0] {
         Constant::Sym(symbol) => symbol.to_str(),
-        Constant::Str(str) => str,
+        Constant::Str(str) => str.get(),
         other => err_tuple!("Expected a string or a symbol, found {}", other),
     };
 
     match str.parse::<f64>() {
-        Ok(n) => GcRef::new(Constant::Num(n)),
+        Ok(n) => Constant::Num(n),
         Err(e) => err_tuple!("{:?}", e),
     }
 }

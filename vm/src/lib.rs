@@ -9,12 +9,7 @@ pub mod gc;
 mod list;
 mod literal;
 mod opcode;
-// mod prelude;
-mod prelude {
-    pub fn prelude() -> crate::Table {
-        crate::Table::new()
-    }
-}
+mod prelude;
 mod stack;
 #[cfg(test)]
 mod tests;

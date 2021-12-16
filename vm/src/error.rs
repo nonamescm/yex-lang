@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(Debug)]
 pub struct InterpretError {
     pub err: String,
     pub line: usize,
