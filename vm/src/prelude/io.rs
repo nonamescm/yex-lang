@@ -1,5 +1,5 @@
 use crate::err_tuple;
-
+use crate::ok_tuple;
 use crate::{
     gc::GcRef,
     list,
@@ -104,7 +104,7 @@ pub fn system(args: &[Constant]) -> Constant {
             let list = list.prepend(Str(GcRef::new(stderr)));
             let list = list.prepend(Str(GcRef::new(stdout)));
 
-            List(GcRef::new(list))
+            ok_tuple!(List(GcRef::new(list)))
         }
         Err(e) => err_tuple!("{:?}", e.kind()),
     }
@@ -176,23 +176,24 @@ pub fn read_dir(args: &[Constant]) -> Constant {
         return Constant::Nil;
     }
     let mut dirs: crate::List = list::List::new();
-    if let Ok(dir_result) = fs::read_dir(path) {
-        for file in dir_result {
-            let entry = file.unwrap();
-            let mut table = crate::env::Table::new();
-            table.insert(
-                Symbol::new("filename"),
-                Constant::Str(GcRef::new(entry.file_name().into_string().unwrap())),
-            );
-            table.insert(
-                Symbol::new("isdir"),
-                Constant::Bool(entry.metadata().unwrap().is_dir()),
-            );
-            dirs = dirs.prepend(Constant::Table(GcRef::new(table)));
+    match fs::read_dir(path) {
+        Ok(dir_result) => {
+            for file in dir_result {
+                let entry = file.unwrap();
+                let mut table = crate::env::Table::new();
+                table.insert(
+                    Symbol::new("filename"),
+                    Constant::Str(GcRef::new(entry.file_name().into_string().unwrap())),
+                );
+                table.insert(
+                    Symbol::new("isdir"),
+                    Constant::Bool(entry.metadata().unwrap().is_dir()),
+                );
+                dirs = dirs.prepend(Constant::Table(GcRef::new(table)));
+            }
+            Constant::List(GcRef::new(dirs))
         }
-        Constant::List(GcRef::new(dirs))
-    } else {
-        nil()
+        Err(err) => err_tuple!("{:?}", err.kind()),
     }
 }
 
@@ -209,12 +210,11 @@ pub fn remove_dir(args: &[Constant]) -> Constant {
     };
 
     if !std::path::Path::new(path).is_dir() {
-        // returns nil when path is not a dir
-        return nil();
+        err_tuple!("NotADirectory");
     }
     match fs::remove_dir(path) {
         Ok(_) => ok(),
-        Err(_) => nil(),
+        Err(err) => err_tuple!("{:?}", err.kind()),
     }
 }
 
@@ -235,6 +235,6 @@ pub fn make_dir(args: &[Constant]) -> Constant {
     }
     match fs::create_dir(path) {
         Ok(_) => ok(),
-        Err(_) => nil(),
+        Err(err) => err_tuple!("{:?}", err.kind()),
     }
 }
