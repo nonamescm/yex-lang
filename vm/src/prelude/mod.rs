@@ -167,5 +167,6 @@ pub fn prelude() -> Table {
     insert_fn!("ends_with", ends_with, 2);
     insert_fn!("replace", replace, 3);
     insert_fn!("readdir", read_dir);
+    insert_fn!("removedir", remove_dir);
     prelude
 }

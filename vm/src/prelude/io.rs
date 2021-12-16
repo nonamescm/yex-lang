@@ -177,7 +177,6 @@ pub fn read_dir(args: &[Constant]) -> Constant {
         return Constant::Nil;
     }
     let mut dirs = list::List::new();
-
     for file in fs::read_dir(path).unwrap() {
         let entry = file.unwrap();
         let mut table = crate::env::Table::new();
@@ -192,4 +191,26 @@ pub fn read_dir(args: &[Constant]) -> Constant {
         dirs = dirs.prepend(Constant::Table(GcRef::new(table)));
     }
     Constant::List(GcRef::new(dirs))
+}
+
+pub fn remove_dir(args: &[Constant]) -> Constant {
+    use Constant::*;
+    /*
+     * name    |  type  | description
+     * path    |  str   | path to delete
+     */
+
+    let path = match &args[0] {
+        Str(path) => path.get(),
+        other => err_tuple!("readdir() expected str, found {}", other),
+    };
+
+    if !std::path::Path::new(path).is_dir() {
+        // returns nil when path is not a dir
+        return nil();
+    }
+    match fs::remove_dir(path) {
+        Ok(_) => ok(),
+        Err(_) => nil(),
+    }
 }
