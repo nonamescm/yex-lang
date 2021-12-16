@@ -176,21 +176,25 @@ pub fn read_dir(args: &[Constant]) -> Constant {
         // returns nil when path is not a dir
         return Constant::Nil;
     }
-    let mut dirs = list::List::new();
-    for file in fs::read_dir(path).unwrap() {
-        let entry = file.unwrap();
-        let mut table = crate::env::Table::new();
-        table.insert(
-            Symbol::new("filename"),
-            Constant::Str(GcRef::new(entry.file_name().into_string().unwrap())),
-        );
-        table.insert(
-            Symbol::new("isdir"),
-            Constant::Bool(entry.metadata().unwrap().is_dir()),
-        );
-        dirs = dirs.prepend(Constant::Table(GcRef::new(table)));
+    let mut dirs: crate::List = list::List::new();
+    if let Ok(dir_result) = fs::read_dir(path) {
+        for file in dir_result {
+            let entry = file.unwrap();
+            let mut table = crate::env::Table::new();
+            table.insert(
+                Symbol::new("filename"),
+                Constant::Str(GcRef::new(entry.file_name().into_string().unwrap())),
+            );
+            table.insert(
+                Symbol::new("isdir"),
+                Constant::Bool(entry.metadata().unwrap().is_dir()),
+            );
+            dirs = dirs.prepend(Constant::Table(GcRef::new(table)));
+        }
+        return Constant::List(GcRef::new(dirs));
+    } else {
+        return nil();
     }
-    Constant::List(GcRef::new(dirs))
 }
 
 pub fn remove_dir(args: &[Constant]) -> Constant {
