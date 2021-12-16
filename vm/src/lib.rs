@@ -224,6 +224,7 @@ impl VirtualMachine {
 
                     match &mut self.stack[len] {
                         Constant::Table(ts) => {
+                            *ts = GcRef::new(ts.get().clone());
                             ts.insert(key, value);
                         }
                         other => return panic!("Expected a table, found a `{}`", other),

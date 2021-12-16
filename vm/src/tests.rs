@@ -1,4 +1,4 @@
-use crate::{list::List, Constant, OpCode, OpCodeMetadata, VirtualMachine};
+use crate::{list::List, Constant, OpCodeMetadata, OpCode, VirtualMachine, Table, Symbol, gc::GcRef};
 
 macro_rules! vecm {
     ($($tt:tt)*) => {
@@ -69,4 +69,16 @@ fn test_list() {
     // Make sure empty tail works
     let list = list.tail();
     assert_eq!(list.head(), None);
+}
+#[test]
+fn table_test() {
+    let mut table = Table::new();   
+    table.insert(Symbol::new("test"), Constant::Table(GcRef::new(Table::new())));
+    assert_eq!(table.get(&Symbol::new("test")), Some(Constant::Table(GcRef::new(Table::new()))));
+}
+#[test] 
+fn gc_alloc_eq_for_same_values_test() {
+    let val1 = GcRef::new(Table::new());
+    let val2 = GcRef::new(Table::new());
+    assert_eq!(val1, val2);
 }
