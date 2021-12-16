@@ -11,6 +11,7 @@ mod literal;
 mod opcode;
 mod prelude;
 mod stack;
+mod table;
 #[cfg(test)]
 mod tests;
 
@@ -35,6 +36,7 @@ impl<L, R> Either<L, R> {
 
 use std::{cmp::Ordering, mem};
 
+use env::EnvTable;
 use gc::GcRef;
 
 use crate::{
@@ -45,10 +47,10 @@ use crate::{
 };
 
 pub use crate::{
-    env::Table,
     list::List,
     literal::{symbol::Symbol, Constant, Fun},
     opcode::{OpCode, OpCodeMetadata},
+    table::Table,
 };
 
 const STACK_SIZE: usize = 512;
@@ -93,7 +95,7 @@ pub struct VirtualMachine {
     call_stack: CallStack,
     stack: Stack,
     variables: Env,
-    globals: Table,
+    globals: EnvTable,
 }
 
 impl VirtualMachine {
@@ -220,12 +222,10 @@ impl VirtualMachine {
 
                 Insert(key) => {
                     let value = self.pop();
-                    let len = self.stack.len() - 1;
 
-                    match &mut self.stack[len] {
+                    match self.pop() {
                         Constant::Table(ts) => {
-                            *ts = GcRef::new(ts.get().clone());
-                            ts.insert(key, value);
+                            self.push(Constant::Table(GcRef::new(ts.insert(key, value))))
                         }
                         other => return panic!("Expected a table, found a `{}`", other),
                     };

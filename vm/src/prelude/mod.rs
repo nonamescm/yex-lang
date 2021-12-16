@@ -1,5 +1,5 @@
 use crate::{
-    env::Table,
+    env::EnvTable,
     gc::GcRef,
     literal::{ok, Constant},
 };
@@ -105,10 +105,10 @@ fn int(args: &[Constant]) -> Constant {
     }
 }
 
-pub fn prelude() -> Table {
+pub fn prelude() -> EnvTable {
     use {self::str::*, io::*, list::*, misc::*};
 
-    let mut prelude = Table::new();
+    let mut prelude = EnvTable::new();
     macro_rules! insert_fn {
         ($name: expr, $fn: expr) => {
             insert_fn!($name, $fn, 1)

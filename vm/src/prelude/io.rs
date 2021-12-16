@@ -4,6 +4,7 @@ use crate::{
     gc::GcRef,
     list,
     literal::{nil, ok, symbol::Symbol, Constant},
+    table,
 };
 use std::env;
 use std::fs;
@@ -180,7 +181,7 @@ pub fn read_dir(args: &[Constant]) -> Constant {
         Ok(dir_result) => {
             for file in dir_result {
                 let entry = file.unwrap();
-                let mut table = crate::env::Table::new();
+                let mut table = table::Table::new();
                 table.insert(
                     Symbol::new("filename"),
                     Constant::Str(GcRef::new(entry.file_name().into_string().unwrap())),

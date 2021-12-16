@@ -13,11 +13,11 @@ struct Entry {
 
 #[derive(Debug, PartialEq, Clone)]
 /// A table of key-value pairs
-pub struct Table {
+pub struct EnvTable {
     entries: Vec<Entry>,
 }
 
-impl Table {
+impl EnvTable {
     /// Creates a new table
     pub fn new() -> Self {
         Self {
@@ -90,7 +90,7 @@ impl Table {
     }
 }
 
-impl std::fmt::Display for Table {
+impl std::fmt::Display for EnvTable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{")?;
         for (len, (key, value)) in self.iter().enumerate() {
@@ -104,7 +104,7 @@ impl std::fmt::Display for Table {
     }
 }
 
-impl Default for Table {
+impl Default for EnvTable {
     fn default() -> Self {
         Self::new()
     }
@@ -112,25 +112,25 @@ impl Default for Table {
 
 #[derive(Debug)]
 pub(crate) struct Env {
-    entries: Vec<Table>,
+    entries: Vec<EnvTable>,
 }
 
 impl Env {
     pub fn nsc(&mut self) {
-        self.entries.push(Table::new());
+        self.entries.push(EnvTable::new());
     }
 
     pub fn esc(&mut self) {
         self.entries.pop();
     }
 
-    fn top(&mut self) -> &mut Table {
+    fn top(&mut self) -> &mut EnvTable {
         self.entries.last_mut().unwrap()
     }
 
     pub fn new() -> Self {
         Self {
-            entries: vec![Table::new()],
+            entries: vec![EnvTable::new()],
         }
     }
 

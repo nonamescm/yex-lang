@@ -60,11 +60,11 @@ impl<T> Clone for GcRef<T> {
     }
 }
 
-impl<T> std::ops::DerefMut for GcRef<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { &mut self.inner.as_mut().inner }
-    }
-}
+// impl<T> std::ops::DerefMut for GcRef<T> {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         unsafe { &mut self.inner.as_mut().inner }
+//     }
+// }
 
 impl<T> std::ops::Deref for GcRef<T> {
     type Target = T;

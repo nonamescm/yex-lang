@@ -3,8 +3,9 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
 };
 pub mod symbol;
-use crate::{env::Table, error::InterpretResult, gc::GcRef, Either, VirtualMachine};
-use crate::{list::List, Bytecode};
+use crate::{
+    error::InterpretResult, gc::GcRef, list::List, table::Table, Bytecode, Either, VirtualMachine,
+};
 use symbol::Symbol;
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Constant>) -> Constant;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;

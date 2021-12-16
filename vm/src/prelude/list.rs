@@ -82,11 +82,7 @@ pub fn insert(args: &[Constant]) -> Constant {
     let value = args[2].clone();
 
     match &args[0] {
-        Constant::Table(ts) => {
-            let mut ts = (*ts).clone();
-            ts.insert(key, value);
-            Constant::Table(ts)
-        }
+        Constant::Table(ts) => Constant::Table(GcRef::new(ts.insert(key, value))),
         other => err_tuple!("insert()[0] expected a table, found {}", other),
     }
 }
