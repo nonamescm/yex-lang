@@ -6,6 +6,7 @@ use crate::{
 use std::io::Write;
 mod io;
 mod list;
+mod misc;
 mod str;
 
 #[macro_export]
@@ -105,7 +106,7 @@ fn int(args: &[Constant]) -> Constant {
 }
 
 pub fn prelude() -> Table {
-    use {self::str::*, io::*, list::*};
+    use {self::str::*, io::*, list::*, misc::*};
 
     let mut prelude = Table::new();
     macro_rules! insert_fn {
@@ -170,5 +171,9 @@ pub fn prelude() -> Table {
     insert_fn!("readdir", read_dir);
     insert_fn!("removedir", remove_dir);
     insert_fn!("mkdir", make_dir);
+
+    insert_fn!("panic", yex_panic);
+    insert_fn!("error", yex_error);
+    insert_fn!("ok", yex_ok);
     prelude
 }
