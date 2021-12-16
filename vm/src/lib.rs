@@ -39,7 +39,7 @@ use gc::GcRef;
 
 use crate::{
     env::Env,
-    error::{InterpretError, InterpretResult},
+    error::InterpretResult,
     literal::{nil, FunBody},
     stack::StackVec,
 };
