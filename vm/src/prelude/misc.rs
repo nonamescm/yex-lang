@@ -1,7 +1,6 @@
 use crate::err_tuple;
 use crate::error::InterpretError;
 use crate::panic;
-use crate::FILE_NAME;
 use crate::{
     gc::GcRef,
     list,
