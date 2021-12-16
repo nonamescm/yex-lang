@@ -225,7 +225,12 @@ impl VirtualMachine {
 
                     match self.pop() {
                         Constant::Table(ts) => {
+<<<<<<< HEAD
                             self.push(Constant::Table(GcRef::new(ts.insert(key, value))))
+=======
+                            *ts = GcRef::new(ts.get().clone());
+                            ts.insert(key, value);
+>>>>>>> abbbed1 (Fix Crash on Table (#33))
                         }
                         other => return panic!("Expected a table, found a `{}`", other),
                     };

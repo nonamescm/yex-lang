@@ -181,12 +181,21 @@ pub fn read_dir(args: &[Constant]) -> Constant {
         Ok(dir_result) => {
             for file in dir_result {
                 let entry = file.unwrap();
+<<<<<<< HEAD
                 let mut table = table::Table::new();
                 table = table.insert(
                     Symbol::new("filename"),
                     Constant::Str(GcRef::new(entry.file_name().into_string().unwrap())),
                 );
                 table = table.insert(
+=======
+                let mut table = crate::env::Table::new();
+                table.insert(
+                    Symbol::new("filename"),
+                    Constant::Str(GcRef::new(entry.file_name().into_string().unwrap())),
+                );
+                table.insert(
+>>>>>>> 7b41f1c (Improve Error Handling in IO Functions (#32))
                     Symbol::new("isdir"),
                     Constant::Bool(entry.metadata().unwrap().is_dir()),
                 );

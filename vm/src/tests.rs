@@ -73,7 +73,11 @@ fn test_list() {
 #[test]
 fn table_test() {
     let mut table = Table::new();   
+<<<<<<< HEAD
     table = table.insert(Symbol::new("test"), Constant::Table(GcRef::new(Table::new())));
+=======
+    table.insert(Symbol::new("test"), Constant::Table(GcRef::new(Table::new())));
+>>>>>>> abbbed1 (Fix Crash on Table (#33))
     assert_eq!(table.get(&Symbol::new("test")), Some(Constant::Table(GcRef::new(Table::new()))));
 }
 #[test] 
