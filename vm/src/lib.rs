@@ -45,7 +45,7 @@ use gc::GcRef;
 
 use crate::{
     env::Env,
-    error::InterpretResult,
+    error::{InterpretError, InterpretResult},
     literal::{nil, FunBody},
     stack::StackVec,
 };

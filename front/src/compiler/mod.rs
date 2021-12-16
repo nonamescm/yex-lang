@@ -561,7 +561,7 @@ impl Compiler {
                 let mut new = vec![];
 
                 while old_comp > 0 {
-                    new.push(proxy.pop().unwrap());
+                    new.insert(0, proxy.pop().unwrap());
                     old_comp -= 1;
                 }
 

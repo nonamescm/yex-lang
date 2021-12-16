@@ -2,3 +2,4 @@
 callgrind.out.*
 perf.data*
 flamegraph.svg
+rust-toolchain
