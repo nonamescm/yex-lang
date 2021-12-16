@@ -1,10 +1,9 @@
 use crate::err_tuple;
-use crate::literal::nil;
+
 use crate::panic;
 use crate::{
     gc::GcRef,
     list,
-    VirtualMachine,
     literal::{err, ok, Constant},
 };
 use std::process::exit;
