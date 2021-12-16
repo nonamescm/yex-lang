@@ -1,17 +1,14 @@
 use front::compile;
-use vm::FILE_NAME;
+
 #[cfg(feature = "repl")]
 use {front::compile_expr, rustyline::Editor};
 
 use std::{env::args, fs::read_to_string, process::exit};
 use vm::VirtualMachine;
-fn set_file_name(file: impl Into<String>) {
-    let mut guard = FILE_NAME.lock().unwrap();
-    *guard = Some(file.into())
-}
+
 fn eval_file(file: &str) -> Result<i32, front::ParseError> {
     let mut vm = VirtualMachine::default();
-    set_file_name(file);
+
     let file = read_to_string(file).unwrap_or_else(|_| {
         eprintln!("File not found");
         exit(1)

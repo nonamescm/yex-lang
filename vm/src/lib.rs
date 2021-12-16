@@ -13,12 +13,6 @@ mod prelude;
 mod stack;
 #[cfg(test)]
 mod tests;
-use lazy_static::lazy_static;
-use std::sync::Mutex;
-lazy_static! {
-    #[doc(hidden)]
-    pub static ref FILE_NAME: Mutex<Option<String>> = Mutex::new(None);
-}
 
 #[derive(PartialEq, Debug, Clone)]
 /// Either left or right value
@@ -69,7 +63,7 @@ macro_rules! panic {
     ($($tt:tt)+) => {
         unsafe {
             let msg = format!($($tt)+);
-            Err($crate::error::InterpretError { line: $crate::LINE, column: $crate::COLUMN, err: msg, file: FILE_NAME.lock().unwrap().clone() })
+            Err($crate::error::InterpretError { line: $crate::LINE, column: $crate::COLUMN, err: msg })
         }
     }
 }
