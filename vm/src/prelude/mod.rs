@@ -118,9 +118,7 @@ pub fn prelude() -> Table {
                 Constant::Fun(GcRef::new(crate::literal::Fun {
                     arity: $arity,
                     args: vec![],
-                    body: GcRef::new($crate::Either::Right(|_, it| {
-                        $fn(&*it)
-                    })),
+                    body: GcRef::new($crate::Either::Right(|_, it| $fn(&*it))),
                 })),
             )
         };
@@ -168,5 +166,9 @@ pub fn prelude() -> Table {
     insert_fn!("starts_with", starts_with, 2);
     insert_fn!("ends_with", ends_with, 2);
     insert_fn!("replace", replace, 3);
+
+    insert_fn!("readdir", read_dir);
+    insert_fn!("removedir", remove_dir);
+    insert_fn!("mkdir", make_dir);
     prelude
 }

@@ -1,9 +1,10 @@
 use crate::err_tuple;
 
 use crate::{
+    env::Table,
     gc::GcRef,
     list,
-    literal::{nil, Constant, ok},
+    literal::{nil, ok, symbol::Symbol, Constant},
 };
 use std::env;
 use std::fs;
@@ -152,4 +153,89 @@ pub fn get_args(_: &[Constant]) -> Constant {
     }
 
     List(GcRef::new(args))
+}
+
+pub fn read_dir(args: &[Constant]) -> Constant {
+    use Constant::*;
+    /*
+     * name    |  type  | description
+     * path    |  str   | path to read
+     */
+
+    let path = match &args[0] {
+        Str(path) => path.get(),
+        other => err_tuple!("readdir() expected str, found {}", other),
+    };
+
+    /*
+     * Return:
+     * Array of tables
+     * [{ filename: str, isdir: bool }]
+     */
+    if !std::path::Path::new(path).is_dir() {
+        // returns nil when path is not a dir
+        return Constant::Nil;
+    }
+    let mut dirs: crate::List = list::List::new();
+    if let Ok(dir_result) = fs::read_dir(path) {
+        for file in dir_result {
+            let entry = file.unwrap();
+            let mut table = crate::env::Table::new();
+            table.insert(
+                Symbol::new("filename"),
+                Constant::Str(GcRef::new(entry.file_name().into_string().unwrap())),
+            );
+            table.insert(
+                Symbol::new("isdir"),
+                Constant::Bool(entry.metadata().unwrap().is_dir()),
+            );
+            dirs = dirs.prepend(Constant::Table(GcRef::new(table)));
+        }
+        return Constant::List(GcRef::new(dirs));
+    } else {
+        return nil();
+    }
+}
+
+pub fn remove_dir(args: &[Constant]) -> Constant {
+    use Constant::*;
+    /*
+     * name    |  type  | description
+     * path    |  str   | path to delete
+     */
+
+    let path = match &args[0] {
+        Str(path) => path.get(),
+        other => err_tuple!("readdir() expected str, found {}", other),
+    };
+
+    if !std::path::Path::new(path).is_dir() {
+        // returns nil when path is not a dir
+        return nil();
+    }
+    match fs::remove_dir(path) {
+        Ok(_) => ok(),
+        Err(_) => nil(),
+    }
+}
+
+pub fn make_dir(args: &[Constant]) -> Constant {
+    use Constant::*;
+    /*
+     * name    |  type  | description
+     * path    |  str   | path to create
+     */
+
+    let path = match &args[0] {
+        Str(path) => path.get(),
+        other => err_tuple!("readdir() expected str, found {}", other),
+    };
+
+    if std::path::Path::new(path).exists() {
+        return nil();
+    }
+    match fs::create_dir(path) {
+        Ok(_) => ok(),
+        Err(_) => nil(),
+    }
 }
