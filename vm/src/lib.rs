@@ -39,7 +39,7 @@ use literal::ConstantRef;
 use crate::{
     env::{Env, Table},
     error::InterpretResult,
-    literal::FunBody,
+    literal::{nil, FunBody},
     stack::StackVec,
 };
 
@@ -217,17 +217,19 @@ impl VirtualMachine {
                     };
                 }
 
-                Index => {
-                    let index = match self.pop().get() {
-                        Constant::Num(n) if n.fract() == 0.0 && *n >= 0.0 => *n as usize,
-                        other => return panic!("Expected a integer to use as index, found a `{}`", other),
-                    };
+                Insert(key) => {
+                    let value = self.pop();
+                    let len = self.stack.len() - 1;
 
-                    match self.pop().get() {
-                        Constant::List(xs) => self.push_gc_ref(xs.index(index)),
-                        other => panic!("Expected a list to index, found a `{}`", other)?,
+                    match &mut *self.stack[len] {
+                        Constant::Table(ts) => {
+                            ts.insert(key, value);
+                        }
+                        other => return panic!("Expected a table, found a `{}`", other),
                     };
                 }
+
+                Index => self.index()?,
 
                 Rev => {
                     let a = self.pop();
@@ -269,7 +271,10 @@ impl VirtualMachine {
         Ok(Constant::Nil)
     }
 
-    fn call_helper(&mut self, carity: usize) -> InterpretResult<(FunBody, usize, Vec<ConstantRef>)> {
+    fn call_helper(
+        &mut self,
+        carity: usize,
+    ) -> InterpretResult<(FunBody, usize, Vec<ConstantRef>)> {
         let mut fargs;
 
         let (farity, body) = match self.pop().get() {
@@ -341,6 +346,21 @@ impl VirtualMachine {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn index(&mut self) -> InterpretResult<()> {
+        match self.pop().get() {
+            Constant::Num(n) if n.fract() == 0.0 && *n >= 0.0 => match &*self.pop() {
+                Constant::List(xs) => self.push_gc_ref(xs.index(*n as usize)),
+                other => panic!("Expected a list to index, found a `{}`", other)?,
+            },
+            Constant::Sym(key) => match &*self.pop() {
+                Constant::Table(ts) => self.push_gc_ref(ts.get(key).unwrap_or_else(nil)),
+                other => panic!("Expected a table to index, found a `{}`", other)?,
+            },
+            other => return panic!("Expected a integer to use as index, found a `{}`", other),
+        };
         Ok(())
     }
 

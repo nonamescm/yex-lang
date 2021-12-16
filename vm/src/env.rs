@@ -32,7 +32,7 @@ impl Table {
         None
     }
 
-    fn find_entry(&mut self, key: &Symbol) -> Option<&mut Entry> {
+    fn find_entry_mut(&mut self, key: &Symbol) -> Option<&mut Entry> {
         for entry in self.entries.iter_mut() {
             if &entry.key == key {
                 return Some(entry);
@@ -41,14 +41,23 @@ impl Table {
         None
     }
 
+    fn find_entry(&self, key: &Symbol) -> Option<&Entry> {
+        for entry in self.entries.iter() {
+            if &entry.key == key {
+                return Some(entry);
+            }
+        }
+        None
+    }
+
     pub fn insert(&mut self, key: Symbol, value: ConstantRef) {
-        match self.find_entry(&key) {
+        match self.find_entry_mut(&key) {
             Some(entry) => *entry = Entry { key, value },
             None => self.entries.push(Entry { key, value }),
         }
     }
 
-    pub fn get(&mut self, key: &Symbol) -> Option<ConstantRef> {
+    pub fn get(&self, key: &Symbol) -> Option<ConstantRef> {
         match self.find_entry(key) {
             Some(entry) => Some(entry.value.clone()),
             None => None,

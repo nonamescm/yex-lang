@@ -56,6 +56,19 @@ impl<T> Clone for GcRef<T> {
     }
 }
 
+impl<T> std::ops::DerefMut for GcRef<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut self.inner.as_mut().inner }
+    }
+}
+
+impl<T> std::ops::Deref for GcRef<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        unsafe { &self.inner.as_ref().inner }
+    }
+}
+
 impl<T> Drop for GcRef<T> {
     fn drop(&mut self) {
         self.dec_ref();
