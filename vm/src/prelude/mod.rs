@@ -4,6 +4,7 @@ use crate::{
     literal::{ok, Constant},
 };
 use std::io::Write;
+mod ffi;
 mod io;
 mod list;
 mod misc;
@@ -81,6 +82,9 @@ fn r#type(args: &[Constant]) -> Constant {
             Constant::Bool(_) => "bool",
             Constant::Sym(_) => "symbol",
             Constant::Nil => "nil",
+            Constant::ExternalFunction(_) 
+            |  Constant::ExternalFunctionNoArg(_) => "extern fn",
+
             Constant::Fun { .. } => "fn",
         }
         .into(),
@@ -106,7 +110,7 @@ fn int(args: &[Constant]) -> Constant {
 }
 
 pub fn prelude() -> EnvTable {
-    use {self::str::*, io::*, list::*, misc::*};
+    use {self::str::*, ffi::*, io::*, list::*, misc::*};
 
     let mut prelude = EnvTable::new();
     macro_rules! insert_fn {
@@ -175,6 +179,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("panic", yex_panic);
     insert_fn!("ok", yex_ok);
     insert_fn!("err", yex_error);
-    
+
+    insert_fn!(@vm "dlopen", dlopen, 3);
     prelude
 }

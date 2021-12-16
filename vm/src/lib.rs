@@ -87,12 +87,14 @@ type Stack = StackVec<Constant, STACK_SIZE>;
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
 pub type Bytecode = Vec<OpCodeMetadata>;
-
+use std::collections::HashMap;
+use dlopen::raw::Library;
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
 pub struct VirtualMachine {
     constants: Vec<Constant>,
     call_stack: CallStack,
+    dlopen_libs: HashMap<String, GcRef<Library>>, 
     stack: Stack,
     variables: Env,
     globals: EnvTable,
@@ -415,6 +417,7 @@ impl Default for VirtualMachine {
             call_stack: StackVec::new(),
             stack: StackVec::new(),
             globals: prelude,
+            dlopen_libs: HashMap::new(),
             variables: Env::new(),
         }
     }
