@@ -223,7 +223,7 @@ pub fn make_dir(args: &[Constant]) -> Constant {
     use Constant::*;
     /*
      * name    |  type  | description
-     * path    |  str   | path to delete
+     * path    |  str   | path to create
      */
 
     let path = match &args[0] {
