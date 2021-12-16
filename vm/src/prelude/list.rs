@@ -75,13 +75,13 @@ pub fn tail(args: &[Constant]) -> Constant {
 }
 
 pub fn insert(args: &[Constant]) -> Constant {
-    let key = match &args[1] {
+    let key = match &args[0] {
         Constant::Sym(s) => *s,
         other => err_tuple!("insert()[1] expected a symbol, found {}", other),
     };
-    let value = args[2].clone();
+    let value = args[1].clone();
 
-    match &args[0] {
+    match &args[2] {
         Constant::Table(ts) => Constant::Table(GcRef::new(ts.insert(key, value))),
         other => err_tuple!("insert()[0] expected a table, found {}", other),
     }
