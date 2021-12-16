@@ -173,8 +173,8 @@ pub fn prelude() -> EnvTable {
     insert_fn!("mkdir", make_dir);
 
     insert_fn!("panic", yex_panic);
-    insert_fn!("error", yex_error);
     insert_fn!("ok", yex_ok);
+    insert_fn!("err", yex_error);
     
     prelude
 }
