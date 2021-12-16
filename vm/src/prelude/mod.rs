@@ -175,7 +175,6 @@ pub fn prelude() -> Table {
     insert_fn!("panic", yex_panic);
     insert_fn!("error", yex_error);
     insert_fn!("ok", yex_ok);
-    insert_fn!(@vm "set", set, 2);
     
     prelude
 }

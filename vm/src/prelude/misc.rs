@@ -39,13 +39,3 @@ pub fn yex_ok(args: &[Constant]) -> Constant {
     list = list.prepend(ok());
     Constant::List(GcRef::new(list))
 }
-pub fn set(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
-    let key = match &args[0] {
-        Constant::Sym(s) => *s,
-        other => err_tuple!("set()[0] expected a symbol, found {}", other),
-    };
-    let val = args[1].clone();
-    vm.variables.remove(&key);
-    vm.variables.insert(key, val);
-    nil()
-}
