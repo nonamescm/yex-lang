@@ -3,7 +3,7 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
 };
 pub mod symbol;
-use crate::{Either, VirtualMachine, error::InterpretResult, gc::GcRef};
+use crate::{env::Table, error::InterpretResult, gc::GcRef, Either, VirtualMachine};
 use crate::{list::List, Bytecode};
 use symbol::Symbol;
 pub type NativeFun = fn(*mut VirtualMachine, Vec<ConstantRef>) -> ConstantRef;
@@ -24,7 +24,7 @@ pub fn err() -> ConstantRef {
 }
 
 /// Immediate values that can be consumed
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq)]
 pub enum Constant {
     /// float-precision numbers
     Num(f64),
@@ -45,6 +45,8 @@ pub enum Constant {
     },
     /// Yex lists
     List(List),
+    /// Yex Tables
+    Table(Table),
     /// null
     Nil,
 }
@@ -63,6 +65,7 @@ impl Constant {
             Constant::Num(_) => std::mem::size_of::<f64>(),
             Constant::Sym(_) => std::mem::size_of::<Symbol>(),
             Constant::Str(s) => s.len(),
+            Constant::Table(ts) => ts.len(),
             Constant::Fun { arity, body, args } => {
                 mem::size_of_val(&body) + mem::size_of_val(&arity) + mem::size_of_val(&args)
             }
@@ -112,6 +115,7 @@ impl std::fmt::Display for Constant {
             }
             Nil => "nil".to_string(),
             List(xs) => format!("{}", xs),
+            Table(ts) => format!("{}", ts),
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),

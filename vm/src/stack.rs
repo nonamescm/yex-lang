@@ -130,3 +130,12 @@ impl<T: std::fmt::Display, const S: usize> std::fmt::Display for StackVec<T, S> 
         write!(f, "]")
     }
 }
+
+impl<T: PartialEq, const S: usize> PartialEq for StackVec<T, S> {
+    fn eq(&self, other: &Self) -> bool {
+        self.iter()
+            .zip(other.iter())
+            .fold(true, |acc, (this, other)| acc && this == other)
+            && self.len() == other.len()
+    }
+}

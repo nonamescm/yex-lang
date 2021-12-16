@@ -1,14 +1,17 @@
-use crate::{literal::ConstantRef, StackVec, Symbol};
+use crate::{literal::ConstantRef, StackVec, Symbol, GcRef};
 
 const MAX_TABLE_ENTRIES: usize = 256;
 
-#[derive(Debug)]
+type Key = Symbol;
+type Value = ConstantRef;
+
+#[derive(Debug, PartialEq)]
 struct Entry {
-    pub key: Symbol,
-    pub value: ConstantRef,
+    pub key: Key,
+    pub value: Value,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Table {
     entries: StackVec<Entry, MAX_TABLE_ENTRIES>,
 }
@@ -56,6 +59,24 @@ impl Table {
         if let Some(idx) = self.find_entry_idx(key) {
             self.entries.remove(idx);
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
+        self.entries.iter().map(|it| (it.key, GcRef::clone(&it.value)))
+    }
+}
+
+impl std::fmt::Display for Table {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{")?;
+        for (key, value) in self.iter() {
+            write!(f, "{} => {}, ", key, value.get())?;
+        }
+        write!(f, "}}")
     }
 }
 

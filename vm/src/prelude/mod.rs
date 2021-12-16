@@ -75,6 +75,7 @@ fn r#type(args: &[ConstantRef]) -> ConstantRef {
     let type_name = Constant::Str(
         match args[0].get() {
             Constant::List(_) => "list",
+            Constant::Table(_) => "table",
             Constant::Str(_) => "str",
             Constant::Num(_) => "num",
             Constant::Bool(_) => "bool",
