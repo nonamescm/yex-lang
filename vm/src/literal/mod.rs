@@ -109,7 +109,8 @@ macro_rules! panic {
             Err($crate::error::InterpretError {
                 line: $crate::LINE,
                 column: $crate::COLUMN,
-                err: msg
+                err: msg,
+                file: $crate::FILE_NAME.lock().unwrap().clone()
             })
         }
     }

@@ -5,7 +5,6 @@ mod error;
 mod lexer;
 mod tests;
 mod tokens;
-
 pub use error::ParseError;
 
 use compiler::Compiler;
