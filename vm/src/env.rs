@@ -78,6 +78,7 @@ impl EnvTable {
     }
 
     /// Checks if the table is empty
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }

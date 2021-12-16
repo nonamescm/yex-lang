@@ -182,11 +182,11 @@ pub fn read_dir(args: &[Constant]) -> Constant {
             for file in dir_result {
                 let entry = file.unwrap();
                 let mut table = table::Table::new();
-                table.insert(
+                table = table.insert(
                     Symbol::new("filename"),
                     Constant::Str(GcRef::new(entry.file_name().into_string().unwrap())),
                 );
-                table.insert(
+                table = table.insert(
                     Symbol::new("isdir"),
                     Constant::Bool(entry.metadata().unwrap().is_dir()),
                 );
