@@ -1,6 +1,6 @@
-use crate::{literal::ConstantRef, StackVec, Symbol, GcRef};
+use crate::{literal::ConstantRef, GcRef, Symbol};
 
-const MAX_TABLE_ENTRIES: usize = 256;
+// const MAX_TABLE_ENTRIES: usize = 256;
 
 type Key = Symbol;
 type Value = ConstantRef;
@@ -14,14 +14,14 @@ struct Entry {
 #[derive(Debug, PartialEq)]
 /// A table of key-value pairs
 pub struct Table {
-    entries: StackVec<Entry, MAX_TABLE_ENTRIES>,
+    entries: Vec<Entry>,
 }
 
 impl Table {
     /// Creates a new table
     pub fn new() -> Self {
         Self {
-            entries: StackVec::new(),
+            entries: Vec::new(),
         }
     }
 
@@ -62,10 +62,7 @@ impl Table {
 
     /// Indexes an item in the table
     pub fn get(&self, key: &Symbol) -> Option<ConstantRef> {
-        match self.find_entry(key) {
-            Some(entry) => Some(entry.value.clone()),
-            None => None,
-        }
+        self.find_entry(key).map(|entry| entry.value.clone())
     }
 
     /// Remove an item from the table
@@ -80,9 +77,16 @@ impl Table {
         self.entries.len()
     }
 
+    /// Checks if the table is empty
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
     /// Iterates over the table
     pub fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
-        self.entries.iter().map(|it| (it.key, GcRef::clone(&it.value)))
+        self.entries
+            .iter()
+            .map(|it| (it.key, GcRef::clone(&it.value)))
     }
 }
 
@@ -97,6 +101,12 @@ impl std::fmt::Display for Table {
             }
         }
         write!(f, "}}")
+    }
+}
+
+impl Default for Table {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

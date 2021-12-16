@@ -106,7 +106,7 @@ pub fn system(args: &[ConstantRef]) -> ConstantRef {
             let list = list.prepend(GcRef::new(Str(stderr)));
             let list = list.prepend(GcRef::new(Str(stdout)));
 
-            return GcRef::new(List(list));
+            GcRef::new(List(list))
         }
         Err(e) => err_tuple!("{:?}", e.kind()),
     }

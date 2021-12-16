@@ -43,6 +43,7 @@ impl<T, const S: usize> StackVec<T, S> {
         self.len
     }
 
+    #[allow(dead_code)]
     #[track_caller]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> + DoubleEndedIterator {
         self.array[0..self.len]
@@ -57,6 +58,7 @@ impl<T, const S: usize> StackVec<T, S> {
             .map(|it| unsafe { it.assume_init_ref() })
     }
 
+    #[allow(dead_code)]
     #[track_caller]
     pub fn remove(&mut self, index: usize) {
         if index >= S {
