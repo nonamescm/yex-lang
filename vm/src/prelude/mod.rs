@@ -169,11 +169,12 @@ pub fn prelude() -> EnvTable {
     insert_fn!("replace", replace, 3);
 
     insert_fn!("readdir", read_dir);
-    insert_fn!("removedir", remove_dir);
+    insert_fn!("rmdir", remove_dir);
     insert_fn!("mkdir", make_dir);
 
     insert_fn!("panic", yex_panic);
     insert_fn!("error", yex_error);
     insert_fn!("ok", yex_ok);
+    
     prelude
 }

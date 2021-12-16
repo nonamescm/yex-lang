@@ -1,10 +1,10 @@
 use crate::err_tuple;
-use crate::error::InterpretError;
+
 use crate::panic;
 use crate::{
     gc::GcRef,
     list,
-    literal::{err, nil, ok, Constant},
+    literal::{err, ok, Constant},
 };
 use std::process::exit;
 
@@ -15,12 +15,9 @@ pub fn yex_panic(args: &[Constant]) -> Constant {
         other => err_tuple!("panic() expected str, found {}", other),
     };
 
-    let a: Result<(), InterpretError> = panic!("{}", msg);
-    if let Err(e) = a {
-        println!("{}", e.to_string());
-        exit(1);
-    }
-    nil()
+    let err: Result<(), _> =  panic!("{}", msg);
+    eprintln!("{}", err.unwrap_err());
+    exit(1);
 }
 
 /*
