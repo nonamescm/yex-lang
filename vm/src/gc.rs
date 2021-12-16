@@ -13,12 +13,16 @@ pub struct GcRef<T> {
 
 impl<T> GcRef<T> {
     pub fn new(constant: T) -> Self {
-        Self {
-            inner: NonNull::new(Box::into_raw(Box::new(Ref {
-                inner: constant,
-                count: Cell::new(1),
-            })))
-            .unwrap(),
+        // SAFETY:
+        // We pass the box to into_raw after the allocation, everything is properly aligned and
+        // nothing can be null
+        unsafe {
+            Self {
+                inner: NonNull::new_unchecked(Box::into_raw(Box::new(Ref {
+                    inner: constant,
+                    count: Cell::new(1),
+                }))),
+            }
         }
     }
 
