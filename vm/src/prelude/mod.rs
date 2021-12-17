@@ -180,6 +180,6 @@ pub fn prelude() -> EnvTable {
     insert_fn!("ok", yex_ok);
     insert_fn!("err", yex_error);
 
-    insert_fn!(@vm "dlopen", dlopen, 3);
+    insert_fn!(@vm "dlopen", dlopen, 4);
     prelude
 }
