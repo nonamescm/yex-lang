@@ -57,7 +57,7 @@ Open the repl and start typing:
 yex> type(1)
 >> "num"
 yex> 2+2
->> 2
+>> 4
 yex> 2-2
 >> 0
 yex> 2*2
