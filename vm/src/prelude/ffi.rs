@@ -97,7 +97,7 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
                             let mut c_args = vec![];
                             let yex_args = &args[2..];
                             for arg in yex_args {
-                                c_args.push(match convs::to_c_ptr(&arg) {
+                                c_args.push(match convs::to_c_ptr(arg) {
                                     Ok(a) => a,
                                     Err(err) => err_tuple!("{}", err),
                                 });
@@ -113,7 +113,7 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
                             std::mem::forget(ptr);
 
                             let r = fn_ptr(c_args.len(), ptr as *mut u8);
-                            return convs::c_ptr_to_cont(r, &typeof_fun);
+                            convs::c_ptr_to_cont(r, typeof_fun)
                         }
                         _ => unreachable!(),
                     }

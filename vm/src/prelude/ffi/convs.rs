@@ -14,7 +14,7 @@ pub fn c_ptr_to_cont(ptr: *mut c_void, fun_ty: &str) -> Constant {
             unsafe {
                 let float_value = f.read();
 
-                return Constant::Num(float_value);
+                Constant::Num(float_value)
             }
         }
         "str" => unsafe {
@@ -34,7 +34,7 @@ pub unsafe fn to_c_ptr(cont: &Constant) -> Result<*mut u8, String> {
         Num(num) => Ok(mem::transmute(*num)),
         Str(s) => {
             let mut str = s.to_string();
-            if str.ends_with("\0") {
+            if str.ends_with('\0') {
                 str.pop();
             }
             str.shrink_to_fit();
