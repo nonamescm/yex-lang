@@ -508,87 +508,39 @@ fn convert_json_to_table(name: Option<String>, jtype: JsonType) -> table::Table 
             )
         }
         JsonType::Object(d) => {
-            if let Some(ref n) = name {
-                //table = table.insert(
-                //Symbol::new(n.clone()),
-                //Constant::Table(GcRef::new(convert_json_to_table(Some(n), jtype.clone()))),
-                //)
-
-                for (objname, objtype) in d {
-                    match objtype.clone() {
-                        JsonType::String(str) => {
-                            table =
-                                table.insert(Symbol::new(objname), Constant::Str(GcRef::new(str)));
-                        }
-                        /*Numbers in  Yex are in fact F64, so both are equal, but i cant handle both at once*/
-                        JsonType::Int(int) => {
-                            table = table.insert(Symbol::new(objname), Constant::Num(int as f64));
-                        }
-                        JsonType::Float(float) => {
-                            table = table.insert(Symbol::new(objname), Constant::Num(float));
-                        }
-                        JsonType::Bool(b) => {
-                            table = table.insert(Symbol::new(objname), Constant::Bool(b));
-                        }
-                        JsonType::Null => {
-                            table = table.insert(Symbol::new(objname), Constant::Nil);
-                        }
-                        JsonType::Array(arr) => {
-                            table = table.insert(
-                                Symbol::new(objname),
-                                Constant::List(GcRef::new(convert_json_array_to_yex_array(
-                                    objtype,
-                                ))),
-                            )
-                        }
-                        JsonType::Object(d) => {
-                            let mut parsed_new_table =
-                                convert_json_to_table(Some(objname.clone()), objtype);
-                            table = table.insert(
-                                Symbol::new(objname.clone()),
-                                Constant::Table(GcRef::new(parsed_new_table)),
-                            );
-                        }
-                    };
-                }
-            } else {
-                for (objname, objtype) in d {
-                    match objtype.clone() {
-                        JsonType::String(str) => {
-                            table =
-                                table.insert(Symbol::new(objname), Constant::Str(GcRef::new(str)));
-                        }
-                        /*Numbers in  Yex are in fact F64, so both are equal, but i cant handle both at once*/
-                        JsonType::Int(int) => {
-                            table = table.insert(Symbol::new(objname), Constant::Num(int as f64));
-                        }
-                        JsonType::Float(float) => {
-                            table = table.insert(Symbol::new(objname), Constant::Num(float));
-                        }
-                        JsonType::Bool(b) => {
-                            table = table.insert(Symbol::new(objname), Constant::Bool(b));
-                        }
-                        JsonType::Null => {
-                            table = table.insert(Symbol::new(objname), Constant::Nil);
-                        }
-                        JsonType::Array(arr) => {
-                            table = table.insert(
-                                Symbol::new(objname),
-                                Constant::List(GcRef::new(convert_json_array_to_yex_array(
-                                    objtype,
-                                ))),
-                            )
-                        }
-                        JsonType::Object(d) => {
-                            let mut parsed_new_table =
-                                convert_json_to_table(Some(objname.clone()), objtype);
-                            table = table.insert(
-                                Symbol::new(objname.clone()),
-                                Constant::Table(GcRef::new(parsed_new_table)),
-                            );
-                        }
-                    };
-                }
+            for (objname, objtype) in d {
+                match objtype.clone() {
+                    JsonType::String(str) => {
+                        table = table.insert(Symbol::new(objname), Constant::Str(GcRef::new(str)));
+                    }
+                    /*Numbers in  Yex are in fact F64, so both are equal, but i cant handle both at once*/
+                    JsonType::Int(int) => {
+                        table = table.insert(Symbol::new(objname), Constant::Num(int as f64));
+                    }
+                    JsonType::Float(float) => {
+                        table = table.insert(Symbol::new(objname), Constant::Num(float));
+                    }
+                    JsonType::Bool(b) => {
+                        table = table.insert(Symbol::new(objname), Constant::Bool(b));
+                    }
+                    JsonType::Null => {
+                        table = table.insert(Symbol::new(objname), Constant::Nil);
+                    }
+                    JsonType::Array(arr) => {
+                        table = table.insert(
+                            Symbol::new(objname),
+                            Constant::List(GcRef::new(convert_json_array_to_yex_array(objtype))),
+                        )
+                    }
+                    JsonType::Object(d) => {
+                        let mut parsed_new_table =
+                            convert_json_to_table(Some(objname.clone()), objtype);
+                        table = table.insert(
+                            Symbol::new(objname.clone()),
+                            Constant::Table(GcRef::new(parsed_new_table)),
+                        );
+                    }
+                };
             }
         }
     };
