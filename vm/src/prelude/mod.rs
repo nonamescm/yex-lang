@@ -152,7 +152,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("fread", read_file);
     insert_fn!("fwrite", write_file, 2);
     insert_fn!("remove", remove_file);
-    insert_fn!("creat", create_file);
+    insert_fn!("create", create_file);
     insert_fn!("exists", exists_file);
     insert_fn!("system", system, 2);
     insert_fn!("getargs", get_args, 0);
