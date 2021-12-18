@@ -110,8 +110,6 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
                             
                             c_args.shrink_to_fit();
                             let ptr = c_args.as_mut_ptr();
-                            std::mem::forget(ptr);
-
                             let r = fn_ptr(c_args.len(), ptr as *mut u8);
                             convs::c_ptr_to_cont(r, typeof_fun)
                         }

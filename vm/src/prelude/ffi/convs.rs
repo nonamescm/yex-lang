@@ -31,6 +31,8 @@ pub fn c_ptr_to_cont(ptr: *mut c_void, fun_ty: &str) -> Constant {
 pub unsafe fn to_c_ptr(cont: &Constant) -> Result<*mut u8, String> {
     use Constant::*;
     match cont {
+        // yeah kek
+        #[allow(clippy::wrong_transmute)]
         Num(num) => Ok(mem::transmute(*num)),
         Str(s) => {
             let mut str = s.to_string();
@@ -43,7 +45,7 @@ pub unsafe fn to_c_ptr(cont: &Constant) -> Result<*mut u8, String> {
             let c_string = CString::new(str).unwrap();
             let ptr = libc::malloc(strlen);
             libc::strcpy(ptr as *mut i8, c_string.as_ptr());
-            mem::forget(ptr);
+
             assert!(!ptr.is_null());
             Ok(ptr as *mut u8)
         }
