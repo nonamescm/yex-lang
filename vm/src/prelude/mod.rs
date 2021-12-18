@@ -96,6 +96,10 @@ fn inspect(args: &[Constant]) -> Constant {
     Constant::Str(GcRef::new(format!("{:#?}", &args[0])))
 }
 
+fn get_os(_args: &[Constant]) -> Constant {
+    return Constant::Str(GcRef::new(std::env::consts::OS.to_string()));
+}
+
 fn int(args: &[Constant]) -> Constant {
     let str = match &args[0] {
         Constant::Sym(symbol) => symbol.to_str(),
@@ -184,5 +188,6 @@ pub fn prelude() -> EnvTable {
     insert_fn!(@vm "dlclose", dlclose, 2);
 
     insert_fn!("fromjson", json_to_table);
+    insert_fn!("getos", get_os, 0);
     prelude
 }
