@@ -1,6 +1,6 @@
 use std::{
     mem,
-    ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
+    ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub}, ffi::c_void,
 };
 pub mod symbol;
 use crate::{
@@ -9,7 +9,8 @@ use crate::{
 use symbol::Symbol;
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Constant>) -> Constant;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
-
+pub type FFINoArgFunction = unsafe extern "C" fn() -> *mut c_void;
+pub type FFIFunction = unsafe extern "C" fn(usize, *mut u8) -> *mut c_void;
 pub fn nil() -> Constant {
     Constant::Nil
 }
@@ -50,6 +51,10 @@ pub enum Constant {
     List(GcRef<List>),
     /// Yex Tables
     Table(GcRef<Table>),
+    /// External Function
+    ExternalFunctionNoArg(FFINoArgFunction),
+    /// External Function With Arguments
+    ExternalFunction(FFIFunction),
     /// null
     Nil,
 }
@@ -63,6 +68,8 @@ impl Clone for Constant {
             Sym(s) => Sym(*s),
             Bool(b) => Bool(*b),
             Nil => Nil,
+            ExternalFunction(f) => ExternalFunction(*f),
+            ExternalFunctionNoArg(f) => ExternalFunctionNoArg(*f),
             Str(ref_s) => Str(GcRef::clone(ref_s)),
             List(xs) => List(GcRef::clone(xs)),
             Table(ts) => Table(GcRef::clone(ts)),
@@ -89,6 +96,8 @@ impl Constant {
             Constant::Fun(f) => {
                 mem::size_of_val(&f.arity) + mem::size_of_val(&f.body) + mem::size_of_val(&f.args)
             }
+            Constant::ExternalFunction(f) => mem::size_of_val(f),
+            Constant::ExternalFunctionNoArg(f) => mem::size_of_val(f),
             Constant::Bool(_) => std::mem::size_of::<bool>(),
             Constant::Nil => 4,
         }
@@ -133,6 +142,8 @@ impl std::fmt::Display for Constant {
             Fun(f) => {
                 format!("<fun({})>", f.arity)
             }
+            ExternalFunction(_) => "<extern fun<?>>".to_string(),
+            ExternalFunctionNoArg(_) => "<extern fun<0>".to_string(),
             Nil => "nil".to_string(),
             List(xs) => format!("{}", xs.get()),
             Table(ts) => format!("{}", ts.get()),
