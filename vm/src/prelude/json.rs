@@ -1,20 +1,13 @@
 use crate::err_tuple;
-use crate::panic;
 use crate::table;
 use crate::Symbol;
-use crate::{
-    gc::GcRef,
-    list,
-    literal::{err, ok, Constant},
-};
+use crate::{gc::GcRef, list, Constant};
 use std::char;
 use std::collections::HashMap;
-use std::process::exit;
 use std::slice::Iter;
 use std::str::Chars;
 /*STOLEN CODE!!!! https://github.com/gelendir/rtcsms/blob/master/src/json/ */
 use std::fmt;
-use std::iter::DoubleEndedIterator;
 
 /// Error handler for all errors in the json module
 #[derive(Debug)]
@@ -150,7 +143,7 @@ impl Lexer {
                 State::Text => self.lex_text(i, c),
                 State::Keyword => self.lex_keyword(i, c),
                 State::Number => self.lex_number(i, c),
-            };
+            }?;
         }
         let pos = text.len();
         match self.state {
@@ -223,7 +216,7 @@ impl Lexer {
             _ => {
                 self.add_keyword(index)?;
                 self.state = State::Neutral;
-                self.lex_neutral(index, character);
+                self.lex_neutral(index, character)?;
                 Ok(())
             }
         }
@@ -270,7 +263,7 @@ impl Lexer {
             _ => {
                 self.add_number(index)?;
                 self.state = State::Neutral;
-                self.lex_neutral(index, character);
+                self.lex_neutral(index, character)?;
                 Ok(())
             }
         }
@@ -462,12 +455,12 @@ fn convert_json_array_to_yex_array(jtype: JsonType) -> list::List {
                     JsonType::Null => {
                         list = list.prepend(Constant::Nil);
                     }
-                    JsonType::Array(arr) => {
+                    JsonType::Array(_arr) => {
                         list = list.prepend(Constant::List(GcRef::new(
                             convert_json_array_to_yex_array(i),
                         )));
                     }
-                    JsonType::Object(d) => {
+                    JsonType::Object(_d) => {
                         list = list
                             .prepend(Constant::Table(GcRef::new(convert_json_to_table(None, i))));
                     }
@@ -501,7 +494,7 @@ fn convert_json_to_table(name: Option<String>, jtype: JsonType) -> table::Table 
         JsonType::Null => {
             table = table.insert(Symbol::new(name.unwrap()), Constant::Nil);
         }
-        JsonType::Array(arr) => {
+        JsonType::Array(_arr) => {
             table = table.insert(
                 Symbol::new(name.as_ref().unwrap()),
                 Constant::List(GcRef::new(convert_json_array_to_yex_array(jtype))),
@@ -526,14 +519,14 @@ fn convert_json_to_table(name: Option<String>, jtype: JsonType) -> table::Table 
                     JsonType::Null => {
                         table = table.insert(Symbol::new(objname), Constant::Nil);
                     }
-                    JsonType::Array(arr) => {
+                    JsonType::Array(_arr) => {
                         table = table.insert(
                             Symbol::new(objname),
                             Constant::List(GcRef::new(convert_json_array_to_yex_array(objtype))),
                         )
                     }
-                    JsonType::Object(d) => {
-                        let mut parsed_new_table =
+                    JsonType::Object(_d) => {
+                        let parsed_new_table =
                             convert_json_to_table(Some(objname.clone()), objtype);
                         table = table.insert(
                             Symbol::new(objname.clone()),
@@ -555,16 +548,16 @@ pub fn json_to_table(args: &[Constant]) -> Constant {
     };
     if json.trim() == "{}" {
         //empty json causes an error
-        let mut json_as_table = table::Table::new();
+        let json_as_table = table::Table::new();
         return Constant::Table(GcRef::new(json_as_table));
     }
 
-    let mut table: table::Table;
+    let table: table::Table;
     match parse(json.as_str()) {
         Ok(j) => {
             // Json needs to begin as a table
             match j.clone() {
-                JsonType::Object(d) => {
+                JsonType::Object(_d) => {
                     table = convert_json_to_table(None, j);
                 }
                 _ => {
