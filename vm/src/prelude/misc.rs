@@ -15,7 +15,7 @@ pub fn yex_panic(args: &[Constant]) -> Constant {
         other => err_tuple!("panic() expected str, found {}", other),
     };
 
-    let err: Result<(), _> =  panic!("{}", msg);
+    let err: Result<(), _> = panic!("{}", msg);
     eprintln!("{}", err.unwrap_err());
     exit(1);
 }

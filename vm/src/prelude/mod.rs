@@ -6,6 +6,7 @@ use crate::{
 use std::io::Write;
 mod ffi;
 mod io;
+mod json;
 mod list;
 mod misc;
 mod str;
@@ -82,8 +83,7 @@ fn r#type(args: &[Constant]) -> Constant {
             Constant::Bool(_) => "bool",
             Constant::Sym(_) => "symbol",
             Constant::Nil => "nil",
-            Constant::ExternalFunction(_) 
-            |  Constant::ExternalFunctionNoArg(_) => "extern fn",
+            Constant::ExternalFunction(_) | Constant::ExternalFunctionNoArg(_) => "extern fn",
 
             Constant::Fun { .. } => "fn",
         }
@@ -110,7 +110,7 @@ fn int(args: &[Constant]) -> Constant {
 }
 
 pub fn prelude() -> EnvTable {
-    use {self::str::*, ffi::*, io::*, list::*, misc::*};
+    use {self::str::*, ffi::*, io::*, json::*, list::*, misc::*};
 
     let mut prelude = EnvTable::new();
     macro_rules! insert_fn {
@@ -182,5 +182,7 @@ pub fn prelude() -> EnvTable {
 
     insert_fn!(@vm "dlopen", dlopen, 4);
     insert_fn!(@vm "dlclose", dlclose, 2);
+
+    insert_fn!("fromjson", json_to_table);
     prelude
 }
