@@ -401,7 +401,8 @@ fn parse_object(tokens: &mut Iter<Token>) -> Result<JsonType, Error> {
         let key = match tokens.next() {
             Some(token) => match &token.kind {
                 TokenKind::Text(t) => t.to_string(),
-                _ => return Err(Error::unexpected("string", token)),
+                TokenKind::ObjClose => return Ok(JsonType::Object(items)),
+                _ => return Err(Error::unexpected("string or close", token)),
             },
             None => return Err(Error::missing("assignment")),
         };
@@ -412,6 +413,7 @@ fn parse_object(tokens: &mut Iter<Token>) -> Result<JsonType, Error> {
                 TokenKind::Assign => {}
                 _ => return Err(Error::unexpected("assignment", token)),
             },
+
             _ => return Err(Error::missing("assignment")),
         };
 
@@ -546,12 +548,6 @@ pub fn json_to_table(args: &[Constant]) -> Constant {
         Str(j) => j.get(),
         other => err_tuple!("fromjson()[0] expected str, found {}", other),
     };
-    if json.trim() == "{}" {
-        //empty json causes an error
-        let json_as_table = table::Table::new();
-        return Constant::Table(GcRef::new(json_as_table));
-    }
-
     let table: table::Table;
     match parse(json.as_str()) {
         Ok(j) => {
