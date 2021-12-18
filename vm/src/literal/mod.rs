@@ -10,7 +10,7 @@ use symbol::Symbol;
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Constant>) -> Constant;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
 pub type FFINoArgFunction = unsafe extern "C" fn() -> *mut c_void;
-pub type FFIFunction = unsafe extern "C" fn(usize, *mut c_void) -> *mut c_void;
+pub type FFIFunction = unsafe extern "C" fn(usize, *mut u8) -> *mut c_void;
 pub fn nil() -> Constant {
     Constant::Nil
 }

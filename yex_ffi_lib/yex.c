@@ -21,3 +21,11 @@ yex_string_t yex_init_str(const char* content)
     return ptr;
   }
 }
+
+yex_string_ptr_t yex_get_str(void* arg) 
+{
+  yex_string_ptr_t ptr = malloc(strlen(arg));
+  if (IS_NULL(ptr)) return NULL;
+  else memcpy(ptr, arg, strlen(arg));
+  return ptr;
+}
