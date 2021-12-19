@@ -156,6 +156,22 @@ pub enum OpCode {
     /// The stack layout before running this opcode: [const1, const2]
     /// The stack layout after running it: [result]
     Eq,
+    /// Check if the first value on the top of the stack is greater than the second
+    /// The stack layout before running this opcode: [const1, const2]
+    /// The stack layout after running it: [result]
+    Greater,
+    /// Check if the first value on the top of the stack is greater or equal than the second
+    /// The stack layout before running this opcode: [const1, const2]
+    /// The stack layout after running it: [result]
+    GreaterEq,
+    /// Check if the first value on the top of the stack is less than the second
+    /// The stack layout before running this opcode: [const1, const2]
+    /// The stack layout after running it: [result]
+    Less,
+    /// Check if the first value on the top of the stack is less or equal than the second
+    /// The stack layout before running this opcode: [const1, const2]
+    /// The stack layout after running it: [result]
+    LessEq
 }
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,

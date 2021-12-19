@@ -219,6 +219,7 @@ impl Compiler {
 
     fn expression(&mut self) -> ParseResult {
         loop {
+            println!("{:?}", self.current.token);
             match self.current.token {
                 Tkt::If => self.condition(),
                 Tkt::Let => self.let_(),
@@ -388,6 +389,7 @@ impl Compiler {
     }
 
     fn pipe(&mut self) -> ParseResult {
+        
         self.equality()?;
 
         while let Tkt::Pipe = self.current.token {
@@ -400,7 +402,7 @@ impl Compiler {
     }
 
     fn equality(&mut self) -> ParseResult {
-        self.cons()?;
+        self.cmp()?;
 
         while let Tkt::Eq = self.current.token {
             let operator = match self.current.token {
@@ -412,6 +414,22 @@ impl Compiler {
             self.emit(operator);
         }
 
+        Ok(())
+    }
+    fn cmp(&mut self) -> ParseResult {
+        self.cons()?;
+        while let Tkt::LessEq | Tkt::Less | Tkt::Greater | Tkt::GreaterEq = self.current.token {
+            let operator = match self.current.token {
+                Tkt::LessEq => OpCode::LessEq,
+                Tkt::Greater => OpCode::Greater,
+                Tkt::Less => OpCode::Less,
+                Tkt::GreaterEq => OpCode::GreaterEq,
+                _ => unreachable!(),
+            };
+            self.next()?;
+            self.cons()?;
+            self.emit(operator);
+        }
         Ok(())
     }
 
