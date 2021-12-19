@@ -219,7 +219,7 @@ impl Compiler {
 
     fn expression(&mut self) -> ParseResult {
         loop {
-            println!("{:?}", self.current.token);
+            
             match self.current.token {
                 Tkt::If => self.condition(),
                 Tkt::Let => self.let_(),
