@@ -70,7 +70,12 @@ fn input(args: &[Constant]) -> Constant {
 }
 
 fn str(args: &[Constant]) -> Constant {
-    Constant::Str(GcRef::new(format!("{}", &args[0])))
+    use Constant::*;
+    match &args[0] {
+        Str(s) => return Constant::Str(s.to_owned()),
+        other => return Constant::Str(GcRef::new(format!("{}", &args[0]))),
+    }
+    //Constant::Str(GcRef::new(format!("{}", &args[0])))
 }
 
 fn r#type(args: &[Constant]) -> Constant {
