@@ -5,38 +5,6 @@ use {front::compile_expr, rustyline::Editor};
 use std::{env::args, fs::read_to_string, process::exit};
 use vm::{VirtualMachine, Constant, gc::GcRef, Bytecode, OpCode, OpCodeMetadata};
 
-fn byte_code_debug() -> Result<i32, front::ParseError> {
-    let mut vm = VirtualMachine::default();
-
-    vm.set_consts(vec![Constant::Num(20.1), Constant::Num(20.0)]);
-    let bytecode: Bytecode = vec![
-        OpCodeMetadata {
-            line: 1 as usize,
-            opcode: OpCode::Push(0),
-            column: 0 as usize  
-        },
-        OpCodeMetadata {
-            line: 1 as usize,
-            opcode: OpCode::Push(1),
-            column: 0 as usize  
-        },
-        OpCodeMetadata {
-            line: 1 as usize,
-            opcode: OpCode::LessEq,
-            column: 0 as usize  
-        },
-        OpCodeMetadata {
-            line: 1 as usize,
-            opcode: OpCode::Pop,
-            column: 0 as usize  
-        }
-        ]; 
-        vm.run(bytecode).unwrap();
-        
-
-    Ok(0)
-}
-
 fn eval_file(file: &str) -> Result<i32, front::ParseError> {
     let mut vm = VirtualMachine::default();
 
@@ -69,26 +37,14 @@ fn start(args: Vec<String>) -> i32 {
     let mut repl = Editor::<()>::new();
 
     if args.len() > 1 {
-        if args[1].as_str() == "bytecode" {
-            println!("sexo");
-            return match byte_code_debug() {
-                Ok(n) => n,
-                Err(e) => {
-                    eprintln!("{}", e);
-                    1
-                }
-            };
-        }else { 
-            
             return match eval_file(&args[1]) {
                 Ok(n) => n,
                 Err(e) => {
                     eprintln!("{}", e);
                     1
                 }
-            };
+            }
         }
-    }
     loop {
         let line = match repl.readline("yex> ").map(|it| it.trim().to_string()) {
             Ok(str) => {
@@ -137,15 +93,6 @@ fn main() {
 #[cfg(not(feature = "repl"))]
 fn main() {
     let args = args().collect::<Vec<_>>();
-    if args[1] == "bytecode" {
-        exit(match byte_code_debug() {
-            Ok(n) => n,
-            Err(e) => {
-                eprintln!("{}", e);
-                1
-            }
-        });
-    }
     let file = match args.get(1) {
         Some(file) => eval_file(file),
         None => {
