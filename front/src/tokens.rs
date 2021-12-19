@@ -25,6 +25,10 @@ pub enum TokenType {
     Mul,
     Div,
     Eq,
+    Greater,
+    GreaterEq,
+    Less,
+    LessEq,
     Not,
     Assign,
     Cons,
@@ -82,6 +86,10 @@ impl std::fmt::Display for TokenType {
             Self::Mul => '*'.into(),
             Self::Div => '/'.into(),
             Self::Eq => "==".into(),
+            Self::Greater => ">".into(),
+            Self::GreaterEq => ">=".into(),
+            Self::Less => "<".into(),
+            Self::LessEq => "<=".into(),
             Self::Not => '~'.into(),
             Self::Assign => '='.into(),
             Self::Cons => "::".into(),
@@ -102,7 +110,6 @@ impl std::fmt::Display for TokenType {
             Self::Colon => ','.into(),
             Self::Seq => ">>".into(),
             Self::Pipe => "|>".into(),
-
             Self::Eof => "<eof>".into(),
         };
 
