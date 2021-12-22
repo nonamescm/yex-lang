@@ -1,7 +1,10 @@
 use libc::c_void;
 
-use crate::{Constant, gc::GcRef, err_tuple, literal::nil};
-use std::{mem, ffi::{CString, CStr}};
+use crate::{err_tuple, gc::GcRef, literal::nil, Constant};
+use std::{
+    ffi::{CStr, CString},
+    mem,
+};
 
 pub fn c_ptr_to_cont(ptr: *mut c_void, fun_ty: &str) -> Constant {
     match fun_ty {
@@ -49,6 +52,6 @@ pub unsafe fn to_c_ptr(cont: &Constant) -> Result<*mut u8, String> {
             assert!(!ptr.is_null());
             Ok(ptr as *mut u8)
         }
-        other => Err(format!("FFI FAIL: {} can't tranformed into a C ptr", other))
+        other => Err(format!("FFI FAIL: {} can't tranformed into a C ptr", other)),
     }
 }

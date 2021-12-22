@@ -85,9 +85,7 @@ impl EnvTable {
 
     /// Iterates over the table
     pub fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
-        self.entries
-            .iter()
-            .map(|it| (it.key, it.value.clone()))
+        self.entries.iter().map(|it| (it.key, it.value.clone()))
     }
 }
 

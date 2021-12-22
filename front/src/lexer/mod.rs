@@ -251,9 +251,15 @@ impl Lexer {
                 TokenType::BitXor
             }
             ',' => TokenType::Colon,
-            '<' if self.peek_at(1) == '=' => { self.next(); TokenType::LessEq },
+            '<' if self.peek_at(1) == '=' => {
+                self.next();
+                TokenType::LessEq
+            }
             '<' => TokenType::Less,
-            '>' if self.peek_at(1) == '=' => { self.next(); TokenType::GreaterEq },
+            '>' if self.peek_at(1) == '=' => {
+                self.next();
+                TokenType::GreaterEq
+            }
             '>' => TokenType::Greater,
             EOF => TokenType::Eof,
 

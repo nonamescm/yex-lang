@@ -87,14 +87,14 @@ type Stack = StackVec<Constant, STACK_SIZE>;
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
 pub type Bytecode = Vec<OpCodeMetadata>;
-use std::collections::HashMap;
 use dlopen::raw::Library;
+use std::collections::HashMap;
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
 pub struct VirtualMachine {
     constants: Vec<Constant>,
     call_stack: CallStack,
-    dlopen_libs: HashMap<String, GcRef<Library>>, 
+    dlopen_libs: HashMap<String, GcRef<Library>>,
     stack: Stack,
     variables: Env,
     globals: EnvTable,
@@ -258,76 +258,92 @@ impl VirtualMachine {
                     self.push(Constant::Bool(left == right))
                 }
                 Greater => {
-                    let right = match self.pop() {  
+                    let right = match self.pop() {
                         Constant::Num(n) => n,
-                        other => { 
-                            let a: Result<(), crate::error::InterpretError> = panic!("VM ERROR: expected num got {:?}", other);
+                        other => {
+                            let a: Result<(), crate::error::InterpretError> =
+                                panic!("VM ERROR: expected num got {:?}", other);
                             a.unwrap_err();
-                            0 as f64 }
+                            0 as f64
+                        }
                     };
-                    let left = match self.pop() {  
+                    let left = match self.pop() {
                         Constant::Num(n) => n,
-                        other => { 
-                            let a: Result<(), crate::error::InterpretError> = panic!("VM ERROR: expected num got {:?}", other);
+                        other => {
+                            let a: Result<(), crate::error::InterpretError> =
+                                panic!("VM ERROR: expected num got {:?}", other);
                             a.unwrap_err();
-                            0 as f64 }
+                            0 as f64
+                        }
                     };
-                
+
                     self.push(Constant::Bool(left > right))
                 }
                 GreaterEq => {
-                    let right = match self.pop() {  
+                    let right = match self.pop() {
                         Constant::Num(n) => n,
-                        other => { 
-                            let a: Result<(), crate::error::InterpretError> = panic!("VM ERROR: expected num got {:?}", other);
+                        other => {
+                            let a: Result<(), crate::error::InterpretError> =
+                                panic!("VM ERROR: expected num got {:?}", other);
                             a.unwrap_err();
-                            0 as f64 }
+                            0 as f64
+                        }
                     };
-                    let left = match self.pop() {  
+                    let left = match self.pop() {
                         Constant::Num(n) => n,
-                        other => { 
-                            let a: Result<(), crate::error::InterpretError> = panic!("VM ERROR: expected num got {:?}", other);
+                        other => {
+                            let a: Result<(), crate::error::InterpretError> =
+                                panic!("VM ERROR: expected num got {:?}", other);
                             a.unwrap_err();
-                            0 as f64 }
+                            0 as f64
+                        }
                     };
-                
+
                     self.push(Constant::Bool(left >= right))
                 }
-                
+
                 Less => {
-                    let right = match self.pop() {  
+                    let right = match self.pop() {
                         Constant::Num(n) => n,
-                        other => { 
-                            let a: Result<(), crate::error::InterpretError> = panic!("VM ERROR: expected num got {:?}", other);
+                        other => {
+                            let a: Result<(), crate::error::InterpretError> =
+                                panic!("VM ERROR: expected num got {:?}", other);
                             a.unwrap_err();
-                            0 as f64 }
+                            0 as f64
+                        }
                     };
-                    let left = match self.pop() {  
+                    let left = match self.pop() {
                         Constant::Num(n) => n,
-                        other => { 
-                            let a: Result<(), crate::error::InterpretError> = panic!("VM ERROR: expected num got {:?}", other);
+                        other => {
+                            let a: Result<(), crate::error::InterpretError> =
+                                panic!("VM ERROR: expected num got {:?}", other);
                             a.unwrap_err();
-                            0 as f64 }
+                            0 as f64
+                        }
                     };
-                
+
                     self.push(Constant::Bool(left < right))
                 }
                 LessEq => {
-                    let right = match self.pop() {  
+                    let right = match self.pop() {
                         Constant::Num(n) => n,
-                        other => { 
-                            let a: Result<(), crate::error::InterpretError> = panic!("VM ERROR: expected num got {:?}", other);
+                        other => {
+                            let a: Result<(), crate::error::InterpretError> =
+                                panic!("VM ERROR: expected num got {:?}", other);
                             a.unwrap_err();
-                            0 as f64 }
+                            0 as f64
+                        }
                     };
-                    let left = match self.pop() {  
+                    let left = match self.pop() {
                         Constant::Num(n) => n,
-                        other => { 
-                            let a: Result<(), crate::error::InterpretError> = panic!("VM ERROR: expected num got {:?}", other);
+                        other => {
+                            let a: Result<(), crate::error::InterpretError> =
+                                panic!("VM ERROR: expected num got {:?}", other);
                             a.unwrap_err();
-                            0 as f64 }
+                            0 as f64
+                        }
                     };
-                
+
                     self.push(Constant::Bool(left <= right))
                 }
 

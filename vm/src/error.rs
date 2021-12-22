@@ -13,4 +13,3 @@ impl fmt::Display for InterpretError {
     }
 }
 pub type InterpretResult<T> = Result<T, InterpretError>;
-

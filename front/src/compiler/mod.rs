@@ -219,7 +219,6 @@ impl Compiler {
 
     fn expression(&mut self) -> ParseResult {
         loop {
-            
             match self.current.token {
                 Tkt::If => self.condition(),
                 Tkt::Let => self.let_(),
@@ -389,7 +388,6 @@ impl Compiler {
     }
 
     fn pipe(&mut self) -> ParseResult {
-        
         self.equality()?;
 
         while let Tkt::Pipe = self.current.token {
