@@ -7,6 +7,7 @@ use crate::ok_tuple;
 use crate::Constant;
 use crate::GcRef;
 use crate::VirtualMachine;
+use crate::stackvec;
 use dlopen::raw::Library;
 
 pub fn dlclose(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
@@ -59,7 +60,7 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
 
             let call = Constant::Fun(GcRef::new(crate::literal::Fun {
                 arity: *number_of_args as i64 as usize,
-                args: vec![ExternalFunctionNoArg(func), Str(GcRef::new(typeof_fun))],
+                args: stackvec![ExternalFunctionNoArg(func), Str(GcRef::new(typeof_fun))],
                 body: GcRef::new(crate::Either::Right(|_, mut args| {
                     args.reverse();
                     match &args[0] {
@@ -86,7 +87,7 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
             };
             let call = Constant::Fun(GcRef::new(crate::literal::Fun {
                 arity: *number_of_args as i64 as usize,
-                args: vec![Str(GcRef::new(typeof_fun)), ExternalFunction(func)],
+                args: stackvec![Str(GcRef::new(typeof_fun)), ExternalFunction(func)],
                 body: GcRef::new(crate::Either::Right(|_, args| match &args[0] {
                     ExternalFunction(fn_ptr) => {
                         let typeof_fun = match &args[1] {

@@ -2,6 +2,7 @@ use crate::{
     env::EnvTable,
     gc::GcRef,
     literal::{ok, Constant},
+    stackvec,
 };
 use std::io::Write;
 mod ffi;
@@ -126,7 +127,7 @@ pub fn prelude() -> EnvTable {
                 $crate::Symbol::new($name),
                 Constant::Fun(GcRef::new(crate::literal::Fun {
                     arity: $arity,
-                    args: vec![],
+                    args: stackvec![],
                     body: GcRef::new($crate::Either::Right(|_, it| $fn(&*it))),
                 })),
             )
@@ -137,7 +138,7 @@ pub fn prelude() -> EnvTable {
                 $crate::Symbol::new($name),
                 Constant::Fun(GcRef::new(crate::literal::Fun {
                     arity: $arity,
-                    args: vec![],
+                    args: stackvec![],
                     body: GcRef::new($crate::Either::Right(|vm, it| {
                         $fn(unsafe { vm.as_mut().unwrap() }, &*it)
                     })),

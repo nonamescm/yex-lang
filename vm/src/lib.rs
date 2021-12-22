@@ -43,13 +43,13 @@ use crate::{
     env::Env,
     error::InterpretResult,
     literal::{nil, FunBody},
-    stack::StackVec,
 };
 
 pub use crate::{
     list::List,
     literal::{symbol::Symbol, Constant, Fun},
     opcode::{OpCode, OpCodeMetadata},
+    stack::StackVec,
     table::Table,
 };
 
@@ -368,23 +368,26 @@ impl VirtualMachine {
         Ok(())
     }
 
-    fn call_helper(&mut self, carity: usize) -> InterpretResult<(FunBody, usize, Vec<Constant>)> {
-        let mut fargs;
+    fn call_helper(
+        &mut self,
+        carity: usize,
+    ) -> InterpretResult<(FunBody, usize, StackVec<Constant, 8>)> {
+        let mut fargs = StackVec::new();
+        let fun = self.pop();
 
-        let (farity, body) = match self.pop() {
+        while fargs.len() < carity {
+            fargs.push(self.pop())
+        }
+
+        let (farity, body) = match fun {
             Constant::Fun(f) => {
-                fargs = f.args.clone();
+                for elem in f.args.iter() {
+                    fargs.push(elem.clone())
+                }
                 (f.arity, f.body.clone())
             }
             other => return panic!("Can't call {}", other),
         };
-
-        let mut old_fargs_len = 0;
-        let len = fargs.len();
-        while fargs.len() - len < carity {
-            fargs.insert(old_fargs_len, self.pop());
-            old_fargs_len += 1;
-        }
 
         Ok((body, farity, fargs))
     }
