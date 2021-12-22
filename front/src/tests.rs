@@ -1,5 +1,5 @@
 #[cfg(test)]
-use vm::{Constant, List, OpCode, OpCodeMetadata, Symbol, gc::GcRef};
+use vm::{gc::GcRef, Constant, List, OpCode, OpCodeMetadata, Symbol};
 
 #[test]
 fn lex_test() {

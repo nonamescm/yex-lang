@@ -1,6 +1,7 @@
 use std::{
+    ffi::c_void,
     mem,
-    ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub}, ffi::c_void,
+    ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
 };
 pub mod symbol;
 use crate::{

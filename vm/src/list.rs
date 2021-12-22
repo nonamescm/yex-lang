@@ -48,9 +48,7 @@ impl List {
 
     /// Returns the current element
     pub fn head(&self) -> Option<Constant> {
-        self.head
-            .as_ref()
-            .map(|node| node.get().elem.clone())
+        self.head.as_ref().map(|node| node.get().elem.clone())
     }
 
     /// Returns a index into the list

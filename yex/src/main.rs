@@ -5,7 +5,6 @@ use vm::{gc::GcRef, Bytecode, Constant, OpCode, OpCodeMetadata, VirtualMachine};
 #[cfg(feature = "repl")]
 use {front::compile_expr, rustyline::Editor};
 
-
 fn eval_file(file: &str) -> Result<i32, front::ParseError> {
     let mut vm = VirtualMachine::default();
 
@@ -39,7 +38,6 @@ fn start(args: Vec<String>) -> i32 {
     let mut repl = Editor::<()>::new();
 
     if args.len() > 1 {
-        
         return match eval_file(&args[1]) {
             Ok(n) => n,
             Err(e) => {

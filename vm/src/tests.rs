@@ -1,4 +1,6 @@
-use crate::{list::List, Constant, OpCodeMetadata, OpCode, VirtualMachine, Table, Symbol, gc::GcRef};
+use crate::{
+    gc::GcRef, list::List, Constant, OpCode, OpCodeMetadata, Symbol, Table, VirtualMachine,
+};
 
 macro_rules! vecm {
     ($($tt:tt)*) => {
@@ -50,10 +52,7 @@ fn test_list() {
     let list = List::new();
     assert_eq!(list.head(), None);
 
-    let list = list
-        .prepend(Num(1.0))
-        .prepend(Num(2.0))
-        .prepend(Num(3.0));
+    let list = list.prepend(Num(1.0)).prepend(Num(2.0)).prepend(Num(3.0));
 
     assert_eq!(list.head(), Some(Num(3.0)));
 
@@ -72,11 +71,17 @@ fn test_list() {
 }
 #[test]
 fn table_test() {
-    let mut table = Table::new();   
-    table = table.insert(Symbol::new("test"), Constant::Table(GcRef::new(Table::new())));
-    assert_eq!(table.get(&Symbol::new("test")), Some(Constant::Table(GcRef::new(Table::new()))));
+    let mut table = Table::new();
+    table = table.insert(
+        Symbol::new("test"),
+        Constant::Table(GcRef::new(Table::new())),
+    );
+    assert_eq!(
+        table.get(&Symbol::new("test")),
+        Some(Constant::Table(GcRef::new(Table::new())))
+    );
 }
-#[test] 
+#[test]
 fn gc_alloc_eq_for_same_values_test() {
     let val1 = GcRef::new(Table::new());
     let val2 = GcRef::new(Table::new());
