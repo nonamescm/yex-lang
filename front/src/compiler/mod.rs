@@ -4,7 +4,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 use std::{iter::Peekable, mem::take};
-use vm::{gc::GcRef, Bytecode, Constant, Either, Fun, List, OpCode, OpCodeMetadata, Symbol, Table};
+use vm::{gc::GcRef, Bytecode, Constant, Either, Fun, List, OpCode, OpCodeMetadata, Symbol, Table, stackvec};
 
 type ParseResult = Result<(), ParseError>;
 
@@ -265,7 +265,7 @@ impl Compiler {
         self.emit_const_push(Constant::Fun(GcRef::new(Fun {
             body: GcRef::new(Either::Left(body)),
             arity,
-            args: vec![],
+            args: stackvec![],
         })));
 
         Ok(())
