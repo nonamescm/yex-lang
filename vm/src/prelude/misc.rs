@@ -6,6 +6,7 @@ use crate::{
     list,
     literal::{err, ok, Constant},
 };
+
 use std::process::exit;
 
 pub fn yex_panic(args: &[Constant]) -> Constant {

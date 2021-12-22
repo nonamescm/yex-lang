@@ -49,7 +49,16 @@ fn print(args: &[Constant]) -> Constant {
     };
     ok()
 }
-
+/// converts a str to a symbol
+fn sym(args: &[Constant]) -> Constant {
+    use Constant::*;
+    use crate::Symbol;
+    let str = match &args[0] {
+        Str(s) => s.get(),
+        other => err_tuple!("sym()[0] expected str, found {}", other),
+    };
+    Constant::Sym(Symbol::new(str))
+}
 fn input(args: &[Constant]) -> Constant {
     match &args[0] {
         Constant::Str(s) => print!("{}", s.get()),
@@ -160,6 +169,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("type", r#type);
     insert_fn!("inspect", inspect);
     insert_fn!("int", int);
+    insert_fn!("sym", sym);
     insert_fn!("split", str_split, 2);
 
     insert_fn!("fread", read_file);

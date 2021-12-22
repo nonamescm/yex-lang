@@ -1,9 +1,25 @@
 use front::compile;
 
+use std::{env::args, fs::read_to_string, process::exit};
+use vm::{gc::GcRef, Bytecode, Constant, OpCode, OpCodeMetadata, VirtualMachine};
 #[cfg(feature = "repl")]
 use {front::compile_expr, rustyline::Editor};
-use std::{env::args, fs::read_to_string, process::exit};
-use vm::{VirtualMachine, Constant, gc::GcRef, Bytecode, OpCode, OpCodeMetadata};
+
+fn com(file: &str) -> Result<i32, front::ParseError> {
+    let file = read_to_string(file).unwrap_or_else(|_| {
+        eprintln!("File not found");
+        exit(1)
+    });
+
+    if file.is_empty() {
+        return Ok(0);
+    }
+
+    let (bytecode, constants) = compile(file)?;
+    println!("bytecode: {:#?}", &bytecode);
+    println!("{}", OpCode::Push as u8);
+    Ok(0)
+}
 
 fn eval_file(file: &str) -> Result<i32, front::ParseError> {
     let mut vm = VirtualMachine::default();
@@ -16,6 +32,7 @@ fn eval_file(file: &str) -> Result<i32, front::ParseError> {
     if file.is_empty() {
         return Ok(0);
     }
+    
 
     let (bytecode, constants) = compile(file)?;
     #[cfg(debug_assertions)]
@@ -37,14 +54,19 @@ fn start(args: Vec<String>) -> i32 {
     let mut repl = Editor::<()>::new();
 
     if args.len() > 1 {
-            return match eval_file(&args[1]) {
-                Ok(n) => n,
-                Err(e) => {
-                    eprintln!("{}", e);
-                    1
-                }
-            }
+        if args.len() > 2 || args[2] == "com" {
+            com(&args[1]).unwrap();
+            return 1;
         }
+        
+        return match eval_file(&args[1]) {
+            Ok(n) => n,
+            Err(e) => {
+                eprintln!("{}", e);
+                1
+            }
+        };
+    }
     loop {
         let line = match repl.readline("yex> ").map(|it| it.trim().to_string()) {
             Ok(str) => {
