@@ -1,7 +1,6 @@
 use crate::Symbol;
 
 /// OpCodes for the virtualMachine
-#[repr(u8)]
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum OpCode {
     /// Stops the virtual machine
