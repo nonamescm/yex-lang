@@ -4,36 +4,38 @@
 This tutorial assumes that you have previous experience with programming and
 already has the yex language installed.
 
-* [Basics](#basics)
-  * [Primitives](#Primitives)
-    * [Numbers](#Numbers)
-    * [Strings](#Strings)
-    * [Bool](#Booleans)
-    * [Nulls](#Nulls)
-  * [Structuring a program](#structuring-a-program)
-* [Variables](#variables)
-  * [Globals](#globals)
-  * [Locals](#locals)
-* [Lists](#lists)
-  * [Creating lists](#creating-lists)
-  * [Operating on lists](#operating-on-lists)
-* [Tables](#tables)
-  * [Creating tables](#creating-tables)
-* [Functions](#Functions)
-  * [Creating functions](#creating-functions)
-    * [Named functions](#named-functions)
-    * [Anonymous functions](#anonymous-functions)
-  * [Tail calls](#tail-calls)
-  * [Partial application](#partial-application)
-* [Control flow](#control-flow)
-  * [Conditional execution](#conditional-execution)
-    * [If and else](#if-and-else)
-  * [Sequential execution](#sequential-execution)
-    * [The sequence operator](#the-sequence-operator)
-  * [Pipes](#pipes)
-  * [Modules](#modules)
-    * [The open keyword](#the-open-keyword)
-* [Builtin functions](#builtin-functions)
+- [Learn Yex](#learn-yex)
+  - [NOTE:](#note)
+  - [Basics](#basics)
+    - [Primitives](#primitives)
+      - [Numbers](#numbers)
+      - [Strings](#strings)
+      - [Symbols](#symbols)
+      - [Booleans](#booleans)
+      - [Nulls](#nulls)
+    - [Structuring a program](#structuring-a-program)
+  - [Variables](#variables)
+    - [Globals](#globals)
+    - [Locals](#locals)
+  - [Lists](#lists)
+    - [Creating lists](#creating-lists)
+    - [Operating on lists](#operating-on-lists)
+  - [Tables](#tables)
+    - [Creating tables](#creating-tables)
+  - [Functions](#functions)
+    - [Creating functions](#creating-functions)
+      - [Named Functions](#named-functions)
+      - [Anonymous Functions](#anonymous-functions)
+    - [Tail calls](#tail-calls)
+    - [Partial application](#partial-application)
+  - [Controw flow](#controw-flow)
+    - [Conditional execution](#conditional-execution)
+      - [If and else](#if-and-else)
+    - [The sequence operator](#the-sequence-operator)
+    - [Pipes](#pipes)
+  - [Modules](#modules)
+    - [The open keyword](#the-open-keyword)
+  - [Builtin functions](#builtin-functions)
 
 ## Basics
 
@@ -48,7 +50,7 @@ Yex has the following primitive types:
   * `bool` - Booleans (true and false)
   * `list` - Singly linked lists
 
-Them all support the equality `==` operator and the `#` len operator.
+They all support the equality `==` operator and the `#` len operator.
 
 #### Numbers
 Open the repl and start typing:
@@ -162,9 +164,9 @@ Run it with the yex binary. It should print 42.
 
 ### Locals
 
-Since, everything in yex is an expression, local variables declarations also
+Since everything in yex is an expression, local variables declarations also
 need to be one. For this we use the `let name = expression in expression` constructor, which explicity
-defines a expression to be runned after the declaration.
+defines an expression to be runned after the declaration.
 
 Open a file and type:
 
@@ -194,7 +196,7 @@ In yex, lists are data types that let you have a collection of values of diverge
 
 ### Creating lists
 
-Like in most other languages, lists can be instantiated using brackets, open the
+Like in most other languages, lists can be instantiated using square brackets, open the
 repl and type:
 
 ```ml
@@ -209,9 +211,9 @@ yex> [1, "hello", :symbol, [3, 4], true, nil]
 Lists support the following operations:
   * `head()` - returns the first element of the list
   * `tail()` - returns the tail of the list, (all elements except for the first)
-  * `::` - This is the cons operator, it add a new element at the start of the
+  * `::` - This is the cons operator, it adds a new element at the start of the
     list without mutating it.
-  * `#` - Returns the list length
+  * `#` - Returns the length of the list
 
 On the repl:
 
@@ -280,8 +282,8 @@ yex> type(mul)
 
 ### Tail calls
 
-Tail calls are an specific type of recursion where it just jump to some
-instructions before, you can create them using the `become` keyword, like:
+Tail calls are an specific type of recursion where it just jumps to some
+previous instruction, you can create them using the `become` keyword, like:
 
 ```ml
 let until_0 num =
@@ -332,7 +334,7 @@ after the `else`.
 
 ### The sequence operator
 
-Since everything in yex is an expression, it isn't really a easy thing to run
+Since everything in yex is an expression, it isn't really an easy thing to run
 multiple side-effect-only functions chained, you could probably think about
 using let to concat them, but this looks really bad. So, yex provides the `>>`
 operator, which ignores the result of a computation and runs the next
@@ -392,23 +394,23 @@ Make sure the two files are in the same directory and run b.yex.
 ## Builtin functions
 
 
-|    Name   |                        Description                       |
-|:---------:|:--------------------------------------------------------:|
-| `print`   | prints a value without adding the new line               |
-| `puts`    | prints a value with a newline at the end                 |
-| `str`     | converts a value to string                               |
-| `input`   | Reads the input from the console                         |
-| `head`    | Returns the first element of a list                      |
-| `tail`    | Returns the tail of a list                               |
-| `type`    | Returns the string representation of value type's        |
-| `inspect` | Returns the intern representation of the value           |
-| `getargs` | Returns the args that this program was started with      |
-| `fread`   | Read's a file content                                    |
-| `fwrite`  | Write to a file                                          |
-| `remove`  | delete a file                                            |
-| `exists`  | check if a file exists                                   |
-| `system`  | run a shell command, returning the stdout and the stderr |
-| `getenv`  | get an environment variable                              |
-| `setenv`  | Set an environment variable, `setenv("cool", "true")`    |
-| `split`   | Splits a string                                          |
+|    Name   |                        Description                        |
+|:---------:|:---------------------------------------------------------:|
+| `print`   | Prints a value without adding the new line                |
+| `puts`    | Prints a value with a newline at the end                  |
+| `str`     | Converts a value to string                                |
+| `input`   | Reads the input from the console                          |
+| `head`    | Returns the first element of a list                       |
+| `tail`    | Returns the tail of a list                                |
+| `type`    | Returns the string representation of the value's type     |
+| `inspect` | Returns the intern representation of the value            |
+| `getargs` | Returns the args that this program was started with       |
+| `fread`   | Reads a file content                                      |
+| `fwrite`  | Writes to a file                                          |
+| `remove`  | Deletes a file                                            |
+| `exists`  | Checks if a file exists                                   |
+| `system`  | Runs a shell command, returning the stdout and the stderr |
+| `getenv`  | Gets an environment variable                              |
+| `setenv`  | Sets an environment variable, `setenv("cool", "true")`    |
+| `split`   | Splits a string                                           |
 

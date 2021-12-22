@@ -32,5 +32,5 @@ A basic tutorial can be found at [DOCS.md](/DOCS.md)
   * [ ] Modules
 
 ## Contributing
-  * Open a issue if you find any bug
+  * Open an issue if you find any bug
   * Submit a PR if you want to implement a new feature
