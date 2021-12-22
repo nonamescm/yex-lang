@@ -121,6 +121,16 @@ impl VirtualMachine {
     pub fn run(&mut self, bytecode: Bytecode) -> InterpretResult<Constant> {
         self.call_stack.push(CallFrame::new(bytecode));
 
+        while *self.ip() < self.bytecode().len() {
+            self.run_instruction()?;
+        }
+
+        self.call_stack.pop();
+
+        Ok(Constant::Nil)
+    }
+
+    fn run_instruction(&mut self) -> InterpretResult<()> {
         macro_rules! binop {
             ($op:tt) => {{
                 let right = self.pop();
@@ -138,230 +148,224 @@ impl VirtualMachine {
             }};
         }
 
-        'main: while *self.ip() < self.bytecode().len() {
-            self.debug_stack();
+        self.debug_stack();
 
-            let inst_ip = *self.ip();
-            let inst = self.bytecode()[inst_ip];
-            *self.ip() += 1;
+        let inst_ip = *self.ip();
+        let inst = self.bytecode()[inst_ip];
+        *self.ip() += 1;
 
-            unsafe {
-                LINE = inst.line;
-                COLUMN = inst.column;
+        unsafe {
+            LINE = inst.line;
+            COLUMN = inst.column;
+        }
+
+        use OpCode::*;
+        match inst.opcode {
+            Halt => std::process::exit(0),
+            Push(n) => {
+                if self.constants.len() <= n {
+                    panic!("err: can't find consts. Are you in repl?")?;
+                }
+
+                let val = self.constants[n].clone();
+                self.push(val)
+            }
+            Pop => {
+                self.pop();
             }
 
-            use OpCode::*;
-            match inst.opcode {
-                Halt => break 'main,
-                Push(n) => {
-                    if self.constants.len() <= n {
-                        panic!("err: can't find consts. Are you in repl?")?;
-                    }
+            Save(val) => {
+                let value = self.pop();
+                self.variables.insert(val, value);
+            }
 
-                    let val = self.constants[n].clone();
-                    self.push(val)
-                }
-                Pop => {
-                    self.pop();
-                }
+            Savg(val) => {
+                let value = self.pop();
+                self.globals.insert(val, value)
+            }
 
-                Save(val) => {
-                    let value = self.pop();
-                    self.variables.insert(val, value);
-                }
-
-                Savg(val) => {
-                    let value = self.pop();
-                    self.globals.insert(val, value)
-                }
-
-                Load(val) => {
-                    let val = match self.variables.get(&val) {
+            Load(val) => {
+                let val = match self.variables.get(&val) {
+                    Some(v) => v.clone(),
+                    None => match self.globals.get(&val) {
                         Some(v) => v.clone(),
-                        None => match self.globals.get(&val) {
-                            Some(v) => v.clone(),
-                            None => return panic!("unknown variable {}", val),
-                        },
-                    };
+                        None => return panic!("unknown variable {}", val),
+                    },
+                };
 
-                    self.push(val);
-                }
+                self.push(val);
+            }
 
-                Drop(val) => {
-                    self.variables.remove(&val);
-                }
+            Drop(val) => {
+                self.variables.remove(&val);
+            }
 
-                Drpg(val) => self.globals.remove(&val),
+            Drpg(val) => self.globals.remove(&val),
 
-                Jmf(offset) => {
-                    if Into::<bool>::into(!self.pop()) {
-                        *self.ip() = offset;
-                        continue;
-                    }
-                }
-                Jmp(offset) => {
+            Jmf(offset) => {
+                if Into::<bool>::into(!self.pop()) {
                     *self.ip() = offset;
-                    continue;
+                    return Ok(());
                 }
+            }
+            Jmp(offset) => {
+                *self.ip() = offset;
+                return Ok(());
+            }
 
-                Nsc => self.variables.nsc(),
+            Nsc => self.variables.nsc(),
 
-                Esc => self.variables.esc(),
+            Esc => self.variables.esc(),
 
-                Call(carity) => self.call(carity)?,
-                TCall(carity) => self.tcall(carity)?,
+            Call(carity) => self.call(carity)?,
+            TCall(carity) => self.tcall(carity)?,
 
-                Prep => {
-                    let val = self.pop();
+            Prep => {
+                let val = self.pop();
 
-                    match self.pop() {
-                        Constant::List(xs) => {
-                            self.push(Constant::List(GcRef::new(xs.prepend(val))))
-                        }
-                        other => return panic!("Expected a list, found a `{}`", other),
-                    };
-                }
+                match self.pop() {
+                    Constant::List(xs) => self.push(Constant::List(GcRef::new(xs.prepend(val)))),
+                    other => return panic!("Expected a list, found a `{}`", other),
+                };
+            }
 
-                Insert(key) => {
-                    let value = self.pop();
+            Insert(key) => {
+                let value = self.pop();
 
-                    match self.pop() {
-                        Constant::Table(ts) => {
-                            self.push(Constant::Table(GcRef::new(ts.insert(key, value))))
-                        }
-                        other => return panic!("Expected a table, found a `{}`", other),
-                    };
-                }
+                match self.pop() {
+                    Constant::Table(ts) => {
+                        self.push(Constant::Table(GcRef::new(ts.insert(key, value))))
+                    }
+                    other => return panic!("Expected a table, found a `{}`", other),
+                };
+            }
 
-                Index => self.index()?,
+            Index => self.index()?,
 
-                Rev => {
-                    let a = self.pop();
-                    let b = self.pop();
-                    self.push(a);
-                    self.push(b);
-                }
+            Rev => {
+                let a = self.pop();
+                let b = self.pop();
+                self.push(a);
+                self.push(b);
+            }
 
-                Add => binop!(+),
-                Sub => binop!(-),
-                Mul => binop!(*),
-                Div => binop!(/),
-                Xor => binop!(^),
-                Shl => binop!(>>),
-                Shr => binop!(<<),
-                BitAnd => binop!(&),
-                BitOr => binop!(|),
+            Add => binop!(+),
+            Sub => binop!(-),
+            Mul => binop!(*),
+            Div => binop!(/),
+            Xor => binop!(^),
+            Shl => binop!(>>),
+            Shr => binop!(<<),
+            BitAnd => binop!(&),
+            BitOr => binop!(|),
 
-                Eq => {
-                    let right = self.pop();
-                    let left = self.pop();
-                    self.push(Constant::Bool(left == right))
-                }
-                Greater => {
-                    let right = match self.pop() {
-                        Constant::Num(n) => n,
-                        other => {
-                            let a: Result<(), crate::error::InterpretError> =
-                                panic!("VM ERROR: expected num got {:?}", other);
-                            a.unwrap_err();
-                            0 as f64
-                        }
-                    };
-                    let left = match self.pop() {
-                        Constant::Num(n) => n,
-                        other => {
-                            let a: Result<(), crate::error::InterpretError> =
-                                panic!("VM ERROR: expected num got {:?}", other);
-                            a.unwrap_err();
-                            0 as f64
-                        }
-                    };
+            Eq => {
+                let right = self.pop();
+                let left = self.pop();
+                self.push(Constant::Bool(left == right))
+            }
+            Greater => {
+                let right = match self.pop() {
+                    Constant::Num(n) => n,
+                    other => {
+                        let a: Result<(), crate::error::InterpretError> =
+                            panic!("VM ERROR: expected num got {:?}", other);
+                        a.unwrap_err();
+                        0 as f64
+                    }
+                };
+                let left = match self.pop() {
+                    Constant::Num(n) => n,
+                    other => {
+                        let a: Result<(), crate::error::InterpretError> =
+                            panic!("VM ERROR: expected num got {:?}", other);
+                        a.unwrap_err();
+                        0 as f64
+                    }
+                };
 
-                    self.push(Constant::Bool(left > right))
-                }
-                GreaterEq => {
-                    let right = match self.pop() {
-                        Constant::Num(n) => n,
-                        other => {
-                            let a: Result<(), crate::error::InterpretError> =
-                                panic!("VM ERROR: expected num got {:?}", other);
-                            a.unwrap_err();
-                            0 as f64
-                        }
-                    };
-                    let left = match self.pop() {
-                        Constant::Num(n) => n,
-                        other => {
-                            let a: Result<(), crate::error::InterpretError> =
-                                panic!("VM ERROR: expected num got {:?}", other);
-                            a.unwrap_err();
-                            0 as f64
-                        }
-                    };
+                self.push(Constant::Bool(left > right))
+            }
+            GreaterEq => {
+                let right = match self.pop() {
+                    Constant::Num(n) => n,
+                    other => {
+                        let a: Result<(), crate::error::InterpretError> =
+                            panic!("VM ERROR: expected num got {:?}", other);
+                        a.unwrap_err();
+                        0 as f64
+                    }
+                };
+                let left = match self.pop() {
+                    Constant::Num(n) => n,
+                    other => {
+                        let a: Result<(), crate::error::InterpretError> =
+                            panic!("VM ERROR: expected num got {:?}", other);
+                        a.unwrap_err();
+                        0 as f64
+                    }
+                };
 
-                    self.push(Constant::Bool(left >= right))
-                }
+                self.push(Constant::Bool(left >= right))
+            }
 
-                Less => {
-                    let right = match self.pop() {
-                        Constant::Num(n) => n,
-                        other => {
-                            let a: Result<(), crate::error::InterpretError> =
-                                panic!("VM ERROR: expected num got {:?}", other);
-                            a.unwrap_err();
-                            0 as f64
-                        }
-                    };
-                    let left = match self.pop() {
-                        Constant::Num(n) => n,
-                        other => {
-                            let a: Result<(), crate::error::InterpretError> =
-                                panic!("VM ERROR: expected num got {:?}", other);
-                            a.unwrap_err();
-                            0 as f64
-                        }
-                    };
+            Less => {
+                let right = match self.pop() {
+                    Constant::Num(n) => n,
+                    other => {
+                        let a: Result<(), crate::error::InterpretError> =
+                            panic!("VM ERROR: expected num got {:?}", other);
+                        a.unwrap_err();
+                        0 as f64
+                    }
+                };
+                let left = match self.pop() {
+                    Constant::Num(n) => n,
+                    other => {
+                        let a: Result<(), crate::error::InterpretError> =
+                            panic!("VM ERROR: expected num got {:?}", other);
+                        a.unwrap_err();
+                        0 as f64
+                    }
+                };
 
-                    self.push(Constant::Bool(left < right))
-                }
-                LessEq => {
-                    let right = match self.pop() {
-                        Constant::Num(n) => n,
-                        other => {
-                            let a: Result<(), crate::error::InterpretError> =
-                                panic!("VM ERROR: expected num got {:?}", other);
-                            a.unwrap_err();
-                            0 as f64
-                        }
-                    };
-                    let left = match self.pop() {
-                        Constant::Num(n) => n,
-                        other => {
-                            let a: Result<(), crate::error::InterpretError> =
-                                panic!("VM ERROR: expected num got {:?}", other);
-                            a.unwrap_err();
-                            0 as f64
-                        }
-                    };
+                self.push(Constant::Bool(left < right))
+            }
+            LessEq => {
+                let right = match self.pop() {
+                    Constant::Num(n) => n,
+                    other => {
+                        let a: Result<(), crate::error::InterpretError> =
+                            panic!("VM ERROR: expected num got {:?}", other);
+                        a.unwrap_err();
+                        0 as f64
+                    }
+                };
+                let left = match self.pop() {
+                    Constant::Num(n) => n,
+                    other => {
+                        let a: Result<(), crate::error::InterpretError> =
+                            panic!("VM ERROR: expected num got {:?}", other);
+                        a.unwrap_err();
+                        0 as f64
+                    }
+                };
 
-                    self.push(Constant::Bool(left <= right))
-                }
+                self.push(Constant::Bool(left <= right))
+            }
 
-                Neg => unaop!(-),
-                Len => {
-                    let len = self.pop().len();
-                    self.push(Constant::Num(len as f64))
-                }
-                Not => {
-                    let right = self.pop();
-                    self.push(!right)
-                }
+            Neg => unaop!(-),
+            Len => {
+                let len = self.pop().len();
+                self.push(Constant::Num(len as f64))
+            }
+            Not => {
+                let right = self.pop();
+                self.push(!right)
             }
         }
 
-        self.call_stack.pop();
-
-        Ok(Constant::Nil)
+        Ok(())
     }
 
     fn call_helper(&mut self, carity: usize) -> InterpretResult<(FunBody, usize, Vec<Constant>)> {
