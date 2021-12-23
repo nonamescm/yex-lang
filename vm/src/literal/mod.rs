@@ -107,7 +107,7 @@ impl Constant {
     }
 
     /// Compares the left and the right value
-    pub fn cmp(&self, rhs: &Self) -> InterpretResult<Ordering> {
+    pub fn ord_cmp(&self, rhs: &Self) -> InterpretResult<Ordering> {
         let (left, right) = match (self, rhs) {
             (Self::Num(left), Self::Num(right)) => (left, right),
             (left, right) => return crate::panic!("Can't compare `{}` and `{}`", left, right),

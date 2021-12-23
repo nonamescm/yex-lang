@@ -268,26 +268,26 @@ impl VirtualMachine {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push(Constant::Bool(left.cmp(&right)?.is_gt()))
+                self.push(Constant::Bool(left.ord_cmp(&right)?.is_gt()))
             }
             GreaterEq => {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push(Constant::Bool(left.cmp(&right)?.is_ge()))
+                self.push(Constant::Bool(left.ord_cmp(&right)?.is_ge()))
             }
 
             Less => {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push(Constant::Bool(left.cmp(&right)?.is_lt()))
+                self.push(Constant::Bool(left.ord_cmp(&right)?.is_lt()))
             }
             LessEq => {
                 let right = self.pop();
                 let left = self.pop();
 
-                self.push(Constant::Bool(left.cmp(&right)?.is_le()))
+                self.push(Constant::Bool(left.ord_cmp(&right)?.is_le()))
             }
 
             Neg => unaop!(-),

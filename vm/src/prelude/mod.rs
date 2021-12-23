@@ -98,7 +98,7 @@ fn inspect(args: &[Constant]) -> Constant {
 }
 
 fn get_os(_args: &[Constant]) -> Constant {
-    return Constant::Str(GcRef::new(std::env::consts::OS.to_string()));
+    Constant::Str(GcRef::new(std::env::consts::OS.to_string()))
 }
 
 fn int(args: &[Constant]) -> Constant {

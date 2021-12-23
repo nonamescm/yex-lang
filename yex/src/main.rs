@@ -1,7 +1,7 @@
 use front::compile;
 
 use std::{env::args, fs::read_to_string, process::exit};
-use vm::{gc::GcRef, Bytecode, Constant, OpCode, OpCodeMetadata, VirtualMachine};
+use vm::VirtualMachine;
 #[cfg(feature = "repl")]
 use {front::compile_expr, rustyline::Editor};
 

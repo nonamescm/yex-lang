@@ -34,7 +34,7 @@ impl<T, const S: usize> StackVec<T, S> {
     #[track_caller]
     /// Pop's the last element
     pub fn pop(&mut self) -> T {
-        if self.len() == 0 {
+        if self.is_empty() {
             panic!("Called pop() on a array with no elements");
         }
 
@@ -66,14 +66,6 @@ impl<T, const S: usize> StackVec<T, S> {
         self.array[0..self.len]
             .iter()
             .map(|it| unsafe { it.assume_init_ref() })
-    }
-
-    /// Consumes the StackVec, returing an iterator over it's elements
-    pub fn into_iter(self) -> IntoIter<T, S> {
-        IntoIter {
-            array: self,
-            next: 0,
-        }
     }
 
     #[track_caller]
@@ -183,7 +175,7 @@ impl<T, const S: usize> Iterator for IntoIter<T, S> {
 
 impl<T, const S: usize> DoubleEndedIterator for IntoIter<T, S> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        if self.array.len() > 0 {
+        if !self.array.is_empty() {
             Some(self.array.pop())
         } else {
             None
@@ -230,5 +222,18 @@ impl<T: Clone, const S: usize> Clone for StackVec<T, S> {
 impl<T, const S: usize> Default for StackVec<T, S> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<T, const S: usize> IntoIterator for StackVec<T, S> {
+    type Item = T;
+    type IntoIter = IntoIter<T, S>;
+
+    /// Consumes the StackVec, returing an iterator over it's elements
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter {
+            array: self,
+            next: 0,
+        }
     }
 }
