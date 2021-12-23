@@ -7,7 +7,6 @@ use crate::{
 use std::io::Write;
 mod ffi;
 mod io;
-mod json;
 mod list;
 mod misc;
 mod str;
@@ -115,7 +114,7 @@ fn int(args: &[Constant]) -> Constant {
 }
 
 pub fn prelude() -> EnvTable {
-    use {self::str::*, ffi::*, io::*, json::*, list::*, misc::*};
+    use {self::str::*, ffi::*, io::*, list::*, misc::*};
 
     let mut prelude = EnvTable::new();
     macro_rules! insert_fn {
@@ -188,7 +187,6 @@ pub fn prelude() -> EnvTable {
     insert_fn!(@vm "dlopen", dlopen, 4);
     insert_fn!(@vm "dlclose", dlclose, 2);
 
-    insert_fn!("fromjson", json_to_table);
     insert_fn!("getos", get_os, 0);
     prelude
 }
