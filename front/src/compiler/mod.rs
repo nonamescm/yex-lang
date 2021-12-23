@@ -4,7 +4,10 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 use std::{iter::Peekable, mem::take};
-use vm::{gc::GcRef, Bytecode, Constant, Either, Fun, List, OpCode, OpCodeMetadata, Symbol, Table, stackvec};
+use vm::{
+    gc::GcRef, stackvec, Bytecode, Constant, Either, Fun, List, OpCode, OpCodeMetadata, Symbol,
+    Table,
+};
 
 type ParseResult = Result<(), ParseError>;
 

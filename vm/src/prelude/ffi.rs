@@ -4,10 +4,10 @@ use crate::literal::nil;
 use crate::literal::FFIFunction;
 use crate::literal::FFINoArgFunction;
 use crate::ok_tuple;
+use crate::stackvec;
 use crate::Constant;
 use crate::GcRef;
 use crate::VirtualMachine;
-use crate::stackvec;
 use dlopen::raw::Library;
 
 pub fn dlclose(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
