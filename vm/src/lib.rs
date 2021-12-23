@@ -186,9 +186,9 @@ impl VirtualMachine {
 
             Load(val) => {
                 let val = match self.variables.get(&val) {
-                    Some(v) => v.clone(),
+                    Some(v) => v,
                     None => match self.globals.get(&val) {
-                        Some(v) => v.clone(),
+                        Some(v) => v,
                         None => return panic!("unknown variable {}", val),
                     },
                 };
@@ -414,7 +414,8 @@ impl VirtualMachine {
                         self.run(bytecode.clone())?;
                     }
                     Either::Right(fp) => {
-                        let ret = fp(self, fargs.into_iter().rev().collect());
+                        let arr = fargs.into_iter().rev().collect();
+                        let ret = fp(self, arr);
                         self.push(ret)
                     }
                 }

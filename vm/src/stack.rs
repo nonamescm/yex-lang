@@ -3,8 +3,8 @@ use std::mem::MaybeUninit;
 #[derive(Debug)]
 /// A wrapper around an array armazenated on the stack
 pub struct StackVec<T, const S: usize> {
-    pub(in crate::stack) len: usize,
-    pub(in crate::stack) array: [MaybeUninit<T>; S],
+    len: usize,
+    array: [MaybeUninit<T>; S],
 }
 
 impl<T, const S: usize> StackVec<T, S> {
@@ -45,6 +45,11 @@ impl<T, const S: usize> StackVec<T, S> {
     /// Returns the StackVec length
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    /// checks if the stack is empty
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     #[track_caller]
@@ -178,8 +183,7 @@ impl<T, const S: usize> Iterator for IntoIter<T, S> {
 
 impl<T, const S: usize> DoubleEndedIterator for IntoIter<T, S> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        if self.array.len > 0 {
-            self.array.len -= 1;
+        if self.array.len() > 0 {
             Some(self.array.pop())
         } else {
             None
@@ -220,5 +224,11 @@ impl<T, const S: usize> FromIterator<T> for StackVec<T, S> {
 impl<T: Clone, const S: usize> Clone for StackVec<T, S> {
     fn clone(&self) -> Self {
         self.iter().cloned().collect::<Self>()
+    }
+}
+
+impl<T, const S: usize> Default for StackVec<T, S> {
+    fn default() -> Self {
+        Self::new()
     }
 }
