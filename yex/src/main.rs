@@ -24,7 +24,7 @@ fn eval_file(file: &str) -> Result<i32, front::ParseError> {
         println!("constants: {:#?}", &constants);
     }
     vm.set_consts(constants);
-    if let Err(e) = vm.run(bytecode) {
+    if let Err(e) = vm.run(&bytecode) {
         eprintln!("{}", e)
     }
 
@@ -75,7 +75,7 @@ fn start(args: Vec<String>) -> i32 {
             println!("constants: {:#?}", &constants);
         }
         vm.set_consts(constants);
-        if let Err(e) = vm.run(bytecode) {
+        if let Err(e) = vm.run(&bytecode) {
             eprintln!("{}", e)
         }
 

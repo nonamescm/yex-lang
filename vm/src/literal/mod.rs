@@ -5,11 +5,12 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
 };
 pub mod symbol;
+use symbol::Symbol;
 use crate::{
     error::InterpretResult, gc::GcRef, list::List, stack::StackVec, table::Table, Bytecode, Either,
     VirtualMachine,
 };
-use symbol::Symbol;
+
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Constant>) -> Constant;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
 pub type FunArgs = StackVec<Constant, 8>;

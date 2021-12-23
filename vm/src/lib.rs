@@ -1,5 +1,8 @@
 #![deny(missing_docs)]
 //! Virtual Machine implementation for the yex programming language
+mod either;
+mod env;
+mod error;
 #[doc(hidden)]
 pub mod gc;
 mod list;
@@ -8,9 +11,6 @@ mod opcode;
 mod prelude;
 mod stack;
 mod table;
-mod either;
-mod env;
-mod error;
 
 #[cfg(test)]
 mod tests;
@@ -23,16 +23,16 @@ use gc::GcRef;
 use crate::{
     env::Env,
     error::InterpretResult,
-    literal::{nil, FunBody, FunArgs},
+    literal::{nil, FunArgs, FunBody},
 };
 
 pub use crate::{
+    either::Either,
     list::List,
     literal::{symbol::Symbol, Constant, Fun},
     opcode::{OpCode, OpCodeMetadata},
     stack::StackVec,
     table::Table,
-    either::Either,
 };
 
 const STACK_SIZE: usize = 512;
@@ -54,12 +54,16 @@ macro_rules! panic {
 
 struct CallFrame {
     pub ip: usize,
-    pub bytecode: Bytecode,
+    bytecode: *const [OpCodeMetadata],
 }
 
 impl CallFrame {
-    pub(crate) fn new(bytecode: Bytecode) -> Self {
+    pub(crate) fn new(bytecode: BytecodeRef) -> Self {
         Self { ip: 0, bytecode }
+    }
+
+    pub(crate) fn bytecode(&self) -> BytecodeRef {
+        unsafe { self.bytecode.as_ref().unwrap() }
     }
 }
 
@@ -69,6 +73,7 @@ type Stack = StackVec<Constant, STACK_SIZE>;
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
 pub type Bytecode = Vec<OpCodeMetadata>;
+type BytecodeRef<'a> = &'a [OpCodeMetadata];
 use dlopen::raw::Library;
 use std::collections::HashMap;
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
@@ -100,7 +105,7 @@ impl VirtualMachine {
     }
 
     /// Executes a given set of bytecode instructions
-    pub fn run(&mut self, bytecode: Bytecode) -> InterpretResult<Constant> {
+    pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<Constant> {
         self.call_stack.push(CallFrame::new(bytecode));
 
         while *self.ip() < self.bytecode().len() {
@@ -286,10 +291,7 @@ impl VirtualMachine {
         Ok(())
     }
 
-    fn call_helper(
-        &mut self,
-        carity: usize,
-    ) -> InterpretResult<(FunBody, usize, FunArgs)> {
+    fn call_helper(&mut self, carity: usize) -> InterpretResult<(FunBody, usize, FunArgs)> {
         let mut fargs = StackVec::new();
         let fun = self.pop();
 
@@ -329,7 +331,7 @@ impl VirtualMachine {
                 match body.get() {
                     Either::Left(bytecode) => {
                         fargs.into_iter().for_each(|it| self.push(it));
-                        self.run(bytecode.clone())?;
+                        self.run(bytecode)?;
                     }
                     Either::Right(fp) => {
                         let arr = fargs.into_iter().rev().collect();
@@ -355,10 +357,11 @@ impl VirtualMachine {
             Ordering::Equal => {
                 fargs.into_iter().for_each(|it| self.push(it));
 
-                if body.get().as_ref() == Either::Left(self.bytecode()) {
-                    *self.ip() = 0;
-                } else {
-                    panic!("Can't use tail calls with different functions")?
+                match body.get() {
+                    Either::Left(bytecode) if bytecode == self.bytecode() => {
+                        *self.ip() = 0;
+                    }
+                    _ => panic!("Can't use tail calls with different functions")?,
                 }
             }
         }
@@ -387,7 +390,7 @@ impl VirtualMachine {
     pub fn debug_stack(&self) {
         let default = CallFrame {
             ip: 0,
-            bytecode: vec![],
+            bytecode: &[],
         };
 
         let stack = self.call_stack.last().unwrap_or(&default);
@@ -395,7 +398,7 @@ impl VirtualMachine {
         eprintln!(
             "stack: {:#?}\nnext instruction: {:?}\n",
             self.stack.iter().rev().collect::<Vec<&Constant>>(),
-            stack.bytecode.get(stack.ip).map(|it| it.opcode),
+            stack.bytecode().get(stack.ip).map(|it| it.opcode),
         );
     }
 
@@ -413,8 +416,8 @@ impl VirtualMachine {
         &mut self.call_stack[idx - 1].ip
     }
 
-    fn bytecode(&mut self) -> &Bytecode {
-        &self.call_stack.last().unwrap().bytecode
+    fn bytecode(&mut self) -> BytecodeRef {
+        self.call_stack.last().unwrap().bytecode()
     }
 
     #[track_caller]
