@@ -12,6 +12,8 @@ use crate::{
 use symbol::Symbol;
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Constant>) -> Constant;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
+pub type FunArgs = StackVec<Constant, 8>;
+
 pub type FFINoArgFunction = unsafe extern "C" fn() -> *mut c_void;
 pub type FFIFunction = unsafe extern "C" fn(usize, *mut u8) -> *mut c_void;
 pub fn nil() -> Constant {
@@ -34,7 +36,7 @@ pub struct Fun {
     /// The function body
     pub body: FunBody,
     /// The arguments that where already passed to the function
-    pub args: StackVec<Constant, 8>,
+    pub args: FunArgs,
 }
 
 /// Immediate values that can be consumed

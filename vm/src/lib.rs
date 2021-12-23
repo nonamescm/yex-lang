@@ -42,7 +42,7 @@ use gc::GcRef;
 use crate::{
     env::Env,
     error::InterpretResult,
-    literal::{nil, FunBody},
+    literal::{nil, FunBody, FunArgs},
 };
 
 pub use crate::{
@@ -307,7 +307,7 @@ impl VirtualMachine {
     fn call_helper(
         &mut self,
         carity: usize,
-    ) -> InterpretResult<(FunBody, usize, StackVec<Constant, 8>)> {
+    ) -> InterpretResult<(FunBody, usize, FunArgs)> {
         let mut fargs = StackVec::new();
         let fun = self.pop();
 
