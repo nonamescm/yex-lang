@@ -265,93 +265,29 @@ impl VirtualMachine {
                 self.push(Constant::Bool(left == right))
             }
             Greater => {
-                let right = match self.pop() {
-                    Constant::Num(n) => n,
-                    other => {
-                        let a: Result<(), crate::error::InterpretError> =
-                            panic!("VM ERROR: expected num got {:?}", other);
-                        a.unwrap_err();
-                        0 as f64
-                    }
-                };
-                let left = match self.pop() {
-                    Constant::Num(n) => n,
-                    other => {
-                        let a: Result<(), crate::error::InterpretError> =
-                            panic!("VM ERROR: expected num got {:?}", other);
-                        a.unwrap_err();
-                        0 as f64
-                    }
-                };
+                let right = self.pop();
+                let left = self.pop();
 
-                self.push(Constant::Bool(left > right))
+                self.push(Constant::Bool(left.cmp(&right)?.is_gt()))
             }
             GreaterEq => {
-                let right = match self.pop() {
-                    Constant::Num(n) => n,
-                    other => {
-                        let a: Result<(), crate::error::InterpretError> =
-                            panic!("VM ERROR: expected num got {:?}", other);
-                        a.unwrap_err();
-                        0 as f64
-                    }
-                };
-                let left = match self.pop() {
-                    Constant::Num(n) => n,
-                    other => {
-                        let a: Result<(), crate::error::InterpretError> =
-                            panic!("VM ERROR: expected num got {:?}", other);
-                        a.unwrap_err();
-                        0 as f64
-                    }
-                };
+                let right = self.pop();
+                let left = self.pop();
 
-                self.push(Constant::Bool(left >= right))
+                self.push(Constant::Bool(left.cmp(&right)?.is_ge()))
             }
 
             Less => {
-                let right = match self.pop() {
-                    Constant::Num(n) => n,
-                    other => {
-                        let a: Result<(), crate::error::InterpretError> =
-                            panic!("VM ERROR: expected num got {:?}", other);
-                        a.unwrap_err();
-                        0 as f64
-                    }
-                };
-                let left = match self.pop() {
-                    Constant::Num(n) => n,
-                    other => {
-                        let a: Result<(), crate::error::InterpretError> =
-                            panic!("VM ERROR: expected num got {:?}", other);
-                        a.unwrap_err();
-                        0 as f64
-                    }
-                };
+                let right = self.pop();
+                let left = self.pop();
 
-                self.push(Constant::Bool(left < right))
+                self.push(Constant::Bool(left.cmp(&right)?.is_lt()))
             }
             LessEq => {
-                let right = match self.pop() {
-                    Constant::Num(n) => n,
-                    other => {
-                        let a: Result<(), crate::error::InterpretError> =
-                            panic!("VM ERROR: expected num got {:?}", other);
-                        a.unwrap_err();
-                        0 as f64
-                    }
-                };
-                let left = match self.pop() {
-                    Constant::Num(n) => n,
-                    other => {
-                        let a: Result<(), crate::error::InterpretError> =
-                            panic!("VM ERROR: expected num got {:?}", other);
-                        a.unwrap_err();
-                        0 as f64
-                    }
-                };
+                let right = self.pop();
+                let left = self.pop();
 
-                self.push(Constant::Bool(left <= right))
+                self.push(Constant::Bool(left.cmp(&right)?.is_le()))
             }
 
             Neg => unaop!(-),

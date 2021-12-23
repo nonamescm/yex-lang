@@ -1,8 +1,4 @@
-use std::{
-    ffi::c_void,
-    mem,
-    ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
-};
+use std::{cmp::Ordering, ffi::c_void, mem, ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub}};
 pub mod symbol;
 use crate::{Bytecode, Either, VirtualMachine, error::InterpretResult, gc::GcRef, list::List, stack::StackVec, table::Table};
 use symbol::Symbol;
@@ -99,6 +95,19 @@ impl Constant {
             Constant::ExternalFunctionNoArg(f) => mem::size_of_val(f),
             Constant::Bool(_) => std::mem::size_of::<bool>(),
             Constant::Nil => 4,
+        }
+    }
+
+    /// Compares the left and the right value
+    pub fn cmp(&self, rhs: &Self) -> InterpretResult<Ordering> {
+        let (left, right) = match (self, rhs) {
+            (Self::Num(left), Self::Num(right)) => (left, right),
+            (left, right) => return crate::panic!("Can't compare `{}` and `{}`", left, right),
+        };
+
+        match left.partial_cmp(right) {
+            Some(ord) => Ok(ord),
+            None => panic!("Error applying cmp"),
         }
     }
 }
