@@ -1,38 +1,19 @@
 #![deny(missing_docs)]
 //! Virtual Machine implementation for the yex programming language
-mod env;
-mod error;
-
 #[doc(hidden)]
 pub mod gc;
-
 mod list;
 mod literal;
 mod opcode;
 mod prelude;
 mod stack;
 mod table;
+mod either;
+mod env;
+mod error;
+
 #[cfg(test)]
 mod tests;
-
-#[derive(PartialEq, Debug, Clone)]
-/// Either left or right value
-pub enum Either<L, R> {
-    /// The left value
-    Left(L),
-    /// The right value
-    Right(R),
-}
-
-impl<L, R> Either<L, R> {
-    /// Returns self by reference
-    pub fn as_ref(&self) -> Either<&L, &R> {
-        match *self {
-            Self::Left(ref inner) => Either::Left(inner),
-            Self::Right(ref inner) => Either::Right(inner),
-        }
-    }
-}
 
 use std::{cmp::Ordering, mem};
 
@@ -51,6 +32,7 @@ pub use crate::{
     opcode::{OpCode, OpCodeMetadata},
     stack::StackVec,
     table::Table,
+    either::Either,
 };
 
 const STACK_SIZE: usize = 512;
