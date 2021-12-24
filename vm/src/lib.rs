@@ -71,7 +71,7 @@ impl CallFrame {
         unsafe { std::slice::from_raw_parts(self.ip, self.len) }
     }
 
-    pub fn set_offset(&mut self, count: usize) {
+    pub fn jump(&mut self, count: usize) {
         self.ip = unsafe { self.ip.offset((count as isize) - (self.index as isize)) };
         self.index = count;
     }
@@ -214,12 +214,12 @@ impl VirtualMachine {
 
             Jmf(offset) => {
                 if Into::<bool>::into(!self.pop()) {
-                    self.call_frame().set_offset(offset);
+                    self.call_frame().jump(offset);
                     return Ok(());
                 }
             }
             Jmp(offset) => {
-                self.call_frame().set_offset(offset);
+                self.call_frame().jump(offset);
                 return Ok(());
             }
 
@@ -382,7 +382,7 @@ impl VirtualMachine {
 
                 match body.get() {
                     Either::Left(bytecode) if bytecode == self.bytecode() => {
-                        self.call_frame().set_offset(0);
+                        self.call_frame().jump(0);
                     }
                     _ => panic!("Can't use tail calls with different functions")?,
                 }

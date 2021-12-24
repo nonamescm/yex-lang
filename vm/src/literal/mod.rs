@@ -5,11 +5,11 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
 };
 pub mod symbol;
-use symbol::Symbol;
 use crate::{
     error::InterpretResult, gc::GcRef, list::List, stack::StackVec, table::Table, Bytecode, Either,
     VirtualMachine,
 };
+use symbol::Symbol;
 
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Constant>) -> Constant;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
@@ -17,6 +17,7 @@ pub type FunArgs = StackVec<Constant, 8>;
 
 pub type FFINoArgFunction = unsafe extern "C" fn() -> *mut c_void;
 pub type FFIFunction = unsafe extern "C" fn(usize, *mut u8) -> *mut c_void;
+
 pub fn nil() -> Constant {
     Constant::Nil
 }
@@ -70,16 +71,16 @@ impl Clone for Constant {
         use Constant::*;
 
         match self {
-            Num(n) => Num(*n),
-            Sym(s) => Sym(*s),
-            Bool(b) => Bool(*b),
-            Nil => Nil,
-            ExternalFunction(f) => ExternalFunction(*f),
-            ExternalFunctionNoArg(f) => ExternalFunctionNoArg(*f),
-            Str(ref_s) => Str(GcRef::clone(ref_s)),
             List(xs) => List(GcRef::clone(xs)),
             Table(ts) => Table(GcRef::clone(ts)),
+            Str(str) => Str(GcRef::clone(str)),
             Fun(f) => Fun(GcRef::clone(f)),
+            Bool(b) => Bool(*b),
+            Num(n) => Num(*n),
+            Sym(s) => Sym(*s),
+            ExternalFunction(f) => ExternalFunction(*f),
+            ExternalFunctionNoArg(f) => ExternalFunctionNoArg(*f),
+            Nil => Nil,
         }
     }
 }
@@ -187,39 +188,12 @@ impl Add for Constant {
     }
 }
 
-impl Add for &Constant {
-    type Output = ConstantErr;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        use Constant::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(x + y)),
-            (Str(x), Str(y)) => Ok(Str(GcRef::new(x.get().to_string() + y))),
-            (s, r) => panic!("Can't apply `+` operator between {} and {}", s, r),
-        }
-    }
-}
-
 impl Sub for Constant {
     type Output = ConstantErr;
 
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x - y)),
-            (s, r) => panic!("Can't apply `-` operator between {} and {}", s, r),
-        }
-    }
-}
-
-impl Sub for &Constant {
-    type Output = ConstantErr;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        use Constant::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(x - y)),
             (s, r) => panic!("Can't apply `-` operator between {} and {}", s, r),
         }
     }
@@ -236,19 +210,6 @@ impl Mul for Constant {
     }
 }
 
-impl Mul for &Constant {
-    type Output = ConstantErr;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        use Constant::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(x * y)),
-            (s, r) => panic!("Can't apply `*` operator between {} and {}", s, r),
-        }
-    }
-}
-
 impl Div for Constant {
     type Output = ConstantErr;
 
@@ -260,38 +221,12 @@ impl Div for Constant {
     }
 }
 
-impl Div for &Constant {
-    type Output = ConstantErr;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        use Constant::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(x / y)),
-            (s, r) => panic!("Can't apply `/` operator between {} and {}", s, r),
-        }
-    }
-}
-
 impl Neg for Constant {
     type Output = ConstantErr;
 
     fn neg(self) -> Self::Output {
         match self {
             Self::Num(n) => Ok(Self::Num(-n)),
-            s => panic!("Can't apply unary `-` operator on {}", s),
-        }
-    }
-}
-
-impl Neg for &Constant {
-    type Output = ConstantErr;
-
-    fn neg(self) -> Self::Output {
-        use Constant::*;
-
-        match self {
-            Num(n) => Ok(Num(-n)),
             s => panic!("Can't apply unary `-` operator on {}", s),
         }
     }
@@ -317,39 +252,7 @@ impl Not for Constant {
     }
 }
 
-impl Not for &Constant {
-    type Output = Constant;
-
-    fn not(self) -> Self::Output {
-        use Constant::*;
-
-        match self {
-            Bool(true) => Constant::Bool(false),
-            Bool(false) => Constant::Bool(true),
-            Sym(_) => Constant::Bool(false),
-            Str(s) if s.is_empty() => Constant::Bool(true),
-            Str(_) => Constant::Bool(false),
-            Num(n) if *n == 0.0 => Constant::Bool(true),
-            Num(_) => Constant::Bool(false),
-            Nil => Constant::Bool(true),
-            _ => unreachable!(),
-        }
-    }
-}
 impl BitXor for Constant {
-    type Output = ConstantErr;
-
-    fn bitxor(self, rhs: Self) -> Self::Output {
-        use Constant::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
-            (x, y) => panic!("Can't apply bitwise `^` between {} and {}", x, y),
-        }
-    }
-}
-
-impl BitXor for &Constant {
     type Output = ConstantErr;
 
     fn bitxor(self, rhs: Self) -> Self::Output {
@@ -375,33 +278,7 @@ impl BitAnd for Constant {
     }
 }
 
-impl BitAnd for &Constant {
-    type Output = ConstantErr;
-
-    fn bitand(self, rhs: Self) -> Self::Output {
-        use Constant::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
-            (x, y) => panic!("Can't apply bitwise `&` between {} and {}", x, y),
-        }
-    }
-}
-
 impl BitOr for Constant {
-    type Output = ConstantErr;
-
-    fn bitor(self, rhs: Self) -> Self::Output {
-        use Constant::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
-            (x, y) => panic!("Can't apply bitwise `|` between {} and {}", x, y),
-        }
-    }
-}
-
-impl BitOr for &Constant {
     type Output = ConstantErr;
 
     fn bitor(self, rhs: Self) -> Self::Output {
@@ -427,33 +304,7 @@ impl Shr for Constant {
     }
 }
 
-impl Shr for &Constant {
-    type Output = ConstantErr;
-
-    fn shr(self, rhs: Self) -> Self::Output {
-        use Constant::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
-            (x, y) => panic!("Can't apply bitwise `>>` between {} and {}", x, y),
-        }
-    }
-}
-
 impl Shl for Constant {
-    type Output = ConstantErr;
-
-    fn shl(self, rhs: Self) -> Self::Output {
-        use Constant::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
-            (x, y) => panic!("Can't apply bitwise `<<` between {} and {}", x, y),
-        }
-    }
-}
-
-impl Shl for &Constant {
     type Output = ConstantErr;
 
     fn shl(self, rhs: Self) -> Self::Output {
