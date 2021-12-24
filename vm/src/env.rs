@@ -1,5 +1,10 @@
+use std::{
+    alloc::{alloc, Layout},
+    ptr::null_mut,
+};
+
 use crate::{literal::Constant, Symbol};
-use smallvec::{SmallVec, smallvec};
+use smallvec::{smallvec, SmallVec};
 
 // const MAX_TABLE_ENTRIES: usize = 256;
 
@@ -8,98 +13,121 @@ type Value = Constant;
 
 #[derive(Debug, PartialEq, Clone)]
 struct Entry {
-    pub key: Key,
+    pub key: Option<Key>,
     pub value: Value,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 /// A table of key-value pairs
 pub struct EnvTable {
-    entries: Vec<Entry>,
+    entries: *mut Entry,
+    capacitity: usize,
+    count: usize,
 }
 
 impl EnvTable {
     /// Creates a new table
     pub fn new() -> Self {
         Self {
-            entries: Vec::new(),
+            capacitity: 0,
+            count: 0,
+            entries: null_mut(),
         }
     }
 
-    fn find_entry_idx(&mut self, key: &Symbol) -> Option<usize> {
-        for (idx, entry) in self.entries.iter_mut().enumerate() {
-            if &entry.key == key {
-                return Some(idx);
+    unsafe fn find_entry(&self, key: &Key) -> *mut Entry {
+        let mut index = 0;
+        let mut tombstone: *mut Entry = null_mut();
+        while index < self.count {
+            let entry = self.entries.add(index);
+            if (*entry).key.as_ref() == Some(key) {
+                return entry;
+            } else {
+                index += 1;
+                tombstone = entry;
             }
         }
-        None
-    }
-
-    fn find_entry_mut(&mut self, key: &Symbol) -> Option<&mut Entry> {
-        for entry in self.entries.iter_mut() {
-            if &entry.key == key {
-                return Some(entry);
-            }
-        }
-        None
-    }
-
-    fn find_entry(&self, key: &Symbol) -> Option<&Entry> {
-        for entry in self.entries.iter() {
-            if &entry.key == key {
-                return Some(entry);
-            }
-        }
-        None
+        tombstone
     }
 
     /// Inserts an item in the table
     pub fn insert(&mut self, key: Symbol, value: Constant) {
-        match self.find_entry_mut(&key) {
-            Some(entry) => *entry = Entry { key, value },
-            None => self.entries.push(Entry { key, value }),
+        if self.count + 1 > self.capacitity {
+            let old_capacitity = self.capacitity;
+            self.capacitity += (self.capacitity + 1) * 2;
+            unsafe { self.resize(old_capacitity) };
         }
+        unsafe {
+            let entry = self.find_entry(&key);
+            *entry = Entry {
+                key: Some(key),
+                value,
+            }
+        };
+        self.count += 1;
     }
 
     /// Indexes an item in the table
     pub fn get(&self, key: &Symbol) -> Option<Constant> {
-        self.find_entry(key).map(|entry| entry.value.clone())
+        unsafe {
+            self.find_entry(key)
+                .as_ref()
+                .map(|entry| entry.value.clone())
+        }
+    }
+
+    unsafe fn resize(&mut self, old_capacitity: usize) {
+        let entries = alloc(Layout::array::<Entry>(self.capacitity).unwrap()) as *mut Entry;
+
+        for index in 0..(self.capacitity) {
+            let entry = entries.offset(index as isize);
+            (*entry) = Entry {
+                key: None,
+                value: Constant::Nil,
+            };
+        }
+
+        for index in 0..(old_capacitity as isize) {
+            let new_entry = entries.offset(index);
+            let old_entry = self.entries.offset(index);
+
+            match (*old_entry).key {
+                Some(..) => {
+                    new_entry.swap(old_entry)
+                }
+                None => continue,
+            }
+        }
     }
 
     /// Remove an item from the table
     pub fn remove(&mut self, key: &Symbol) {
-        if let Some(idx) = self.find_entry_idx(key) {
-            self.entries.remove(idx);
-        }
+        unsafe {
+            self.find_entry(key).as_mut().map(|entry| {
+                *entry = Entry {
+                    key: None,
+                    value: Constant::Nil,
+                }
+            })
+        };
+        self.count -= 1;
     }
 
     /// Returns the underline table length
     pub fn len(&self) -> usize {
-        self.entries.len()
+        self.count
     }
 
     /// Checks if the table is empty
     #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
-        self.entries.is_empty()
-    }
-
-    /// Iterates over the table
-    pub fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
-        self.entries.iter().map(|it| (it.key, it.value.clone()))
+        self.count == 0
     }
 }
 
 impl std::fmt::Display for EnvTable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{")?;
-        for (len, (key, value)) in self.iter().enumerate() {
-            if len != self.len() - 1 {
-                write!(f, "{} = {}, ", key, value)?;
-            } else {
-                write!(f, "{} = {}", key, value)?;
-            }
-        }
         write!(f, "}}")
     }
 }
