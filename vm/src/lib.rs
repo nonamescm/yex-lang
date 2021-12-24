@@ -53,17 +53,42 @@ macro_rules! panic {
 }
 
 struct CallFrame {
-    pub ip: usize,
-    bytecode: *const [OpCodeMetadata],
+    ip: *const OpCodeMetadata,
+    len: usize,
+    index: usize,
 }
 
 impl CallFrame {
-    pub(crate) fn new(bytecode: BytecodeRef) -> Self {
-        Self { ip: 0, bytecode }
+    pub fn new(bytecode: BytecodeRef) -> Self {
+        Self {
+            ip: bytecode.as_ptr(),
+            len: bytecode.len(),
+            index: 0,
+        }
     }
 
-    pub(crate) fn bytecode(&self) -> BytecodeRef {
-        unsafe { self.bytecode.as_ref().unwrap() }
+    pub fn bytecode(&self) -> BytecodeRef {
+        unsafe { std::slice::from_raw_parts(self.ip, self.len) }
+    }
+
+    pub fn set_offset(&mut self, count: usize) {
+        self.ip = unsafe { self.ip.offset((count as isize) - (self.index as isize)) };
+        self.index = count;
+    }
+
+    pub fn offset(&self) -> usize {
+        self.index
+    }
+
+    pub fn add(&mut self, count: usize) {
+        self.index += count;
+        unsafe { self.ip = self.ip.add(count) }
+    }
+
+    pub fn advance(&mut self) -> OpCodeMetadata {
+        let op = unsafe { *self.ip };
+        self.add(1);
+        op
     }
 }
 
@@ -108,7 +133,7 @@ impl VirtualMachine {
     pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<Constant> {
         self.call_stack.push(CallFrame::new(bytecode));
 
-        while *self.ip() < self.bytecode().len() {
+        while self.call_frame().offset() < bytecode.len() {
             self.run_instruction()?;
         }
 
@@ -137,9 +162,7 @@ impl VirtualMachine {
 
         self.debug_stack();
 
-        let inst_ip = *self.ip();
-        let inst = self.bytecode()[inst_ip];
-        *self.ip() += 1;
+        let inst = self.call_frame().advance();
 
         unsafe {
             LINE = inst.line;
@@ -191,12 +214,12 @@ impl VirtualMachine {
 
             Jmf(offset) => {
                 if Into::<bool>::into(!self.pop()) {
-                    *self.ip() = offset;
+                    self.call_frame().set_offset(offset);
                     return Ok(());
                 }
             }
             Jmp(offset) => {
-                *self.ip() = offset;
+                self.call_frame().set_offset(offset);
                 return Ok(());
             }
 
@@ -359,7 +382,7 @@ impl VirtualMachine {
 
                 match body.get() {
                     Either::Left(bytecode) if bytecode == self.bytecode() => {
-                        *self.ip() = 0;
+                        self.call_frame().set_offset(0);
                     }
                     _ => panic!("Can't use tail calls with different functions")?,
                 }
@@ -388,17 +411,9 @@ impl VirtualMachine {
     #[cfg(debug_assertions)]
     /// Debug the values on the stack and in the bytecode
     pub fn debug_stack(&self) {
-        let default = CallFrame {
-            ip: 0,
-            bytecode: &[],
-        };
-
-        let stack = self.call_stack.last().unwrap_or(&default);
-
         eprintln!(
-            "stack: {:#?}\nnext instruction: {:?}\n",
+            "stack: {:#?}\n",
             self.stack.iter().rev().collect::<Vec<&Constant>>(),
-            stack.bytecode().get(stack.ip).map(|it| it.opcode),
         );
     }
 
@@ -411,13 +426,12 @@ impl VirtualMachine {
         self.stack.push(constant)
     }
 
-    fn ip(&mut self) -> &mut usize {
-        let idx = self.call_stack.len();
-        &mut self.call_stack[idx - 1].ip
-    }
-
     fn bytecode(&mut self) -> BytecodeRef {
         self.call_stack.last().unwrap().bytecode()
+    }
+
+    fn call_frame(&mut self) -> &mut CallFrame {
+        self.call_stack.last_mut().unwrap()
     }
 
     #[track_caller]
