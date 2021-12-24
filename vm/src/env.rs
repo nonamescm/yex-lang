@@ -1,4 +1,5 @@
 use crate::{literal::Constant, Symbol};
+use smallvec::{SmallVec, smallvec};
 
 // const MAX_TABLE_ENTRIES: usize = 256;
 
@@ -111,7 +112,7 @@ impl Default for EnvTable {
 
 #[derive(Debug)]
 pub(crate) struct Env {
-    entries: Vec<EnvTable>,
+    entries: SmallVec<[EnvTable; 4]>,
 }
 
 impl Env {
@@ -129,7 +130,7 @@ impl Env {
 
     pub fn new() -> Self {
         Self {
-            entries: vec![EnvTable::new()],
+            entries: smallvec![EnvTable::new()],
         }
     }
 
