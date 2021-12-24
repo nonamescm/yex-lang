@@ -11,7 +11,7 @@ impl<T, const S: usize> StackVec<T, S> {
     const UNINIT: MaybeUninit<T> = MaybeUninit::uninit();
     const ARRAY_INIT: [MaybeUninit<T>; S] = [Self::UNINIT; S];
     /// Creates a new StackVec
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             len: 0,
             array: Self::ARRAY_INIT,

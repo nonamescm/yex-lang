@@ -132,17 +132,8 @@ impl VirtualMachine {
     /// Executes a given set of bytecode instructions
     pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<Constant> {
         self.call_stack.push(CallFrame::new(bytecode));
+        let call_frame: *mut _ = self.call_frame();
 
-        while self.call_frame().offset() < bytecode.len() {
-            self.run_instruction()?;
-        }
-
-        self.call_stack.pop();
-
-        Ok(Constant::Nil)
-    }
-
-    fn run_instruction(&mut self) -> InterpretResult<()> {
         macro_rules! binop {
             ($op:tt) => {{
                 let right = self.pop();
@@ -160,158 +151,164 @@ impl VirtualMachine {
             }};
         }
 
-        self.debug_stack();
+        while unsafe { (&*call_frame).offset() } < bytecode.len() {
+            self.debug_stack();
 
-        let inst = self.call_frame().advance();
+            let inst = unsafe { (*call_frame).advance() };
 
-        unsafe {
-            LINE = inst.line;
-            COLUMN = inst.column;
-        }
-
-        use OpCode::*;
-        match inst.opcode {
-            Halt => std::process::exit(0),
-            Push(n) => {
-                if self.constants.len() <= n {
-                    panic!("err: can't find consts. Are you in repl?")?;
-                }
-
-                let val = self.constants[n].clone();
-                self.push(val)
-            }
-            Pop => {
-                self.pop();
+            unsafe {
+                LINE = inst.line;
+                COLUMN = inst.column;
             }
 
-            Save(val) => {
-                let value = self.pop();
-                self.variables.insert(val, value);
-            }
-
-            Savg(val) => {
-                let value = self.pop();
-                self.globals.insert(val, value)
-            }
-
-            Load(val) => {
-                let val = match self.variables.get(&val) {
-                    Some(v) => v,
-                    None => match self.globals.get(&val) {
-                        Some(v) => v,
-                        None => return panic!("unknown variable {}", val),
-                    },
-                };
-
-                self.push(val);
-            }
-
-            Drop(val) => {
-                self.variables.remove(&val);
-            }
-
-            Drpg(val) => self.globals.remove(&val),
-
-            Jmf(offset) => {
-                if Into::<bool>::into(!self.pop()) {
-                    self.call_frame().jump(offset);
-                    return Ok(());
-                }
-            }
-            Jmp(offset) => {
-                self.call_frame().jump(offset);
-                return Ok(());
-            }
-
-            Nsc => self.variables.nsc(),
-
-            Esc => self.variables.esc(),
-
-            Call(carity) => self.call(carity)?,
-            TCall(carity) => self.tcall(carity)?,
-
-            Prep => {
-                let val = self.pop();
-
-                match self.pop() {
-                    Constant::List(xs) => self.push(Constant::List(GcRef::new(xs.prepend(val)))),
-                    other => return panic!("Expected a list, found a `{}`", other),
-                };
-            }
-
-            Insert(key) => {
-                let value = self.pop();
-
-                match self.pop() {
-                    Constant::Table(ts) => {
-                        self.push(Constant::Table(GcRef::new(ts.insert(key, value))))
+            use OpCode::*;
+            match inst.opcode {
+                Halt => break,
+                Push(n) => {
+                    if self.constants.len() <= n {
+                        panic!("err: can't find consts. Are you in repl?")?;
                     }
-                    other => return panic!("Expected a table, found a `{}`", other),
-                };
-            }
 
-            Index => self.index()?,
+                    let val = self.constants[n].clone();
+                    self.push(val)
+                }
+                Pop => {
+                    self.pop();
+                }
 
-            Rev => {
-                let a = self.pop();
-                let b = self.pop();
-                self.push(a);
-                self.push(b);
-            }
+                Save(val) => {
+                    let value = self.pop();
+                    self.variables.insert(val, value);
+                }
 
-            Add => binop!(+),
-            Sub => binop!(-),
-            Mul => binop!(*),
-            Div => binop!(/),
-            Xor => binop!(^),
-            Shl => binop!(>>),
-            Shr => binop!(<<),
-            BitAnd => binop!(&),
-            BitOr => binop!(|),
+                Savg(val) => {
+                    let value = self.pop();
+                    self.globals.insert(val, value)
+                }
 
-            Eq => {
-                let right = self.pop();
-                let left = self.pop();
-                self.push(Constant::Bool(left == right))
-            }
-            Greater => {
-                let right = self.pop();
-                let left = self.pop();
+                Load(val) => {
+                    let val = match self.variables.get(&val) {
+                        Some(v) => v,
+                        None => match self.globals.get(&val) {
+                            Some(v) => v,
+                            None => return panic!("unknown variable {}", val),
+                        },
+                    };
 
-                self.push(Constant::Bool(left.ord_cmp(&right)?.is_gt()))
-            }
-            GreaterEq => {
-                let right = self.pop();
-                let left = self.pop();
+                    self.push(val);
+                }
 
-                self.push(Constant::Bool(left.ord_cmp(&right)?.is_ge()))
-            }
+                Drop(val) => {
+                    self.variables.remove(&val);
+                }
 
-            Less => {
-                let right = self.pop();
-                let left = self.pop();
+                Drpg(val) => self.globals.remove(&val),
 
-                self.push(Constant::Bool(left.ord_cmp(&right)?.is_lt()))
-            }
-            LessEq => {
-                let right = self.pop();
-                let left = self.pop();
+                Jmf(offset) => {
+                    if Into::<bool>::into(!self.pop()) {
+                        unsafe { (*call_frame).jump(offset) };
+                        continue;
+                    }
+                }
+                Jmp(offset) => {
+                    unsafe { (*call_frame).jump(offset) };
+                    continue;
+                }
 
-                self.push(Constant::Bool(left.ord_cmp(&right)?.is_le()))
-            }
+                Nsc => self.variables.nsc(),
 
-            Neg => unaop!(-),
-            Len => {
-                let len = self.pop().len();
-                self.push(Constant::Num(len as f64))
-            }
-            Not => {
-                let right = self.pop();
-                self.push(!right)
+                Esc => self.variables.esc(),
+
+                Call(carity) => self.call(carity)?,
+                TCall(carity) => self.tcall(carity)?,
+
+                Prep => {
+                    let val = self.pop();
+
+                    match self.pop() {
+                        Constant::List(xs) => {
+                            self.push(Constant::List(GcRef::new(xs.prepend(val))))
+                        }
+                        other => return panic!("Expected a list, found a `{}`", other),
+                    };
+                }
+
+                Insert(key) => {
+                    let value = self.pop();
+
+                    match self.pop() {
+                        Constant::Table(ts) => {
+                            self.push(Constant::Table(GcRef::new(ts.insert(key, value))))
+                        }
+                        other => return panic!("Expected a table, found a `{}`", other),
+                    };
+                }
+
+                Index => self.index()?,
+
+                Rev => {
+                    let a = self.pop();
+                    let b = self.pop();
+                    self.push(a);
+                    self.push(b);
+                }
+
+                Add => binop!(+),
+                Sub => binop!(-),
+                Mul => binop!(*),
+                Div => binop!(/),
+                Xor => binop!(^),
+                Shl => binop!(>>),
+                Shr => binop!(<<),
+                BitAnd => binop!(&),
+                BitOr => binop!(|),
+
+                Eq => {
+                    let right = self.pop();
+                    let left = self.pop();
+                    self.push(Constant::Bool(left == right))
+                }
+                Greater => {
+                    let right = self.pop();
+                    let left = self.pop();
+
+                    self.push(Constant::Bool(left.ord_cmp(&right)?.is_gt()))
+                }
+                GreaterEq => {
+                    let right = self.pop();
+                    let left = self.pop();
+
+                    self.push(Constant::Bool(left.ord_cmp(&right)?.is_ge()))
+                }
+
+                Less => {
+                    let right = self.pop();
+                    let left = self.pop();
+
+                    self.push(Constant::Bool(left.ord_cmp(&right)?.is_lt()))
+                }
+                LessEq => {
+                    let right = self.pop();
+                    let left = self.pop();
+
+                    self.push(Constant::Bool(left.ord_cmp(&right)?.is_le()))
+                }
+
+                Neg => unaop!(-),
+                Len => {
+                    let len = self.pop().len();
+                    self.push(Constant::Num(len as f64))
+                }
+                Not => {
+                    let right = self.pop();
+                    self.push(!right)
+                }
             }
         }
 
-        Ok(())
+        self.call_stack.pop();
+
+        Ok(Constant::Nil)
     }
 
     fn call_helper(&mut self, carity: usize) -> InterpretResult<(FunBody, usize, FunArgs)> {
@@ -335,6 +332,7 @@ impl VirtualMachine {
         Ok((body, farity, fargs))
     }
 
+    #[inline]
     fn call(&mut self, carity: usize) -> InterpretResult<()> {
         let (body, farity, fargs) = self.call_helper(carity)?;
         match carity.cmp(&farity) {
@@ -368,6 +366,7 @@ impl VirtualMachine {
         Ok(())
     }
 
+    #[inline]
     fn tcall(&mut self, carity: usize) -> InterpretResult<()> {
         let (body, farity, fargs) = self.call_helper(carity)?;
         match carity.cmp(&farity) {
@@ -442,12 +441,15 @@ impl VirtualMachine {
 
 impl Default for VirtualMachine {
     fn default() -> Self {
+        const STACK: Stack = StackVec::new();
+        const CALL_STACK: CallStack = StackVec::new();
+
         let prelude = prelude::prelude();
 
         Self {
             constants: vec![],
-            call_stack: StackVec::new(),
-            stack: StackVec::new(),
+            call_stack: CALL_STACK,
+            stack: STACK,
             globals: prelude,
             dlopen_libs: HashMap::new(),
             variables: Env::new(),
