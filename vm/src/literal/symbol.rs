@@ -7,7 +7,7 @@ use std::{
 #[derive(Clone, Copy)]
 pub struct Symbol {
     string: &'static str,
-    pub(crate) hash: u64,
+    hash: u64,
 }
 
 impl Hash for Symbol {
