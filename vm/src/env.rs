@@ -1,5 +1,14 @@
-use crate::{literal::Constant, Symbol};
-use smallvec::{SmallVec, smallvec};
+use core::slice;
+use std::{
+    alloc::{alloc, dealloc, Layout},
+    ptr::null_mut,
+};
+
+use crate::{
+    literal::{nil, Constant},
+    Symbol,
+};
+use smallvec::{smallvec, SmallVec};
 
 // const MAX_TABLE_ENTRIES: usize = 256;
 
@@ -8,85 +17,166 @@ type Value = Constant;
 
 #[derive(Debug, PartialEq, Clone)]
 struct Entry {
-    pub key: Key,
+    pub key: Option<Key>,
     pub value: Value,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 /// A table of key-value pairs
 pub struct EnvTable {
-    entries: Vec<Entry>,
+    capacity: usize,
+    count: usize,
+    entries: *mut Entry,
 }
 
 impl EnvTable {
+    const BASE_VALUE: usize = 4;
+
     /// Creates a new table
     pub fn new() -> Self {
+        Self::with_capacity(Self::BASE_VALUE)
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        let entries = unsafe {
+            let entries = alloc(Layout::array::<Entry>(capacity).unwrap()) as *mut Entry;
+            for index in 0..capacity {
+                entries.add(index).write(Entry {
+                    key: None,
+                    value: nil(),
+                })
+            }
+            entries
+        };
         Self {
-            entries: Vec::new(),
+            capacity,
+            count: 0,
+            entries,
         }
     }
 
-    fn find_entry_idx(&mut self, key: &Symbol) -> Option<usize> {
-        for (idx, entry) in self.entries.iter_mut().enumerate() {
-            if &entry.key == key {
-                return Some(idx);
-            }
-        }
-        None
-    }
+    unsafe fn find_entry(entries: *mut Entry, capacity: usize, key: &Symbol) -> (*mut Entry, bool) {
+        let mut index = key.hash & (capacity - 1);
+        let mut last_null: *mut Entry = null_mut();
 
-    fn find_entry_mut(&mut self, key: &Symbol) -> Option<&mut Entry> {
-        for entry in self.entries.iter_mut() {
-            if &entry.key == key {
-                return Some(entry);
+        loop {
+            let entry = entries.add(index);
+            index = (index + 1) & (capacity - 1);
+            match (*entry).key {
+                Some(k) if k == *key => return (&mut *entry, true),
+                None if (*entry).value.is_nil() => {
+                    return if !last_null.is_null() {
+                        (last_null, false)
+                    } else {
+                        (entry, false)
+                    }
+                }
+                None if last_null.is_null() => {
+                    last_null = entry;
+                }
+                _ => continue,
             }
         }
-        None
-    }
-
-    fn find_entry(&self, key: &Symbol) -> Option<&Entry> {
-        for entry in self.entries.iter() {
-            if &entry.key == key {
-                return Some(entry);
-            }
-        }
-        None
     }
 
     /// Inserts an item in the table
     pub fn insert(&mut self, key: Symbol, value: Constant) {
-        match self.find_entry_mut(&key) {
-            Some(entry) => *entry = Entry { key, value },
-            None => self.entries.push(Entry { key, value }),
+        if self.count + (self.capacity / Self::BASE_VALUE) >= self.capacity {
+            let len = self.capacity * 2;
+            self.realloc(len)
         }
+
+        let (entry, init) = unsafe { Self::find_entry(self.entries, self.capacity, &key) };
+
+        unsafe {
+            if !init {
+                self.count += 1;
+            }
+            (*entry).key = Some(key);
+            (*entry).value = value;
+        }
+    }
+
+    fn realloc(&mut self, len: usize) {
+        let entries = unsafe { alloc(Layout::array::<Entry>(len).unwrap()) as *mut Entry };
+
+        for index in 0..len {
+            unsafe {
+                entries.add(index).write(Entry {
+                    key: None,
+                    value: nil(),
+                })
+            }
+        }
+
+        for index in 0..self.capacity {
+            unsafe {
+                let entry = self.entries.add(index);
+
+                match (*entry).key {
+                    Some(k) => {
+                        let new = Self::find_entry(entries, len, &k).0;
+                        new.swap(entry);
+                    }
+                    None => continue,
+                }
+            }
+        }
+
+        unsafe {
+            dealloc(
+                self.entries as *mut u8,
+                Layout::array::<Entry>(self.capacity).unwrap(),
+            );
+        }
+
+        self.entries = entries;
+        self.capacity = len;
     }
 
     /// Indexes an item in the table
     pub fn get(&self, key: &Symbol) -> Option<Constant> {
-        self.find_entry(key).map(|entry| entry.value.clone())
+        unsafe {
+            let (entry, init) = Self::find_entry(self.entries, self.capacity, key);
+            if init {
+                Some((*entry).value.clone())
+            } else {
+                None
+            }
+        }
     }
 
     /// Remove an item from the table
     pub fn remove(&mut self, key: &Symbol) {
-        if let Some(idx) = self.find_entry_idx(key) {
-            self.entries.remove(idx);
+        unsafe {
+            let (entry, init) = Self::find_entry(self.entries, self.capacity, key);
+            if !init {
+                return;
+            }
+            (*entry).key = None;
+            (*entry).value = nil();
         }
     }
 
-    /// Returns the underline table length
+    /// Returns the table length
     pub fn len(&self) -> usize {
-        self.entries.len()
+        self.count
     }
 
     /// Checks if the table is empty
     #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
-        self.entries.is_empty()
+        self.count == 0
     }
 
     /// Iterates over the table
-    pub fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
-        self.entries.iter().map(|it| (it.key, it.value.clone()))
+    fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
+        unsafe {
+            slice::from_raw_parts(self.entries, self.capacity)
+                .iter()
+                .filter(|it| it.key.is_some())
+                .map(|it| (it.key.unwrap(), it.value.clone()))
+        }
     }
 }
 
@@ -140,7 +230,7 @@ impl Env {
     }
 
     pub fn get(&mut self, key: &Symbol) -> Option<Constant> {
-        for entry in self.entries.iter_mut().rev() {
+        for entry in self.entries.iter().rev() {
             if let Some(value) = entry.get(key) {
                 return Some(value);
             }
@@ -150,5 +240,24 @@ impl Env {
 
     pub fn remove(&mut self, key: &Symbol) {
         self.top().remove(key);
+    }
+}
+
+impl Drop for EnvTable {
+    fn drop(&mut self) {
+        unsafe {
+            dealloc(
+                self.entries as *mut u8,
+                Layout::array::<Entry>(self.capacity).unwrap(),
+            );
+        }
+    }
+}
+
+impl Drop for Env {
+    fn drop(&mut self) {
+        for entry in self.entries.iter_mut() {
+            drop(entry)
+        }
     }
 }

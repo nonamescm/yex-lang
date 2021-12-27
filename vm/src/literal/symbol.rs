@@ -7,12 +7,12 @@ use std::{
 #[derive(Clone, Copy)]
 pub struct Symbol {
     string: &'static str,
-    hash: u64,
+    pub(crate) hash: usize,
 }
 
 impl Hash for Symbol {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u64(self.hash)
+        state.write_usize(self.hash)
     }
 }
 
@@ -38,37 +38,19 @@ impl std::fmt::Debug for Symbol {
     }
 }
 
-struct FnvHasher(u64);
-impl Default for FnvHasher {
-    fn default() -> Self {
-        Self(0xcbf29ce484222325)
-    }
-}
-
-impl Hasher for FnvHasher {
-    fn finish(&self) -> u64 {
-        self.0
-    }
-
-    fn write(&mut self, bytes: &[u8]) {
-        for byte in bytes.iter() {
-            self.0 ^= *byte as u64;
-            self.0 = self.0.wrapping_mul(16777619);
-        }
-    }
-}
-
 impl Symbol {
     /// Creates a new symbol
     pub fn new<T: Into<String>>(str: T) -> Self {
-        let string = str.into();
+        let str = str.into();
 
-        let mut hash = FnvHasher::default();
-        string.hash(&mut hash);
-        let hash = hash.finish();
+        let mut hash: usize = 2166136261;
+        for b in str.bytes() {
+            hash ^= b as usize;
+            hash = hash.wrapping_mul(16777619);
+        }
 
         Self {
-            string: Box::leak(string.into_boxed_str()),
+            string: Box::leak(str.into_boxed_str()),
             hash,
         }
     }

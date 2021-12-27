@@ -116,7 +116,7 @@ fn int(args: &[Constant]) -> Constant {
 pub fn prelude() -> EnvTable {
     use {self::str::*, ffi::*, io::*, list::*, misc::*};
 
-    let mut prelude = EnvTable::new();
+    let mut prelude = EnvTable::with_capacity(64);
     macro_rules! insert_fn {
         ($name: expr, $fn: expr) => {
             insert_fn!($name, $fn, 1)
