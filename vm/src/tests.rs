@@ -4,10 +4,10 @@ use crate::{
 
 macro_rules! vecm {
     ($($tt:tt)*) => {
-        vec![$($tt)*]
+        &vec![$($tt)*]
             .into_iter()
             .map(metadata_nil)
-            .collect()
+            .collect::<Vec<_>>()
     }
 }
 
