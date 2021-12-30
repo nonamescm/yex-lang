@@ -20,27 +20,27 @@ pub enum OpCode {
     /// argument
     /// The stack layout before running this opcode: []
     /// The stack layout after running it: [variable-value]
-    Load(Symbol),
+    Load(usize),
 
     /// Save a value to a variable
     /// The stack layout before running this opcode: [value-to-save]
     /// The stack layout after running it: []
-    Save(Symbol),
+    Save(usize),
+
+    /// Read a value from a variable
+    /// The stack layout before running this opcode: []
+    /// The stack layout after running it: [variable-value]
+    Loag(Symbol),
 
     /// Save a value to a global variable
     /// The stack layout before running this opcode: [value-to-save]
     /// The stack layout after running it: []
     Savg(Symbol),
 
-    /// Drops a global variable, receives the index of the variable name in the constant table as argument
-    /// The stack layout before running this opcode: []
-    /// The stack layout after running it: []
-    Drpg(Symbol),
-
     /// Drops a variable, receives the index of the variable name in the constant table as argument
     /// The stack layout before running this opcode: []
     /// The stack layout after running it: []
-    Drop(Symbol),
+    Drop(usize),
 
     /// Jump if the value on the stack top is false, receives the jump address as argument
     /// The stack layout before running this opcode: [cond]

@@ -8,9 +8,6 @@ use crate::{
     literal::{nil, Constant},
     Symbol,
 };
-use smallvec::{smallvec, SmallVec};
-
-// const MAX_TABLE_ENTRIES: usize = 256;
 
 type Key = Symbol;
 type Value = Constant;
@@ -200,49 +197,6 @@ impl Default for EnvTable {
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct Env {
-    entries: SmallVec<[EnvTable; 4]>,
-}
-
-impl Env {
-    pub fn nsc(&mut self) {
-        self.entries.push(EnvTable::new());
-    }
-
-    pub fn esc(&mut self) {
-        self.entries.pop();
-    }
-
-    fn top(&mut self) -> &mut EnvTable {
-        self.entries.last_mut().unwrap()
-    }
-
-    pub fn new() -> Self {
-        Self {
-            entries: smallvec![EnvTable::new()],
-        }
-    }
-
-    pub fn insert(&mut self, key: Symbol, value: Constant) -> Option<()> {
-        self.top().insert(key, value);
-        Some(())
-    }
-
-    pub fn get(&mut self, key: &Symbol) -> Option<Constant> {
-        for entry in self.entries.iter().rev() {
-            if let Some(value) = entry.get(key) {
-                return Some(value);
-            }
-        }
-        None
-    }
-
-    pub fn remove(&mut self, key: &Symbol) {
-        self.top().remove(key);
-    }
-}
-
 impl Drop for EnvTable {
     fn drop(&mut self) {
         unsafe {
@@ -250,14 +204,6 @@ impl Drop for EnvTable {
                 self.entries as *mut u8,
                 Layout::array::<Entry>(self.capacity).unwrap(),
             );
-        }
-    }
-}
-
-impl Drop for Env {
-    fn drop(&mut self) {
-        for entry in self.entries.iter_mut() {
-            drop(entry)
         }
     }
 }

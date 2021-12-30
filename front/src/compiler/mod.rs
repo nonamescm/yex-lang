@@ -3,7 +3,7 @@ use crate::{
     lexer::Lexer,
     tokens::{Token, TokenType as Tkt},
 };
-use std::{iter::Peekable, mem::take};
+use std::{collections::HashMap, iter::Peekable, mem::take};
 use vm::{
     gc::GcRef, stackvec, Bytecode, Constant, Either, Fun, List, OpCode, OpCodeMetadata, Symbol,
     Table,
@@ -32,6 +32,7 @@ pub struct Compiler {
     constants: Vec<Constant>,
     current: Token,
     proxies: Vec<Vec<OpCodeMetadata>>,
+    variables: HashMap<Symbol, usize>,
 }
 
 impl Compiler {
@@ -45,6 +46,7 @@ impl Compiler {
                 token: Tkt::Eof,
             },
             proxies: vec![vec![]],
+            variables: HashMap::new(),
         };
         this.next()?;
 
@@ -71,6 +73,7 @@ impl Compiler {
                 token: Tkt::Eof,
             },
             proxies: vec![vec![]],
+            variables: HashMap::new(),
         };
         this.next()?;
 
@@ -190,6 +193,29 @@ impl Compiler {
         }
     }
 
+    fn emit_load(&mut self, name: Symbol) {
+        if let Some(index) = self.variables.get(&name).copied() {
+            self.emit(OpCode::Load(index))
+        } else {
+            self.emit(OpCode::Loag(name))
+        }
+    }
+
+    fn emit_save(&mut self, name: Symbol) {
+        let len = self.variables.len();
+        self.variables.insert(name, len + 1);
+        self.emit(OpCode::Save(len + 1));
+    }
+
+    fn emit_drop(&mut self, name: Symbol) {
+        if let Some(index) = self.variables.get(&name).copied() {
+            self.emit(OpCode::Drop(index))
+        } else {
+            unreachable!()
+        }
+    }
+
+
     fn next(&mut self) -> ParseResult {
         let tk = self.lexer.next();
         self.current = tk.unwrap_or(Ok(Token {
@@ -249,7 +275,7 @@ impl Compiler {
                 _ => unreachable!(),
             };
 
-            self.emit(OpCode::Save(Symbol::new(id)));
+            self.emit_save(Symbol::new(id));
             arity += 1;
             self.next()?;
         }
@@ -374,7 +400,7 @@ impl Compiler {
             self.expression()?;
         }
 
-        self.emit(OpCode::Save(name));
+        self.emit_save(name);
 
         self.consume(
             &[Tkt::In],
@@ -385,7 +411,7 @@ impl Compiler {
         )?;
         self.expression()?;
 
-        self.emit(OpCode::Drop(name));
+        self.emit_drop(name);
 
         Ok(())
     }
@@ -699,7 +725,8 @@ impl Compiler {
             }};
         }
 
-        use {Constant::*, OpCode::*};
+        use Constant::*;
+
         match take(&mut self.current.token) {
             Tkt::Num(n) => push!(Num(n)),
             Tkt::Str(str) => push!(Str(GcRef::new(str))),
@@ -708,7 +735,7 @@ impl Compiler {
             Tkt::False => push!(Bool(false)),
             Tkt::Name(v) => {
                 let v = Symbol::new(v);
-                self.emit(Load(v));
+                self.emit_load(v);
             }
             Tkt::Nil => push!(Nil),
             Tkt::Lbrack => self.list()?,

@@ -15,13 +15,16 @@ mod table;
 #[cfg(test)]
 mod tests;
 
-use std::{cmp::Ordering, mem};
+use std::{
+    alloc::{alloc, dealloc, Layout},
+    cmp::Ordering,
+    ptr::null_mut,
+};
 
 use env::EnvTable;
 use gc::GcRef;
 
 use crate::{
-    env::Env,
     error::InterpretResult,
     literal::{nil, FunArgs, FunBody},
 };
@@ -56,6 +59,8 @@ struct CallFrame {
     ip: *const OpCodeMetadata,
     len: usize,
     index: usize,
+    entries: *mut Constant,
+    capacity: usize,
 }
 
 impl CallFrame {
@@ -64,7 +69,46 @@ impl CallFrame {
             ip: bytecode.as_ptr(),
             len: bytecode.len(),
             index: 0,
+            entries: null_mut(),
+            capacity: 0,
         }
+    }
+
+    pub fn get(&self, index: usize) -> Constant {
+        unsafe { (&*self.entries.add(index)).clone() }
+    }
+
+    pub fn insert(&mut self, index: usize, value: Constant) {
+        if self.capacity <= index {
+            self.realloc(index + 1)
+        }
+
+        unsafe { self.entries.add(index).write(value) }
+    }
+
+    fn realloc(&mut self, len: usize) {
+        let entries = unsafe { alloc(Layout::array::<Constant>(len).unwrap()) as *mut Constant };
+
+        for index in self.capacity..len {
+            unsafe { entries.add(index).write(nil()) }
+        }
+
+        for index in 0..self.capacity {
+            unsafe {
+                let entry = self.entries.add(index);
+                entries.add(index).swap(entry)
+            }
+        }
+
+        unsafe {
+            dealloc(
+                self.entries as *mut u8,
+                Layout::array::<Constant>(self.capacity).unwrap(),
+            );
+        }
+
+        self.entries = entries;
+        self.capacity = len;
     }
 
     pub fn bytecode(&self) -> BytecodeRef {
@@ -108,7 +152,6 @@ pub struct VirtualMachine {
     call_stack: CallStack,
     dlopen_libs: HashMap<String, GcRef<Library>>,
     stack: Stack,
-    variables: Env,
     globals: EnvTable,
 }
 
@@ -176,33 +219,24 @@ impl VirtualMachine {
                     self.pop();
                 }
 
-                Save(val) => {
-                    let value = self.pop();
-                    self.variables.insert(val, value);
-                }
+                Save(val) => unsafe { (*call_frame).insert(val, self.pop()) },
 
                 Savg(val) => {
                     let value = self.pop();
                     self.globals.insert(val, value)
                 }
 
-                Load(val) => {
-                    let val = match self.variables.get(&val) {
-                        Some(v) => v,
-                        None => match self.globals.get(&val) {
-                            Some(v) => v,
-                            None => return panic!("unknown variable {}", val),
-                        },
-                    };
+                Load(val) => unsafe { self.push((*call_frame).get(val)) },
 
-                    self.push(val);
+                Loag(name) => {
+                    if let Some(value) = self.globals.get(&name) {
+                        self.push(value)
+                    } else {
+                        panic!("Unknown global variable `{}`", name)?
+                    }
                 }
 
-                Drop(val) => {
-                    self.variables.remove(&val);
-                }
-
-                Drpg(val) => self.globals.remove(&val),
+                Drop(val) => unsafe { (*call_frame).insert(val, nil()) },
 
                 Jmf(offset) => {
                     if Into::<bool>::into(!self.pop()) {
@@ -215,9 +249,9 @@ impl VirtualMachine {
                     continue;
                 }
 
-                Nsc => self.variables.nsc(),
+                Nsc => {}
 
-                Esc => self.variables.esc(),
+                Esc => {}
 
                 Call(carity) => self.call(carity)?,
                 TCall(carity) => self.tcall(carity)?,
@@ -347,21 +381,17 @@ impl VirtualMachine {
                 body,
                 args: fargs,
             }))),
-            Ordering::Equal => {
-                let curr_env = mem::replace(&mut self.variables, Env::new());
-                match body.get() {
-                    Either::Left(bytecode) => {
-                        fargs.into_iter().for_each(|it| self.push(it));
-                        self.run(bytecode)?;
-                    }
-                    Either::Right(fp) => {
-                        let arr = fargs.into_iter().rev().collect();
-                        let ret = fp(self, arr);
-                        self.push(ret)
-                    }
+            Ordering::Equal => match body.get() {
+                Either::Left(bytecode) => {
+                    fargs.into_iter().for_each(|it| self.push(it));
+                    self.run(bytecode)?;
                 }
-                self.variables = curr_env;
-            }
+                Either::Right(fp) => {
+                    let arr = fargs.into_iter().rev().collect();
+                    let ret = fp(self, arr);
+                    self.push(ret)
+                }
+            },
         }
         Ok(())
     }
@@ -452,7 +482,6 @@ impl Default for VirtualMachine {
             stack: STACK,
             globals: prelude,
             dlopen_libs: HashMap::new(),
-            variables: Env::new(),
         }
     }
 }
