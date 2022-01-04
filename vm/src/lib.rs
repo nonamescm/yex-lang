@@ -110,7 +110,6 @@ pub struct VirtualMachine {
     dlopen_libs: HashMap<String, GcRef<Library>>,
     stack: Stack,
     globals: EnvTable,
-    slots: usize,
 }
 
 impl VirtualMachine {
@@ -131,13 +130,15 @@ impl VirtualMachine {
     }
 
     fn get_slot(&mut self) -> usize {
-        let slot = if !self.call_stack.is_empty() {
-            self.call_frame().slot
+        if !self.call_stack.is_empty() {
+            self.call_frame().slot - 1
         } else {
-            1
-        };
-        println!("SLOT: {}", slot);
-        STACK_SIZE - slot - 1
+            STACK_SIZE - 1
+        }
+    }
+
+    fn calc_slot(&mut self, slot: usize) -> usize {
+        self.get_slot() - slot
     }
 
     /// Executes a given set of bytecode instructions
@@ -190,8 +191,8 @@ impl VirtualMachine {
 
                 Save(val) => {
                     let var = self.pop();
-                    self.stack
-                        .insert_at(val + self.slots + self.stack.len(), var);
+                    let slot = self.calc_slot(val);
+                    self.stack.insert_at(slot, var);
                 }
 
                 Savg(val) => {
@@ -201,10 +202,8 @@ impl VirtualMachine {
                 }
 
                 Load(val) => unsafe {
-                    let var = self
-                        .stack
-                        .get_at(val + self.slots + self.stack.len())
-                        .clone();
+                    let slot = self.calc_slot(val);
+                    let var = self.stack.get_at(slot).clone();
                     self.push(var);
                 },
 
@@ -216,9 +215,10 @@ impl VirtualMachine {
                     }
                 }
 
-                Drop(val) => self
-                    .stack
-                    .insert_at(val + self.slots + self.stack.len(), nil()),
+                Drop(val) => {
+                    let slot = self.calc_slot(val);
+                    self.stack.insert_at(slot, nil())
+                }
 
                 Jmf(offset) => {
                     if Into::<bool>::into(!self.pop()) {
@@ -464,7 +464,6 @@ impl Default for VirtualMachine {
             stack: STACK,
             globals: prelude,
             dlopen_libs: HashMap::new(),
-            slots: 0,
         }
     }
 }
