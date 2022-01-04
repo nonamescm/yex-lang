@@ -102,6 +102,18 @@ impl<T, const S: usize> StackVec<T, S> {
             Some(&mut self[idx])
         }
     }
+
+    #[track_caller]
+    /// Inserts an element at a given index
+    pub fn insert_at(&mut self, idx: usize, value: T) {
+        self.array[idx].write(value);
+    }
+
+    #[track_caller]
+    /// Unsafe indexes in a element of a given index
+    pub unsafe fn get_at(&self, idx: usize) -> &T {
+        self.array[idx].assume_init_ref()
+    }
 }
 
 impl<T, const S: usize> std::ops::Index<usize> for StackVec<T, S> {

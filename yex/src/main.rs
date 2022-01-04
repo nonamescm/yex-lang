@@ -58,7 +58,7 @@ fn start(args: Vec<String>) -> i32 {
         }
 
         let (bytecode, constants) = {
-            if line.trim().starts_with("let") {
+            if line.trim().starts_with("def") {
                 compile(line)
             } else {
                 compile_expr(line)

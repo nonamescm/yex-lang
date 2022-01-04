@@ -15,11 +15,7 @@ mod table;
 #[cfg(test)]
 mod tests;
 
-use std::{
-    alloc::{alloc, dealloc, Layout},
-    cmp::Ordering,
-    ptr::null_mut,
-};
+use std::cmp::Ordering;
 
 use env::EnvTable;
 use gc::GcRef;
@@ -59,56 +55,17 @@ struct CallFrame {
     ip: *const OpCodeMetadata,
     len: usize,
     index: usize,
-    entries: *mut Constant,
-    capacity: usize,
+    slot: usize,
 }
 
 impl CallFrame {
-    pub fn new(bytecode: BytecodeRef) -> Self {
+    pub fn new(bytecode: BytecodeRef, slot: usize) -> Self {
         Self {
             ip: bytecode.as_ptr(),
             len: bytecode.len(),
             index: 0,
-            entries: null_mut(),
-            capacity: 0,
+            slot,
         }
-    }
-
-    pub fn get(&self, index: usize) -> Constant {
-        unsafe { (&*self.entries.add(index)).clone() }
-    }
-
-    pub fn insert(&mut self, index: usize, value: Constant) {
-        if self.capacity <= index {
-            self.realloc(index + 1)
-        }
-
-        unsafe { self.entries.add(index).write(value) }
-    }
-
-    fn realloc(&mut self, len: usize) {
-        let entries = unsafe { alloc(Layout::array::<Constant>(len).unwrap()) as *mut Constant };
-
-        for index in self.capacity..len {
-            unsafe { entries.add(index).write(nil()) }
-        }
-
-        for index in 0..self.capacity {
-            unsafe {
-                let entry = self.entries.add(index);
-                entries.add(index).swap(entry)
-            }
-        }
-
-        unsafe {
-            dealloc(
-                self.entries as *mut u8,
-                Layout::array::<Constant>(self.capacity).unwrap(),
-            );
-        }
-
-        self.entries = entries;
-        self.capacity = len;
     }
 
     pub fn bytecode(&self) -> BytecodeRef {
@@ -153,6 +110,7 @@ pub struct VirtualMachine {
     dlopen_libs: HashMap<String, GcRef<Library>>,
     stack: Stack,
     globals: EnvTable,
+    slots: usize,
 }
 
 impl VirtualMachine {
@@ -172,9 +130,20 @@ impl VirtualMachine {
         self.stack.last().unwrap_or(&Constant::Nil)
     }
 
+    fn get_slot(&mut self) -> usize {
+        let slot = if !self.call_stack.is_empty() {
+            self.call_frame().slot
+        } else {
+            1
+        };
+        println!("SLOT: {}", slot);
+        STACK_SIZE - slot - 1
+    }
+
     /// Executes a given set of bytecode instructions
     pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<Constant> {
-        self.call_stack.push(CallFrame::new(bytecode));
+        let slot = self.get_slot();
+        self.call_stack.push(CallFrame::new(bytecode, slot));
         let call_frame: *mut _ = self.call_frame();
 
         macro_rules! binop {
@@ -194,7 +163,7 @@ impl VirtualMachine {
             }};
         }
 
-        while unsafe { (&*call_frame).offset() } < bytecode.len() {
+        while unsafe { (*call_frame).offset() } < bytecode.len() {
             self.debug_stack();
 
             let inst = unsafe { (*call_frame).advance() };
@@ -219,14 +188,25 @@ impl VirtualMachine {
                     self.pop();
                 }
 
-                Save(val) => unsafe { (*call_frame).insert(val, self.pop()) },
+                Save(val) => {
+                    let var = self.pop();
+                    self.stack
+                        .insert_at(val + self.slots + self.stack.len(), var);
+                }
 
                 Savg(val) => {
                     let value = self.pop();
-                    self.globals.insert(val, value)
+                    self.globals.insert(val, value);
+                    unsafe { (*call_frame).slot += 1 }
                 }
 
-                Load(val) => unsafe { self.push((*call_frame).get(val)) },
+                Load(val) => unsafe {
+                    let var = self
+                        .stack
+                        .get_at(val + self.slots + self.stack.len())
+                        .clone();
+                    self.push(var);
+                },
 
                 Loag(name) => {
                     if let Some(value) = self.globals.get(&name) {
@@ -236,7 +216,9 @@ impl VirtualMachine {
                     }
                 }
 
-                Drop(val) => unsafe { (*call_frame).insert(val, nil()) },
+                Drop(val) => self
+                    .stack
+                    .insert_at(val + self.slots + self.stack.len(), nil()),
 
                 Jmf(offset) => {
                     if Into::<bool>::into(!self.pop()) {
@@ -482,6 +464,7 @@ impl Default for VirtualMachine {
             stack: STACK,
             globals: prelude,
             dlopen_libs: HashMap::new(),
+            slots: 0,
         }
     }
 }

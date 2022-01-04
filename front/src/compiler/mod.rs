@@ -27,12 +27,17 @@ fn patch_bytecode(len: usize, bt_len: usize, bytecode: &[OpCodeMetadata]) -> Byt
         .collect()
 }
 
+#[derive(Default)]
+struct Proxy {
+    vars: HashMap<Symbol, usize>,
+    opcodes: Vec<OpCodeMetadata>,
+}
+
 pub struct Compiler {
     lexer: Peekable<Lexer>,
     constants: Vec<Constant>,
     current: Token,
-    proxies: Vec<Vec<OpCodeMetadata>>,
-    variables: HashMap<Symbol, usize>,
+    proxies: Vec<Proxy>,
 }
 
 impl Compiler {
@@ -45,22 +50,21 @@ impl Compiler {
                 column: 0,
                 token: Tkt::Eof,
             },
-            proxies: vec![vec![]],
-            variables: HashMap::new(),
+            proxies: vec![Proxy::default()],
         };
         this.next()?;
 
         loop {
             match this.current.token {
                 Tkt::Open => this.open(),
-                _ => this.scoped_let(),
+                _ => this.def(),
             }?;
             if this.current.token == Tkt::Eof {
                 break;
             }
         }
 
-        Ok((this.proxies.pop().unwrap(), this.constants))
+        Ok((this.proxies.pop().unwrap().opcodes, this.constants))
     }
 
     pub fn compile_expr(lexer: Lexer) -> Result<(Bytecode, Vec<Constant>), ParseError> {
@@ -72,8 +76,7 @@ impl Compiler {
                 column: 0,
                 token: Tkt::Eof,
             },
-            proxies: vec![vec![]],
-            variables: HashMap::new(),
+            proxies: vec![Proxy::default()],
         };
         this.next()?;
 
@@ -81,18 +84,18 @@ impl Compiler {
         if this.current.token != Tkt::Eof {
             this.throw(format!("Expected <eof>, got `{}`", this.current.token))?
         }
-        Ok((this.proxies.pop().unwrap(), this.constants))
+        Ok((this.proxies.pop().unwrap().opcodes, this.constants))
     }
 
-    fn scoped_let(&mut self) -> ParseResult {
-        if self.current.token != Tkt::Let {
-            self.throw(format!("Expected `let`, found `{}`", self.current.token))?
+    fn def(&mut self) -> ParseResult {
+        if self.current.token != Tkt::Def {
+            self.throw(format!("Expected `def`, found `{}`", self.current.token))?
         }
         self.next()?; // skips the let token
 
         let name = match take(&mut self.current.token) {
             Tkt::Name(v) => Symbol::new(v),
-            o => return self.throw(format!("Expected variable name after `let`, found `{}`", o)),
+            o => return self.throw(format!("Expected variable name after `def`, found `{}`", o)),
         };
         self.next()?;
 
@@ -162,7 +165,11 @@ impl Compiler {
     }
 
     fn compiled_opcodes(&self) -> usize {
-        self.proxies.last().unwrap().len()
+        self.proxies.last().unwrap().opcodes.len()
+    }
+
+    fn variables(&mut self) -> &mut HashMap<Symbol, usize> {
+        &mut self.proxies.last_mut().unwrap().vars
     }
 
     fn emit(&mut self, intr: OpCode) {
@@ -176,12 +183,12 @@ impl Compiler {
 
     fn emit_metadata(&mut self, op: OpCodeMetadata) {
         let proxy = self.proxies.last_mut().unwrap();
-        proxy.push(op);
+        proxy.opcodes.push(op);
     }
 
     fn emit_patch(&mut self, intr: OpCode, idx: usize) {
         let proxy = self.proxies.last_mut().unwrap();
-        proxy[idx].opcode = intr;
+        proxy.opcodes[idx].opcode = intr;
     }
 
     fn emit_const_push(&mut self, constant: Constant) {
@@ -194,7 +201,7 @@ impl Compiler {
     }
 
     fn emit_load(&mut self, name: Symbol) {
-        if let Some(index) = self.variables.get(&name).copied() {
+        if let Some(index) = self.variables().get(&name).copied() {
             self.emit(OpCode::Load(index))
         } else {
             self.emit(OpCode::Loag(name))
@@ -202,19 +209,18 @@ impl Compiler {
     }
 
     fn emit_save(&mut self, name: Symbol) {
-        let len = self.variables.len();
-        self.variables.insert(name, len + 1);
+        let len = self.variables().len();
+        self.variables().insert(name, len + 1);
         self.emit(OpCode::Save(len + 1));
     }
 
     fn emit_drop(&mut self, name: Symbol) {
-        if let Some(index) = self.variables.get(&name).copied() {
+        if let Some(index) = self.proxies.last().unwrap().vars.get(&name).copied() {
             self.emit(OpCode::Drop(index))
         } else {
             unreachable!()
         }
     }
-
 
     fn next(&mut self) -> ParseResult {
         let tk = self.lexer.next();
@@ -246,6 +252,10 @@ impl Compiler {
         ParseError::throw(self.current.line, self.current.column, err.into())
     }
 
+    fn new_proxy(&mut self) {
+        self.proxies.push(Proxy::default())
+    }
+
     fn expression(&mut self) -> ParseResult {
         loop {
             match self.current.token {
@@ -267,7 +277,7 @@ impl Compiler {
 
     fn function(&mut self) -> ParseResult {
         let mut arity = 0;
-        self.proxies.push(vec![]);
+        self.new_proxy();
 
         while matches!(self.current.token, Tkt::Name(_)) {
             let id = match take(&mut self.current.token) {
@@ -292,7 +302,7 @@ impl Compiler {
         let body = self.proxies.pop().unwrap();
 
         self.emit_const_push(Constant::Fun(GcRef::new(Fun {
-            body: GcRef::new(Either::Left(body)),
+            body: GcRef::new(Either::Left(body.opcodes)),
             arity,
             args: stackvec![],
         })));
@@ -305,7 +315,7 @@ impl Compiler {
         self.next()?;
         self.call()?;
         let proxy = &mut self.proxies.last_mut().unwrap();
-        match proxy.pop() {
+        match proxy.opcodes.pop() {
             Some(OpCodeMetadata {
                 opcode: OpCode::Call(arity),
                 line,
@@ -606,7 +616,7 @@ impl Compiler {
                 let mut new = vec![];
 
                 while old_comp > 0 {
-                    new.insert(0, proxy.pop().unwrap());
+                    new.insert(0, proxy.opcodes.pop().unwrap());
                     old_comp -= 1;
                 }
 
@@ -643,7 +653,7 @@ impl Compiler {
                 break;
             }
 
-            self.proxies.push(vec![]);
+            self.new_proxy();
             self.expression()?; // compiles the argument
             self.emit(OpCode::Prep);
             ret_vec.push(self.proxies.pop().unwrap());
@@ -659,6 +669,7 @@ impl Compiler {
         ret_vec
             .iter()
             .rev()
+            .map(|it| &it.opcodes)
             .flatten()
             .for_each(|it| self.emit_metadata(*it));
 
