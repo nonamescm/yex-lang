@@ -22,7 +22,7 @@ use gc::GcRef;
 
 use crate::{
     error::InterpretResult,
-    literal::{nil, FunArgs, FunBody},
+    literal::{nil, FunArgs, FunBody, NOARGS},
 };
 
 pub use crate::{
@@ -327,22 +327,27 @@ impl VirtualMachine {
         Ok(Constant::Nil)
     }
 
-    fn call_helper(&mut self, carity: usize) -> InterpretResult<(FunBody, usize, FunArgs)> {
+    fn call_helper(&mut self, carity: usize) -> InterpretResult<(*const FunBody, usize, FunArgs)> {
         let mut fargs = StackVec::new();
         let fun = self.pop();
+        let fun = match fun {
+            Constant::Fun(f) => f,
+            other => return panic!("Can't call {}", other),
+        };
+
+        if fun.arity == carity && fun.body.is_left() {
+            return Ok((&fun.body, fun.arity, NOARGS));
+        }
 
         while fargs.len() < carity {
             fargs.push(self.pop())
         }
 
-        let (farity, body) = match fun {
-            Constant::Fun(f) => {
-                for elem in f.args.iter() {
-                    fargs.push(elem.clone())
-                }
-                (f.arity, f.body.clone())
+        let (farity, body) = {
+            for elem in fun.args.iter() {
+                fargs.push(elem.clone())
             }
-            other => return panic!("Can't call {}", other),
+            (fun.arity, &fun.body)
         };
 
         Ok((body, farity, fargs))
@@ -360,10 +365,10 @@ impl VirtualMachine {
             }
             Ordering::Less => self.push(Constant::Fun(GcRef::new(literal::Fun {
                 arity: farity - carity,
-                body,
+                body: unsafe { (*body).clone() },
                 args: fargs,
             }))),
-            Ordering::Equal => match body.get() {
+            Ordering::Equal => match unsafe { (*body).get() } {
                 Either::Left(bytecode) => {
                     fargs.into_iter().for_each(|it| self.push(it));
                     self.run(bytecode)?;
@@ -391,7 +396,7 @@ impl VirtualMachine {
             Ordering::Equal => {
                 fargs.into_iter().for_each(|it| self.push(it));
 
-                match body.get() {
+                match unsafe { &*body }.get() {
                     Either::Left(bytecode) if bytecode == self.bytecode() => {
                         self.call_frame().jump(0);
                     }
