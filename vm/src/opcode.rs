@@ -16,6 +16,11 @@ pub enum OpCode {
     /// The stack layout after running it: []
     Pop,
 
+    /// Duplicates the top value of the stack
+    /// The stack layout before running this opcode: [c]
+    /// The stack layout after running it: [c, c]
+    Dup,
+
     /// Read a value from a variable, receives the index of the variable name in the constant table as
     /// argument
     /// The stack layout before running this opcode: []

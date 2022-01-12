@@ -427,12 +427,52 @@ impl Compiler {
     }
 
     fn pipe(&mut self) -> ParseResult {
-        self.equality()?;
+        self.or()?;
 
         while let Tkt::Pipe = self.current.token {
             self.next()?;
-            self.equality()?;
+            self.or()?;
             self.emit(OpCode::Call(1))
+        }
+
+        Ok(())
+    }
+
+    fn or(&mut self) -> ParseResult {
+        self.and()?;
+
+        while let Tkt::Or = self.current.token {
+            self.next()?;
+            self.emit(OpCode::Dup);
+            self.emit(OpCode::Not);
+
+            let ip = self.compiled_opcodes();
+            self.emit(OpCode::Jmf(0));
+
+            self.emit(OpCode::Pop);
+            self.and()?;
+
+            self.emit_patch(OpCode::Jmf(self.compiled_opcodes()), ip);
+        }
+
+        Ok(())
+    }
+
+
+    fn and(&mut self) -> ParseResult {
+        self.equality()?;
+
+        while let Tkt::And = self.current.token {
+            self.next()?;
+            self.emit(OpCode::Dup);
+
+            let ip = self.compiled_opcodes();
+            self.emit(OpCode::Jmf(0));
+
+            self.emit(OpCode::Pop);
+            self.equality()?;
+
+            self.emit_patch(OpCode::Jmf(self.compiled_opcodes()), ip);
         }
 
         Ok(())

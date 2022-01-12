@@ -189,6 +189,11 @@ impl VirtualMachine {
                     self.pop();
                 }
 
+                Dup => {
+                    let x = self.stack[self.stack.len() - 1].clone();
+                    self.push(x);
+                }
+
                 Save(val) => {
                     let var = self.pop();
                     let slot = self.calc_slot(val);
@@ -321,6 +326,7 @@ impl VirtualMachine {
         }
 
         self.call_stack.pop();
+        self.debug_stack();
 
         Ok(Constant::Nil)
     }

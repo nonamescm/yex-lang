@@ -19,6 +19,8 @@ pub enum TokenType {
     Fn,
     Become,
     Open,
+    And,
+    Or,
 
     // logical operators
     Add,
@@ -82,6 +84,8 @@ impl std::fmt::Display for TokenType {
             Self::In => "in".into(),
             Self::Become => "become".into(),
             Self::Open => "open".into(),
+            Self::And => "and".into(),
+            Self::Or => "or".into(),
 
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
@@ -133,6 +137,8 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "fn" => Some(TokenType::Fn),
         "become" => Some(TokenType::Become),
         "open" => Some(TokenType::Open),
+        "and" => Some(TokenType::And),
+        "or" => Some(TokenType::Or),
         _ => None,
     }
 }
