@@ -231,9 +231,7 @@ impl VirtualMachine {
                     continue;
                 }
 
-                Nsc => {}
-
-                Esc => {}
+                Nsc | Esc => {}
 
                 Call(carity) => self.call(carity)?,
                 TCall(carity) => self.tcall(carity)?,
