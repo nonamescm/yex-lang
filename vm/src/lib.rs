@@ -15,7 +15,7 @@ mod table;
 #[cfg(test)]
 mod tests;
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, mem::MaybeUninit};
 
 use env::EnvTable;
 use gc::GcRef;
@@ -69,7 +69,7 @@ impl CallFrame {
     }
 
     pub fn bytecode(&self) -> BytecodeRef {
-        unsafe { std::slice::from_raw_parts(self.ip, self.len) }
+        unsafe { std::slice::from_raw_parts(self.ip.sub(self.index), self.len) }
     }
 
     pub fn jump(&mut self, count: usize) {
@@ -109,6 +109,7 @@ pub struct VirtualMachine {
     call_stack: CallStack,
     dlopen_libs: HashMap<String, GcRef<Library>>,
     stack: Stack,
+    locals: [MaybeUninit<Constant>; STACK_SIZE],
     globals: EnvTable,
 }
 
@@ -130,15 +131,16 @@ impl VirtualMachine {
     }
 
     fn get_slot(&mut self) -> usize {
-        if !self.call_stack.is_empty() {
-            self.call_frame().slot - 1
+        let slot = if !self.call_stack.is_empty() {
+            self.call_frame().slot + 1
         } else {
-            STACK_SIZE - 1
-        }
+            0
+        };
+        slot
     }
 
     fn calc_slot(&mut self, slot: usize) -> usize {
-        self.get_slot() - slot
+        self.get_slot() + slot
     }
 
     /// Executes a given set of bytecode instructions
@@ -190,14 +192,15 @@ impl VirtualMachine {
                 }
 
                 Dup => {
-                    let x = self.stack[self.stack.len() - 1].clone();
+                    let x = self.stack.pop();
+                    self.push(x.clone());
                     self.push(x);
                 }
 
                 Save(val) => {
                     let var = self.pop();
                     let slot = self.calc_slot(val);
-                    self.stack.insert_at(slot, var);
+                    self.locals[slot].write(var);
                 }
 
                 Savg(val) => {
@@ -208,7 +211,7 @@ impl VirtualMachine {
 
                 Load(val) => unsafe {
                     let slot = self.calc_slot(val);
-                    let var = self.stack.get_at(slot).clone();
+                    let var = self.locals[slot].assume_init_ref().clone();
                     self.push(var);
                 },
 
@@ -222,7 +225,7 @@ impl VirtualMachine {
 
                 Drop(val) => {
                     let slot = self.calc_slot(val);
-                    self.stack.insert_at(slot, nil())
+                    self.locals[slot] = MaybeUninit::uninit()
                 }
 
                 Jmf(offset) => {
@@ -325,23 +328,20 @@ impl VirtualMachine {
             }
         }
 
-        self.call_stack.pop();
         self.debug_stack();
+        self.call_stack.pop();
 
         Ok(Constant::Nil)
     }
 
     fn call_helper(&mut self, carity: usize) -> InterpretResult<(*const FunBody, usize, FunArgs)> {
-        let mut fargs = StackVec::new();
         let fun = self.pop();
         let fun = match fun {
             Constant::Fun(f) => f,
             other => return panic!("Can't call {}", other),
         };
 
-        if fun.arity == carity && fun.body.is_left() {
-            return Ok((&fun.body, fun.arity, NOARGS));
-        }
+        let mut fargs = StackVec::new();
 
         while fargs.len() < carity {
             fargs.push(self.pop())
@@ -378,8 +378,8 @@ impl VirtualMachine {
                     self.run(bytecode)?;
                 }
                 Either::Right(fp) => {
-                    let arr = fargs.into_iter().rev().collect();
-                    let ret = fp(self, arr);
+                    let arr = fargs.into_iter().collect();
+                    let ret = fp(self, arr)?;
                     self.push(ret)
                 }
             },
@@ -431,9 +431,19 @@ impl VirtualMachine {
     #[cfg(debug_assertions)]
     /// Debug the values on the stack and in the bytecode
     pub fn debug_stack(&self) {
+        let call_stack = self.call_stack.last().unwrap();
         eprintln!(
-            "stack: {:#?}\n",
+            "stack: {:#?}\ninstruction: {:?}\n",
             self.stack.iter().rev().collect::<Vec<&Constant>>(),
+            unsafe {
+                if call_stack.index > call_stack.len {
+                    call_stack.ip.add(1).as_ref()
+                } else if call_stack.index == call_stack.len {
+                    None
+                } else {
+                    call_stack.ip.as_ref()
+                }
+            },
         );
     }
 
@@ -464,6 +474,7 @@ impl Default for VirtualMachine {
     fn default() -> Self {
         const STACK: Stack = StackVec::new();
         const CALL_STACK: CallStack = StackVec::new();
+        const UNINIT: MaybeUninit<Constant> = MaybeUninit::uninit();
 
         let prelude = prelude::prelude();
 
@@ -473,6 +484,7 @@ impl Default for VirtualMachine {
             stack: STACK,
             globals: prelude,
             dlopen_libs: HashMap::new(),
+            locals: [UNINIT; STACK_SIZE],
         }
     }
 }

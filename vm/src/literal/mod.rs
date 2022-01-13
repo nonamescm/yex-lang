@@ -11,7 +11,7 @@ use crate::{
 };
 use symbol::Symbol;
 
-pub type NativeFun = fn(*mut VirtualMachine, Vec<Constant>) -> Constant;
+pub type NativeFun = fn(*mut VirtualMachine, Vec<Constant>) -> InterpretResult<Constant>;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
 pub type FunArgs = StackVec<Constant, 8>;
 pub const NOARGS: FunArgs = stackvec![];

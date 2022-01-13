@@ -88,7 +88,7 @@ impl<T, const S: usize> StackVec<T, S> {
         if self.len == 0 {
             None
         } else {
-            Some(&self[self.len - 1])
+            unsafe { Some(self.array[self.len - 1].assume_init_ref()) }
         }
     }
 
@@ -99,7 +99,7 @@ impl<T, const S: usize> StackVec<T, S> {
             None
         } else {
             let idx = self.len - 1;
-            Some(&mut self[idx])
+            unsafe { Some(self.array[idx].assume_init_mut()) }
         }
     }
 
@@ -113,33 +113,6 @@ impl<T, const S: usize> StackVec<T, S> {
     /// Unsafe indexes in a element of a given index
     pub unsafe fn get_at(&self, idx: usize) -> &T {
         self.array[idx].assume_init_ref()
-    }
-}
-
-impl<T, const S: usize> std::ops::Index<usize> for StackVec<T, S> {
-    type Output = T;
-    #[track_caller]
-    fn index(&self, index: usize) -> &Self::Output {
-        if self.len <= index {
-            panic!(
-                "index out of bounds, the len is `{}` but the index is `{}`",
-                self.len, index
-            )
-        }
-        unsafe { self.array[index].assume_init_ref() }
-    }
-}
-
-impl<T, const S: usize> std::ops::IndexMut<usize> for StackVec<T, S> {
-    #[track_caller]
-    fn index_mut(&mut self, index: usize) -> &mut T {
-        if self.len <= index {
-            panic!(
-                "index out of bounds, the len is `{}` but the index is `{}`",
-                self.len, index
-            )
-        }
-        unsafe { self.array[index].assume_init_mut() }
     }
 }
 

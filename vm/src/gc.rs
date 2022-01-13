@@ -91,6 +91,6 @@ impl<T: Eq> Eq for GcRef<T> {}
 
 impl<T: Debug> Debug for GcRef<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.get())
+        write!(f, "{:#?}", self.get())
     }
 }

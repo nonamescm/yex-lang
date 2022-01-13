@@ -269,6 +269,7 @@ impl Compiler {
             if self.current.token != Tkt::Seq {
                 break;
             }
+            self.emit(OpCode::Pop);
             self.next()?;
         }
 
