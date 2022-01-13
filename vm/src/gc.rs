@@ -1,12 +1,10 @@
-use std::{cell::Cell, ptr::NonNull};
+use std::{cell::Cell, ptr::NonNull, fmt::Debug};
 
-#[derive(Debug)]
 struct Ref<T> {
     pub(in crate::gc) inner: T,
     pub(in crate::gc) count: Cell<usize>,
 }
 
-#[derive(Debug)]
 pub struct GcRef<T> {
     inner: NonNull<Ref<T>>,
 }
@@ -90,3 +88,9 @@ impl<T: PartialEq> PartialEq for GcRef<T> {
 }
 
 impl<T: Eq> Eq for GcRef<T> {}
+
+impl<T: Debug> Debug for GcRef<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.get())
+    }
+}
