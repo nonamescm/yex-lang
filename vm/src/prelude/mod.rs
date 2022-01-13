@@ -1,79 +1,55 @@
 use crate::{
     env::EnvTable,
     gc::GcRef,
-    literal::{ok, Constant},
+    literal::{Constant, nil},
     stackvec,
+    InterpretResult,
 };
 use std::io::Write;
-mod ffi;
-mod io;
+// mod ffi;
 mod list;
-mod misc;
 mod str;
 
-#[macro_export]
-#[doc(hidden)]
-macro_rules! err_tuple {
-    ($($tt:tt)+) => {{
-        let msg = format!($($tt)+);
-        let mut xs = $crate::List::new();
-        xs = xs.prepend(Constant::Str(GcRef::new(msg)));
-        xs = xs.prepend($crate::literal::err());
-        return Constant::List(GcRef::new(xs));
-    }}
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! ok_tuple {
-    ($reason: expr) => {{
-        let mut xs = $crate::List::new();
-        xs = xs.prepend($reason);
-        xs = xs.prepend($crate::literal::ok());
-        Constant::List(GcRef::new(xs))
-    }};
-}
-
-fn puts(args: &[Constant]) -> Constant {
+fn puts(args: &[Constant]) -> InterpretResult<Constant> {
     match &args[0] {
         Constant::Str(s) => println!("{}", s.get()),
         other => println!("{}", other),
     };
-    ok()
+    Ok(nil())
 }
 
-fn print(args: &[Constant]) -> Constant {
+fn print(args: &[Constant]) -> InterpretResult<Constant> {
     match &args[0] {
         Constant::Str(s) => print!("{}", s.get()),
         other => print!("{}", other),
     };
-    ok()
+    Ok(nil())
 }
 
-fn input(args: &[Constant]) -> Constant {
+fn input(args: &[Constant]) -> InterpretResult<Constant> {
     match &args[0] {
         Constant::Str(s) => print!("{}", s.get()),
         other => print!("{}", other),
     };
 
     if std::io::stdout().flush().is_err() {
-        err_tuple!("Error flushing stdout");
+        panic!("Error flushing stdout");
     }
 
     let mut input = String::new();
     if std::io::stdin().read_line(&mut input).is_err() {
-        err_tuple!("Error reading line");
+        panic!("Error reading line");
     }
 
     input.pop();
-    ok_tuple!(Constant::Str(GcRef::new(input)))
+    Ok(Constant::Str(GcRef::new(input)))
 }
 
-fn str(args: &[Constant]) -> Constant {
-    Constant::Str(GcRef::new(format!("{}", &args[0])))
+fn str(args: &[Constant]) -> InterpretResult<Constant> {
+    Ok(Constant::Str(GcRef::new(format!("{}", &args[0]))))
 }
 
-fn r#type(args: &[Constant]) -> Constant {
+fn r#type(args: &[Constant]) -> InterpretResult<Constant> {
     let type_name = GcRef::new(
         match &args[0] {
             Constant::List(_) => "list",
@@ -84,37 +60,36 @@ fn r#type(args: &[Constant]) -> Constant {
             Constant::Sym(_) => "symbol",
             Constant::Nil => "nil",
             Constant::ExternalFunction(_) | Constant::ExternalFunctionNoArg(_) => "extern fn",
-
             Constant::Fun { .. } => "fn",
         }
         .into(),
     );
-    Constant::Str(type_name)
+    Ok(Constant::Str(type_name))
 }
 
-fn inspect(args: &[Constant]) -> Constant {
-    Constant::Str(GcRef::new(format!("{:#?}", &args[0])))
+fn inspect(args: &[Constant]) -> InterpretResult<Constant> {
+    Ok(Constant::Str(GcRef::new(format!("{:#?}", &args[0]))))
 }
 
-fn get_os(_args: &[Constant]) -> Constant {
-    Constant::Str(GcRef::new(std::env::consts::OS.to_string()))
+fn get_os(_args: &[Constant]) -> InterpretResult<Constant> {
+    Ok(Constant::Str(GcRef::new(std::env::consts::OS.to_string())))
 }
 
-fn int(args: &[Constant]) -> Constant {
+fn int(args: &[Constant]) -> InterpretResult<Constant> {
     let str = match &args[0] {
         Constant::Sym(symbol) => symbol.to_str(),
         Constant::Str(str) => str.get(),
-        other => err_tuple!("Expected a string or a symbol, found {}", other),
+        other => panic!("Expected a string or a symbol, found {}", other),
     };
 
     match str.parse::<f64>() {
-        Ok(n) => Constant::Num(n),
-        Err(e) => err_tuple!("{:?}", e),
+        Ok(n) => Ok(Constant::Num(n)),
+        Err(e) => panic!("{:?}", e),
     }
 }
 
 pub fn prelude() -> EnvTable {
-    use {self::str::*, ffi::*, io::*, list::*, misc::*};
+    use {self::str::*, list::*, };
 
     let mut prelude = EnvTable::with_capacity(64);
     macro_rules! insert_fn {
@@ -157,16 +132,6 @@ pub fn prelude() -> EnvTable {
     insert_fn!("int", int);
     insert_fn!("split", str_split, 2);
 
-    insert_fn!("fread", read_file);
-    insert_fn!("fwrite", write_file, 2);
-    insert_fn!("remove", remove_file);
-    insert_fn!("creat", create_file);
-    insert_fn!("exists", exists_file);
-    insert_fn!("system", system, 2);
-    insert_fn!("getargs", get_args, 0);
-    insert_fn!("getenv", getenv);
-    insert_fn!("setenv", setenv, 2);
-
     insert_fn!(@vm "map", map, 2);
     insert_fn!(@vm "fold", fold, 3);
     insert_fn!("rev", rev, 1);
@@ -175,17 +140,6 @@ pub fn prelude() -> EnvTable {
     insert_fn!("starts_with", starts_with, 2);
     insert_fn!("ends_with", ends_with, 2);
     insert_fn!("replace", replace, 3);
-
-    insert_fn!("readdir", read_dir);
-    insert_fn!("rmdir", remove_dir);
-    insert_fn!("mkdir", make_dir);
-
-    insert_fn!("panic", yex_panic);
-    insert_fn!("ok", yex_ok);
-    insert_fn!("err", yex_error);
-
-    insert_fn!(@vm "dlopen", dlopen, 4);
-    insert_fn!(@vm "dlclose", dlclose, 2);
 
     insert_fn!("getos", get_os, 0);
     prelude

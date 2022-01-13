@@ -1,24 +1,24 @@
 use crate::{
-    err_tuple,
+    error::InterpretResult,
     gc::GcRef,
     list::List,
     literal::{nil, Constant},
-    VirtualMachine,
+    panic, VirtualMachine,
 };
 
-pub fn rev(args: &[Constant]) -> Constant {
+pub fn rev(args: &[Constant]) -> InterpretResult<Constant> {
     let xs = match &args[0] {
         Constant::List(xs) => xs,
-        other => err_tuple!("rev[0] expected a list, but found `{}`", other),
+        other => return panic!("rev[0] expected a list, but found `{}`", other),
     };
-    Constant::List(GcRef::new(xs.rev()))
+    Ok(Constant::List(GcRef::new(xs.rev())))
 }
 
-pub fn map(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
+pub fn map(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
     let fun = args[0].clone();
     let xs = match &args[1] {
         Constant::List(xs) => xs,
-        other => err_tuple!("map[1] expected a list, but found `{}`", other),
+        other => return panic!("map[1] expected a list, but found `{}`", other),
     };
 
     let xs = xs
@@ -27,21 +27,24 @@ pub fn map(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
             vm.push(it);
             vm.push(fun.clone());
             if let Err(e) = vm.call(1) {
-                err_tuple!("{}", e)
+                panic!("{}", e)?
             }
-            vm.pop()
+            Ok(vm.pop())
         })
-        .collect::<List>();
+        .try_fold(List::new(), |xs, x| match x {
+            Ok(x) => Ok(xs.prepend(x)),
+            Err(e) => Err(e),
+        })?;
 
-    Constant::List(GcRef::new(xs.rev()))
+    Ok(Constant::List(GcRef::new(xs.rev())))
 }
 
-pub fn fold(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
+pub fn fold(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
     let mut acc = args[0].clone();
     let fun = args[1].clone();
     let xs = match &args[2] {
         Constant::List(xs) => xs,
-        other => err_tuple!("fold[2] expected a list, but found `{}`", other),
+        other => panic!("fold[2] expected a list, but found `{}`", other)?,
     };
 
     for it in xs.iter() {
@@ -49,40 +52,40 @@ pub fn fold(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
         vm.push(it);
         vm.push(fun.clone());
         if let Err(e) = vm.call(2) {
-            err_tuple!("{}", e)
+            return panic!("{}", e);
         }
         acc = vm.pop();
     }
 
-    acc
+    Ok(acc)
 }
 
-pub fn head(args: &[Constant]) -> Constant {
+pub fn head(args: &[Constant]) -> InterpretResult<Constant> {
     match &args[0] {
-        Constant::List(xs) => match xs.head() {
+        Constant::List(xs) => Ok(match xs.head() {
             Some(x) => x,
             None => nil(),
-        },
-        other => err_tuple!("head() expected a list, found {}", other),
+        }),
+        other => panic!("head() expected a list, found {}", other),
     }
 }
 
-pub fn tail(args: &[Constant]) -> Constant {
+pub fn tail(args: &[Constant]) -> InterpretResult<Constant> {
     match &args[0] {
-        Constant::List(xs) => Constant::List(GcRef::new(xs.tail())),
-        other => err_tuple!("tail() expected a list, found {}", other),
+        Constant::List(xs) => Ok(Constant::List(GcRef::new(xs.tail()))),
+        other => panic!("tail() expected a list, found {}", other),
     }
 }
 
-pub fn insert(args: &[Constant]) -> Constant {
+pub fn insert(args: &[Constant]) -> InterpretResult<Constant> {
     let key = match &args[0] {
         Constant::Sym(s) => *s,
-        other => err_tuple!("insert()[1] expected a symbol, found {}", other),
+        other => return panic!("insert()[1] expected a symbol, found {}", other),
     };
     let value = args[1].clone();
 
     match &args[2] {
-        Constant::Table(ts) => Constant::Table(GcRef::new(ts.insert(key, value))),
-        other => err_tuple!("insert()[0] expected a table, found {}", other),
+        Constant::Table(ts) => Ok(Constant::Table(GcRef::new(ts.insert(key, value)))),
+        other => panic!("insert()[0] expected a table, found {}", other),
     }
 }

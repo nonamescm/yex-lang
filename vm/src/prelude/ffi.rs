@@ -1,42 +1,37 @@
 mod convs;
-use crate::err_tuple;
-use crate::literal::nil;
-use crate::literal::FFIFunction;
-use crate::literal::FFINoArgFunction;
-use crate::ok_tuple;
-use crate::stackvec;
-use crate::Constant;
-use crate::GcRef;
-use crate::VirtualMachine;
+use crate::{
+    literal::nil, literal::FFIFunction, literal::FFINoArgFunction, panic, stackvec, Constant,
+    GcRef, InterpretResult, VirtualMachine,
+};
 use dlopen::raw::Library;
 
-pub fn dlclose(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
+pub fn dlclose(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
     use Constant::Str;
     vm.dlopen_libs.remove(match &args[0] {
         Str(libname) => libname.get(),
-        other => err_tuple!("dlclose()[0] expected str, found {}", other),
+        other => return panic!("dlclose()[0] expected str, found {}", other),
     });
-    nil()
+    Ok(nil())
 }
-pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
+pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
     use Constant::*;
 
     let libname = match &args[0] {
         Str(libname) => libname.get(),
-        other => err_tuple!("dlopen()[0] expected str, found {}", other),
+        other => return panic!("dlopen()[0] expected str, found {}", other),
     };
 
     let fn_name = match &args[1] {
         Str(fn_name) => fn_name.get(),
-        other => err_tuple!("dlopen()[1] expected str, found {}", other),
+        other => return panic!("dlopen()[1] expected str, found {}", other),
     };
     let number_of_args = match &args[2] {
         Num(number_of_args) => number_of_args,
-        other => err_tuple!("dlopen()[2] expected int, found {}", other),
+        other => return panic!("dlopen()[2] expected int, found {}", other),
     };
     let typeof_fun = match &args[3] {
         Sym(ty) => ty.to_str().to_string(),
-        other => err_tuple!("dlopen()[2] expected sym, found {}", other),
+        other => return panic!("dlopen()[2] expected sym, found {}", other),
     };
 
     let libname = libname.to_string();
@@ -47,7 +42,7 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
                 vm.dlopen_libs.insert(libname.clone(), GcRef::new(val));
                 vm.dlopen_libs.get(&libname).unwrap()
             }
-            Err(err) => err_tuple!("{}", err),
+            Err(err) => return panic!("{}", err),
         },
     };
 
@@ -55,7 +50,7 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
         if *number_of_args == 0.0 {
             let func = match lib.symbol::<FFINoArgFunction>(fn_name) {
                 Ok(func) => func,
-                Err(err) => err_tuple!("{}", err),
+                Err(err) => return panic!("{}", err),
             };
 
             let call = Constant::Fun(GcRef::new(crate::literal::Fun {
@@ -79,11 +74,11 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
                     }
                 })),
             }));
-            return ok_tuple!(call);
+            return Ok(call);
         } else {
             let func = match lib.symbol::<FFIFunction>(fn_name) {
                 Ok(func) => func,
-                Err(err) => err_tuple!("{}", err),
+                Err(err) => return panic!("{}", err),
             };
             let call = Constant::Fun(GcRef::new(crate::literal::Fun {
                 arity: *number_of_args as i64 as usize,
@@ -99,7 +94,7 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
                         for arg in yex_args {
                             c_args.push(match convs::to_c_ptr(arg) {
                                 Ok(a) => a,
-                                Err(err) => err_tuple!("{}", err),
+                                Err(err) => return panic!("{}", err),
                             });
                         }
                         c_args.shrink_to_fit();
@@ -116,7 +111,7 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> Constant {
                     _ => unreachable!(),
                 })),
             }));
-            return ok_tuple!(call);
+            return Ok(call);
         };
     }
 }

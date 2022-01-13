@@ -1,12 +1,12 @@
 use libc::c_void;
 
-use crate::{err_tuple, gc::GcRef, literal::nil, Constant};
+use crate::{panic, gc::GcRef, literal::nil, Constant};
 use std::{
     ffi::{CStr, CString},
     mem,
 };
 
-pub fn c_ptr_to_cont(ptr: *mut c_void, fun_ty: &str) -> Constant {
+pub fn c_ptr_to_cont(ptr: *mut c_void, fun_ty: &str) -> InterpretResult<Constant> {
     match fun_ty {
         "num" => {
             if ptr.is_null() {
@@ -24,11 +24,11 @@ pub fn c_ptr_to_cont(ptr: *mut c_void, fun_ty: &str) -> Constant {
             let c_str = CStr::from_ptr(ptr as *const i8);
             match c_str.to_str() {
                 Ok(s) => Constant::Str(GcRef::new(s.to_string())),
-                Err(err) => err_tuple!("{}", err),
+                Err(err) => panic!("{}", err),
             }
         },
         "void" => nil(),
-        ty => err_tuple!("unknown C Type: {}", ty),
+        ty => panic!("unknown C Type: {}", ty),
     }
 }
 pub unsafe fn to_c_ptr(cont: &Constant) -> Result<*mut u8, String> {
