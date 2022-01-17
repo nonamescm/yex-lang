@@ -453,6 +453,7 @@ impl VirtualMachine {
 
     #[track_caller]
     fn push(&mut self, constant: Constant) {
+        println!("{:?}", constant);
         self.stack.push(constant)
     }
 

@@ -1,6 +1,5 @@
 use std::mem::MaybeUninit;
 
-#[derive(Debug)]
 /// A wrapper around an array armazenated on the stack
 pub struct StackVec<T, const S: usize> {
     len: usize,
@@ -116,11 +115,11 @@ impl<T, const S: usize> StackVec<T, S> {
     }
 }
 
-impl<T: std::fmt::Display, const S: usize> std::fmt::Display for StackVec<T, S> {
+impl<T: std::fmt::Debug, const S: usize> std::fmt::Debug for StackVec<T, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;
         for (index, value) in self.iter().enumerate() {
-            write!(f, "{}", value)?;
+            write!(f, "{:?}", value)?;
             if index < self.len - 1 {
                 write!(f, ", ")?;
             }
