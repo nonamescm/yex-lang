@@ -191,7 +191,6 @@ impl Lexer {
                 }
             }
             '=' => TokenType::Assign,
-            '~' => TokenType::Not,
             '"' if self.peek_at(1) == '"' => {
                 self.next();
                 TokenType::Str(String::new())

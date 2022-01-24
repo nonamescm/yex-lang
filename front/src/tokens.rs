@@ -21,6 +21,7 @@ pub enum TokenType {
     Open,
     And,
     Or,
+    Not,
 
     // logical operators
     Add,
@@ -32,7 +33,6 @@ pub enum TokenType {
     GreaterEq,
     Less,
     LessEq,
-    Not,
     Assign,
     Cons,
     Len,
@@ -86,6 +86,7 @@ impl std::fmt::Display for TokenType {
             Self::Open => "open".into(),
             Self::And => "and".into(),
             Self::Or => "or".into(),
+            Self::Not => "not".into(),
 
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
@@ -96,7 +97,6 @@ impl std::fmt::Display for TokenType {
             Self::GreaterEq => ">=".into(),
             Self::Less => "<".into(),
             Self::LessEq => "<=".into(),
-            Self::Not => '~'.into(),
             Self::Assign => '='.into(),
             Self::Cons => "::".into(),
             Self::Len => '#'.into(),
@@ -139,6 +139,7 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "open" => Some(TokenType::Open),
         "and" => Some(TokenType::And),
         "or" => Some(TokenType::Or),
+        "not" => Some(TokenType::Not),
         _ => None,
     }
 }
