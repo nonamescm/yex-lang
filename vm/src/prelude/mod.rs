@@ -6,7 +6,7 @@ use crate::{
     InterpretResult,
 };
 use std::io::Write;
-// mod ffi;
+mod ffi;
 mod list;
 mod str;
 
@@ -89,7 +89,7 @@ fn int(args: &[Constant]) -> InterpretResult<Constant> {
 }
 
 pub fn prelude() -> EnvTable {
-    use {self::str::*, list::*, };
+    use {self::str::*, list::*, ffi::*};
 
     let mut prelude = EnvTable::with_capacity(64);
     macro_rules! insert_fn {
@@ -142,5 +142,9 @@ pub fn prelude() -> EnvTable {
     insert_fn!("replace", replace, 3);
 
     insert_fn!("getos", get_os, 0);
+
+    insert_fn!(@vm "dlopen", dlopen, 4);
+    insert_fn!(@vm "dlclose", dlclose, 1);
+
     prelude
 }

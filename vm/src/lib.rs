@@ -1,4 +1,6 @@
 #![deny(missing_docs)]
+#![allow(unused_unsafe)]
+#![deny(clippy::all, clippy::restriction)]
 //! Virtual Machine implementation for the yex programming language
 mod either;
 mod env;

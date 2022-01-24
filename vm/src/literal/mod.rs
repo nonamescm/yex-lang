@@ -23,14 +23,6 @@ pub fn nil() -> Constant {
     Constant::Nil
 }
 
-pub fn ok() -> Constant {
-    Constant::Sym(crate::Symbol::new("ok"))
-}
-
-pub fn err() -> Constant {
-    Constant::Sym(crate::Symbol::new("err"))
-}
-
 #[derive(Debug, PartialEq)]
 /// Yex function struct
 pub struct Fun {

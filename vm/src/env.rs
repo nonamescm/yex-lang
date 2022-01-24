@@ -143,18 +143,6 @@ impl EnvTable {
         }
     }
 
-    /// Remove an item from the table
-    pub fn remove(&mut self, key: &Symbol) {
-        unsafe {
-            let (entry, init) = Self::find_entry(self.entries, self.capacity, key);
-            if !init {
-                return;
-            }
-            (*entry).key = None;
-            (*entry).value = nil();
-        }
-    }
-
     /// Returns the table length
     pub fn len(&self) -> usize {
         self.count

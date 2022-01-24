@@ -13,6 +13,7 @@ pub fn dlclose(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Co
     });
     Ok(nil())
 }
+
 pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
     use Constant::*;
 
