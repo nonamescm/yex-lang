@@ -2,7 +2,7 @@ use crate::{
     env::EnvTable,
     gc::GcRef,
     literal::{nil, Constant},
-    panic, stackvec, InterpretResult,
+    panic, stackvec, InterpretResult, Symbol,
 };
 use std::io::Write;
 mod ffi;
@@ -49,21 +49,19 @@ fn str(args: &[Constant]) -> InterpretResult<Constant> {
 }
 
 fn r#type(args: &[Constant]) -> InterpretResult<Constant> {
-    let type_name = GcRef::new(
-        match &args[0] {
-            Constant::List(_) => "list",
-            Constant::Table(_) => "table",
-            Constant::Str(_) => "str",
-            Constant::Num(_) => "num",
-            Constant::Bool(_) => "bool",
-            Constant::Sym(_) => "symbol",
-            Constant::Nil => "nil",
-            Constant::ExternalFunction(_) | Constant::ExternalFunctionNoArg(_) => "extern fn",
-            Constant::Fun { .. } => "fn",
-        }
-        .into(),
-    );
-    Ok(Constant::Str(type_name))
+    let type_name = match &args[0] {
+        Constant::List(_) => "list",
+        Constant::Table(_) => "table",
+        Constant::Str(_) => "str",
+        Constant::Num(_) => "num",
+        Constant::Bool(_) => "bool",
+        Constant::Sym(_) => "symbol",
+        Constant::Nil => "nil",
+        Constant::ExternalFunction(_) | Constant::ExternalFunctionNoArg(_) => "extern fn",
+        Constant::Fun { .. } => "fn",
+    };
+
+    Ok(Constant::Sym(Symbol::new(type_name)))
 }
 
 fn inspect(args: &[Constant]) -> InterpretResult<Constant> {
