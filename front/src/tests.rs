@@ -159,7 +159,7 @@ fn test_compiler() {
     );
 
     assert_eq!(
-        compile("let _ = [1, 2, 3]").unwrap(),
+        compile("def _ = [1, 2, 3]").unwrap(),
         (
             vec![
                 OpCodeMetadata {

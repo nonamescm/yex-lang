@@ -1,9 +1,8 @@
 use crate::{
     env::EnvTable,
     gc::GcRef,
-    literal::{Constant, nil},
-    stackvec,
-    InterpretResult,
+    literal::{nil, Constant},
+    stackvec, InterpretResult,
 };
 use std::io::Write;
 mod ffi;
@@ -89,7 +88,7 @@ fn int(args: &[Constant]) -> InterpretResult<Constant> {
 }
 
 pub fn prelude() -> EnvTable {
-    use {self::str::*, list::*, ffi::*};
+    use {self::str::*, ffi::*, list::*};
 
     let mut prelude = EnvTable::with_capacity(64);
     macro_rules! insert_fn {

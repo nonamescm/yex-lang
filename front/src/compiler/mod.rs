@@ -459,7 +459,6 @@ impl Compiler {
         Ok(())
     }
 
-
     fn and(&mut self) -> ParseResult {
         self.equality()?;
 

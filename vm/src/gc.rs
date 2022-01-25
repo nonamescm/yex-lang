@@ -1,4 +1,4 @@
-use std::{cell::Cell, ptr::NonNull, fmt::Debug};
+use std::{cell::Cell, fmt::Debug, ptr::NonNull};
 
 struct Ref<T> {
     pub(in crate::gc) inner: T,

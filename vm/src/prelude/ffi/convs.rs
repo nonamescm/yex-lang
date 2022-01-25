@@ -1,6 +1,6 @@
 use libc::c_void;
 
-use crate::{panic, gc::GcRef, literal::nil, Constant, InterpretResult};
+use crate::{gc::GcRef, literal::nil, panic, Constant, InterpretResult};
 use std::{
     ffi::{CStr, CString},
     mem,
