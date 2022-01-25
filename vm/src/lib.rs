@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 #![allow(unused_unsafe)]
-#![deny(clippy::all, clippy::restriction)]
+#![deny(clippy::all)]
 //! Virtual Machine implementation for the yex programming language
 mod either;
 mod env;
@@ -24,7 +24,7 @@ use gc::GcRef;
 
 use crate::{
     error::InterpretResult,
-    literal::{nil, FunArgs, FunBody, NOARGS},
+    literal::{nil, FunArgs, FunBody},
 };
 
 pub use crate::{
@@ -130,6 +130,11 @@ impl VirtualMachine {
     /// Pop's the last value on the stack
     pub fn pop_last(&self) -> &Constant {
         self.stack.last().unwrap_or(&Constant::Nil)
+    }
+
+    /// Get the value of a global variable
+    pub fn get_global<T: Into<Symbol>>(&self, name: Symbol) -> Option<Constant> {
+        self.globals.get(&name)
     }
 
     fn get_slot(&mut self) -> usize {
@@ -438,12 +443,10 @@ impl VirtualMachine {
             "stack: {:#?}\ninstruction: {:?}\n",
             self.stack.iter().rev().collect::<Vec<&Constant>>(),
             unsafe {
-                if call_stack.index > call_stack.len {
-                    call_stack.ip.add(1).as_ref()
-                } else if call_stack.index == call_stack.len {
-                    None
-                } else {
-                    call_stack.ip.as_ref()
+                match call_stack.index.cmp(&call_stack.len) {
+                    Ordering::Greater => call_stack.ip.add(1).as_ref(),
+                    Ordering::Equal => None,
+                    Ordering::Less => call_stack.ip.as_ref(),
                 }
             },
         );

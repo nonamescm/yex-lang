@@ -75,7 +75,7 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Con
                     }
                 })),
             }));
-            return Ok(call);
+            Ok(call)
         } else {
             let func = match lib.symbol::<FFIFunction>(fn_name) {
                 Ok(func) => func,
@@ -112,7 +112,7 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Con
                     _ => unreachable!(),
                 })),
             }));
-            return Ok(call);
-        };
+            Ok(call)
+        }
     }
 }

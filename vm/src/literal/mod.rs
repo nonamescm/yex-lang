@@ -7,14 +7,13 @@ use std::{
 pub mod symbol;
 use crate::{
     error::InterpretResult, gc::GcRef, list::List, stack::StackVec, table::Table, Bytecode, Either,
-    VirtualMachine, stackvec,
+    VirtualMachine,
 };
 use symbol::Symbol;
 
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Constant>) -> InterpretResult<Constant>;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
 pub type FunArgs = StackVec<Constant, 8>;
-pub const NOARGS: FunArgs = stackvec![];
 
 pub type FFINoArgFunction = unsafe extern "C" fn() -> *mut c_void;
 pub type FFIFunction = unsafe extern "C" fn(usize, *mut u8) -> *mut c_void;

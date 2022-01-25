@@ -107,12 +107,6 @@ impl<T, const S: usize> StackVec<T, S> {
     pub fn insert_at(&mut self, idx: usize, value: T) {
         self.array[idx].write(value);
     }
-
-    #[track_caller]
-    /// Unsafe indexes in a element of a given index
-    pub unsafe fn get_at(&self, idx: usize) -> &T {
-        self.array[idx].assume_init_ref()
-    }
 }
 
 impl<T: std::fmt::Debug, const S: usize> std::fmt::Debug for StackVec<T, S> {
