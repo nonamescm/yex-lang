@@ -326,7 +326,7 @@ impl Compiler {
                 column,
                 opcode: OpCode::TCall(arity),
             }),
-            _ => unreachable!(),
+            _ => self.throw("Expected call after become")?,
         }
         self.next()?;
         Ok(())
