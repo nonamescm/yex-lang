@@ -236,7 +236,7 @@ impl VirtualMachine {
                 }
 
                 Jmf(offset) => {
-                    if Into::<bool>::into(!self.pop()) {
+                    if !self.pop().to_bool() {
                         unsafe { (*call_frame).jump(offset) };
                         continue;
                     }

@@ -114,6 +114,27 @@ impl Constant {
             None => panic!("Error applying cmp"),
         }
     }
+
+    /// Convert the constant to a boolean
+    pub fn to_bool(&self) -> bool {
+        use Constant::*;
+
+        match self {
+            Bool(true) => true,
+            Bool(false) => false,
+            Sym(_) => true,
+            Str(s) if s.is_empty() => false,
+            Str(_) => true,
+            Num(n) if *n == 0.0 => false,
+            Num(_) => true,
+            Nil => false,
+            List(xs) => !xs.is_empty(),
+            Fun(_) => false,
+            Table(ts) => !ts.is_empty(),
+            ExternalFunction(_) => false,
+            ExternalFunctionNoArg(_) => false,
+        }
+    }
 }
 
 impl Default for Constant {
@@ -139,11 +160,7 @@ macro_rules! panic {
 
 impl From<Constant> for bool {
     fn from(o: Constant) -> Self {
-        match !o {
-            Constant::Bool(true) => false,
-            Constant::Bool(false) => true,
-            _ => unreachable!(),
-        }
+        o.to_bool()
     }
 }
 
@@ -228,19 +245,7 @@ impl Not for Constant {
     type Output = Constant;
 
     fn not(self) -> Self::Output {
-        use Constant::*;
-
-        match self {
-            Bool(true) => Constant::Bool(false),
-            Bool(false) => Constant::Bool(true),
-            Sym(_) => Constant::Bool(false),
-            Str(s) if s.is_empty() => Constant::Bool(true),
-            Str(_) => Constant::Bool(false),
-            Num(n) if n == 0.0 => Constant::Bool(true),
-            Num(_) => Constant::Bool(false),
-            Nil => Constant::Bool(true),
-            _ => unreachable!(),
-        }
+        Self::Bool(!self.to_bool())
     }
 }
 
