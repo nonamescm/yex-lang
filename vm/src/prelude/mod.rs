@@ -2,7 +2,7 @@ use crate::{
     env::EnvTable,
     gc::GcRef,
     literal::{nil, Constant},
-    stackvec, InterpretResult,
+    panic, stackvec, InterpretResult,
 };
 use std::io::Write;
 mod ffi;
@@ -32,12 +32,12 @@ fn input(args: &[Constant]) -> InterpretResult<Constant> {
     };
 
     if std::io::stdout().flush().is_err() {
-        panic!("Error flushing stdout");
+        panic!("Error flushing stdout")?;
     }
 
     let mut input = String::new();
     if std::io::stdin().read_line(&mut input).is_err() {
-        panic!("Error reading line");
+        panic!("Error reading line")?;
     }
 
     input.pop();
@@ -74,11 +74,12 @@ fn get_os(_args: &[Constant]) -> InterpretResult<Constant> {
     Ok(Constant::Str(GcRef::new(std::env::consts::OS.to_string())))
 }
 
-fn int(args: &[Constant]) -> InterpretResult<Constant> {
+fn num(args: &[Constant]) -> InterpretResult<Constant> {
     let str = match &args[0] {
         Constant::Sym(symbol) => symbol.to_str(),
         Constant::Str(str) => str.get(),
-        other => panic!("Expected a string or a symbol, found {}", other),
+        n @ Constant::Num(..) => return Ok(n.clone()),
+        other => panic!("Expected a string or a symbol, found {}", other)?,
     };
 
     match str.parse::<f64>() {
@@ -128,7 +129,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("str", str);
     insert_fn!("type", r#type);
     insert_fn!("inspect", inspect);
-    insert_fn!("int", int);
+    insert_fn!("num", num);
     insert_fn!("split", str_split, 2);
 
     insert_fn!(@vm "map", map, 2);
