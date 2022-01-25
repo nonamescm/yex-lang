@@ -210,8 +210,8 @@ impl Compiler {
 
     fn emit_save(&mut self, name: Symbol) {
         let len = self.variables().len();
-        self.variables().insert(name, len + 1);
-        self.emit(OpCode::Save(len + 1));
+        self.variables().insert(name, len);
+        self.emit(OpCode::Save(len));
     }
 
     fn emit_drop(&mut self, name: Symbol) {

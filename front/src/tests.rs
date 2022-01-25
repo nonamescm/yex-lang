@@ -111,8 +111,8 @@ fn test_compiler() {
     use OpCode::*;
 
     let bytecode =
-        compile("let _ = let oi = (((10))) in oi * 20").expect("Should be a valid syntax");
-    let oi = Symbol::new("oi");
+        compile("def _ = let oi = (((10))) in oi * 20").expect("Should be a valid syntax");
+    let oi = 0;
 
     assert_eq!(
         bytecode,
