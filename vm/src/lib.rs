@@ -124,7 +124,7 @@ impl VirtualMachine {
 
     /// sets the constants for execution
     pub fn set_consts(&mut self, constants: Vec<Constant>) {
-        self.constants = constants.into_iter().collect();
+        self.constants = constants;
     }
 
     /// Pop's the last value on the stack
@@ -380,7 +380,7 @@ impl VirtualMachine {
                     self.run(bytecode)?;
                 }
                 Either::Right(fp) => {
-                    let arr = fargs.into_iter().collect();
+                    let arr = fargs.into_iter().rev().collect();
                     let ret = fp(self, arr)?;
                     self.push(ret)
                 }
