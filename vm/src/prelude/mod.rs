@@ -133,6 +133,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("split", str_split, 2);
 
     insert_fn!(@vm "map", map, 2);
+    insert_fn!(@vm "filter", filter, 2);
     insert_fn!(@vm "fold", fold, 3);
     insert_fn!("rev", rev, 1);
     insert_fn!("insert", insert, 3);

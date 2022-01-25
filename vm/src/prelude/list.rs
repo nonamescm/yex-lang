@@ -15,7 +15,7 @@ pub fn rev(args: &[Constant]) -> InterpretResult<Constant> {
 }
 
 pub fn map(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
-    let fun = args[0].clone();
+    let fun = &args[0];
     let xs = match &args[1] {
         Constant::List(xs) => xs,
         other => return panic!("map[1] expected a list, but found `{}`", other),
@@ -58,6 +58,32 @@ pub fn fold(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Const
     }
 
     Ok(acc)
+}
+
+pub fn filter(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
+    let fun = &args[0];
+    let xs = match &args[1] {
+        Constant::List(xs) => xs,
+        other => panic!("filter[1] expected a list, but found `{}`", other)?,
+    };
+
+    let mut ys = List::new();
+
+    for x in xs.iter() {
+        vm.push(x.clone());
+        vm.push(fun.clone());
+
+        if let Err(e) = vm.call(1) {
+            return panic!("{}", e);
+        }
+
+        let res = vm.pop();
+        if res.to_bool() {
+            ys = ys.prepend(x);
+        }
+    }
+
+    Ok(Constant::List(GcRef::new(ys)))
 }
 
 pub fn head(args: &[Constant]) -> InterpretResult<Constant> {
