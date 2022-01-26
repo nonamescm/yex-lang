@@ -505,7 +505,6 @@ impl Compiler {
         Ok(())
     }
 
-
     fn cmp(&mut self) -> ParseResult {
         self.cons()?;
         while let Tkt::LessEq | Tkt::Less | Tkt::Greater | Tkt::GreaterEq = self.current.token {

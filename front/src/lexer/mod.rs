@@ -21,25 +21,6 @@ impl Lexer {
             idx: 0,
         }
     }
-    // Implemented for tests
-    #[cfg(test)]
-    pub fn lex(tokens: Vec<char>) -> Vec<Tk> {
-        let mut this = Self {
-            line: 1,
-            column: 1,
-            tokens,
-            idx: 0,
-        };
-
-        let mut reslt = Vec::new();
-
-        while this.current() != EOF {
-            reslt.push(this.get());
-            this.next();
-        }
-
-        reslt
-    }
 
     fn throw<A, T: Into<String>>(&self, str: T) -> Result<A, ParseError> {
         ParseError::throw(self.line, self.column, str.into())

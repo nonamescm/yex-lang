@@ -14,9 +14,6 @@ mod prelude;
 mod stack;
 mod table;
 
-#[cfg(test)]
-mod tests;
-
 use std::{cmp::Ordering, mem::MaybeUninit};
 
 use env::EnvTable;

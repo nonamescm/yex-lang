@@ -1,0 +1,85 @@
+def tests =
+	[
+		"hello" == "hello", // string equality
+		not("hello" == "world"),
+
+		[1][0] == 1, // check that indexing on lists works
+		[1][1] == nil,
+
+		head([]) == nil, // check if head works on empty list
+
+		tail([]) == [], // check if tail works on empty list
+
+		{:a = 20}[:a] == 20, // checks that indexing in tables works
+		{:a = 20}[:b] == nil,
+
+		not "", // check that the following are false
+		not nil,
+		not false,
+		not 0,
+
+		13 &&& 17 == 1, // check mathematical operators
+		13 ||| 17 == 29,
+		13 ^^^ 17 == 28,
+		13 <<< 17 == 1703936,
+		13 >>> 17 == 0,
+		13 + 17 == 30,
+		13 - 17 == -4,
+		13 * 17 == 221,
+		13 / 17 == 0.7647058823529411,
+
+		"hello" + "world" == "helloworld", // check string concatenation
+
+		1 :: 2 :: 3 :: [] == [1,2,3], // check if cons is working
+
+		:a == :a, // check for symbol equality
+
+		[1,2,3,4,5,6]
+		|> filter(fn x = x &&& 1)
+		|> map(fn x = x + 1)
+		|> rev
+		|> fold(1, fn x y = x * y) == 48, // checks that pipes work correctly
+
+		insert(:k, 20, {}) == {:k = 20}, // tests the insertion of a new key
+		insert(:k, 20, {:k = 10}) == {:k = 20},
+
+		{:k = 20} == {:k = 20}, // check for correct table comparison
+
+		not(0/0 == 0/0), // NaN checking
+
+		let a = 0 in a + 10 == 10, // let binding
+		let a = 0 in let b = a + 10 in b + 10 == 20,
+
+		#[1,2,3] == 3, // check if the len operator works
+		#"oi" == 2,
+
+		(fn x = x + 1)(1) == 2, // check if function application works
+
+		(if true then 1 else 2) == 1, // check if if works
+		(if false then 1 else 2) == 2,
+		(if false then 1 else if true then 2 else 3) == 2,
+
+		let f self n =
+			if n == 1
+			then n
+			else become self(self, n - 1)
+		in f(f, 5) == 1, // check tail recursion
+	]
+
+def assert xs =
+	if xs[1] then
+		nil
+	else
+		puts("assertion failed at test " + str(xs[0]))
+		>> exit(1)
+
+def enumerate =
+	let impl self idx acc xs =
+		if xs == [] then rev(acc)
+		else become self(self, idx + 1, [idx, head(xs)] :: acc, tail(xs))
+	in impl(impl, 0, [])
+
+def _ =
+	tests
+	|> enumerate
+	|> map(fn xs = assert(xs))

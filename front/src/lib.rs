@@ -3,7 +3,6 @@
 mod compiler;
 mod error;
 mod lexer;
-mod tests;
 mod tokens;
 
 pub use error::ParseError;
