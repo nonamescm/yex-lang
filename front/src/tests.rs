@@ -158,6 +158,7 @@ fn test_compiler() {
         )
     );
 
+    println!("{:?}", compile("def _ = [1, 2, 3]").unwrap());
     assert_eq!(
         compile("def _ = [1, 2, 3]").unwrap(),
         (
@@ -169,13 +170,8 @@ fn test_compiler() {
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 16,
-                    opcode: Push(3)
-                },
-                OpCodeMetadata {
-                    line: 1,
-                    column: 17,
-                    opcode: Prep
+                    column: 10,
+                    opcode: Push(1)
                 },
                 OpCodeMetadata {
                     line: 1,
@@ -184,17 +180,37 @@ fn test_compiler() {
                 },
                 OpCodeMetadata {
                     line: 1,
+                    column: 16,
+                    opcode: Push(3)
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 11,
+                    opcode: Rev,
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 11,
+                    opcode: Prep
+                },
+                OpCodeMetadata {
+                    line: 1,
+                    column: 14,
+                    opcode: Rev,
+                },
+                OpCodeMetadata {
+                    line: 1,
                     column: 14,
                     opcode: Prep
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 10,
-                    opcode: Push(1)
+                    column: 17,
+                    opcode: Rev,
                 },
                 OpCodeMetadata {
                     line: 1,
-                    column: 11,
+                    column: 17,
                     opcode: Prep
                 },
                 OpCodeMetadata {
@@ -204,10 +220,10 @@ fn test_compiler() {
                 }
             ],
             vec![
-                Constant::List(GcRef::new(List::new())),
                 Constant::Num(1.0),
                 Constant::Num(2.0),
-                Constant::Num(3.0)
+                Constant::Num(3.0),
+                Constant::List(GcRef::new(List::new())),
             ]
         )
     )

@@ -83,7 +83,7 @@ pub fn filter(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Con
         }
     }
 
-    Ok(Constant::List(GcRef::new(ys)))
+    Ok(Constant::List(GcRef::new(ys.rev())))
 }
 
 pub fn head(args: &[Constant]) -> InterpretResult<Constant> {

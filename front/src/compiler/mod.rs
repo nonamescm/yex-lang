@@ -616,6 +616,7 @@ impl Compiler {
 
         while self.current.token != Tkt::Rparen {
             self.expression()?;
+            self.emit(OpCode::Rev);
             *arity += 1;
             match &self.current.token {
                 Tkt::Rparen => break,
@@ -650,31 +651,10 @@ impl Compiler {
     }
 
     fn call(&mut self) -> ParseResult {
-        let comp = self.compiled_opcodes();
         self.primary()?; // compiles the called expresion
 
-        let mut callee = vec![];
         let mut arity = 0;
         let mut is_call = false;
-
-        if matches!(
-            self.lexer.peek().unwrap().as_ref().map(|c| &c.token),
-            Ok(Tkt::Lparen)
-        ) {
-            callee = {
-                let mut old_comp = self.compiled_opcodes() - comp;
-                let mut proxy = self.proxies.pop().unwrap();
-                let mut new = vec![];
-
-                while old_comp > 0 {
-                    new.insert(0, proxy.opcodes.pop().unwrap());
-                    old_comp -= 1;
-                }
-
-                self.proxies.push(proxy);
-                new
-            };
-        }
 
         while matches!(
             self.lexer.peek().unwrap().as_ref().map(|c| &c.token),
@@ -683,7 +663,6 @@ impl Compiler {
             self.call_args(&mut arity)?;
             is_call = true;
         }
-        callee.iter().for_each(|it| self.emit(it.opcode));
 
         if is_call {
             self.emit(OpCode::Call(arity));
@@ -693,8 +672,7 @@ impl Compiler {
     }
 
     fn list(&mut self) -> ParseResult {
-        let mut ret_vec = vec![];
-        self.emit_const_push(Constant::List(GcRef::new(List::new())));
+        let mut len = 0;
         loop {
             if matches!(self.current.token, Tkt::Rbrack) {
                 break;
@@ -704,10 +682,8 @@ impl Compiler {
                 break;
             }
 
-            self.new_proxy();
             self.expression()?; // compiles the argument
-            self.emit(OpCode::Prep);
-            ret_vec.push(self.proxies.pop().unwrap());
+            len += 1;
 
             if !matches!(&self.current.token, Tkt::Colon | Tkt::Rbrack) {
                 self.throw(format!(
@@ -717,12 +693,13 @@ impl Compiler {
             }
         }
 
-        ret_vec
-            .iter()
-            .rev()
-            .map(|it| &it.opcodes)
-            .flatten()
-            .for_each(|it| self.emit_metadata(*it));
+        self.emit_const_push(Constant::List(GcRef::new(List::new())));
+
+        while len > 0 {
+            self.emit(OpCode::Rev);
+            self.emit(OpCode::Prep);
+            len -= 1;
+        }
 
         Ok(())
     }

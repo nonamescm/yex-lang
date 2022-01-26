@@ -181,7 +181,7 @@ pub enum OpCode {
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,
 /// make it possible to be used for error handling
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Eq)]
 pub struct OpCodeMetadata {
     /// Source's code line
     pub line: usize,
@@ -194,5 +194,11 @@ pub struct OpCodeMetadata {
 impl std::fmt::Debug for OpCodeMetadata {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.opcode)
+    }
+}
+
+impl std::cmp::PartialEq for OpCodeMetadata {
+    fn eq(&self, other: &Self) -> bool {
+        self.opcode == other.opcode
     }
 }
