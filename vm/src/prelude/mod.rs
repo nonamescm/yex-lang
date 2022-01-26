@@ -85,6 +85,15 @@ fn num(args: &[Constant]) -> InterpretResult<Constant> {
     }
 }
 
+fn exit(args: &[Constant]) -> InterpretResult<Constant> {
+    let code = match &args[0] {
+        Constant::Num(n) if n.fract() == 0.0 => *n as i32,
+        other => panic!("Expected a valid int number, found {}", other)?,
+    };
+
+    std::process::exit(code);
+}
+
 pub fn prelude() -> EnvTable {
     use {ffi::*, list::*};
 
@@ -127,6 +136,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("type", r#type);
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
+    insert_fn!("exit", exit);
 
     insert_fn!(@vm "map", map, 2);
     insert_fn!(@vm "filter", filter, 2);
