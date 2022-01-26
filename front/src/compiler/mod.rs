@@ -263,6 +263,7 @@ impl Compiler {
                 Tkt::Let => self.let_(),
                 Tkt::Fn => self.fn_(),
                 Tkt::Become => self.become_(),
+                Tkt::Loop => self.loop_(),
                 _ => self.pipe(),
             }?;
 
@@ -272,6 +273,16 @@ impl Compiler {
             self.emit(OpCode::Pop);
             self.next()?;
         }
+
+        Ok(())
+    }
+
+    fn loop_(&mut self) -> ParseResult {
+        self.next()?;
+        let offset = self.compiled_opcodes();
+        self.expression()?;
+        self.emit(OpCode::Pop);
+        self.emit(OpCode::Jmp(offset));
 
         Ok(())
     }
