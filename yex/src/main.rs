@@ -2,7 +2,6 @@ use front::compile;
 
 use std::{env::args, fs::read_to_string, process::exit};
 use vm::VirtualMachine;
-#[cfg(feature = "repl")]
 use {front::compile_expr, rustyline::Editor};
 
 fn eval_file(file: &str) -> Result<i32, front::ParseError> {
@@ -31,7 +30,6 @@ fn eval_file(file: &str) -> Result<i32, front::ParseError> {
     Ok(0)
 }
 
-#[cfg(feature = "repl")]
 fn start(args: Vec<String>) -> i32 {
     let mut vm = VirtualMachine::default();
     let mut repl = Editor::<()>::new();
@@ -84,28 +82,7 @@ fn start(args: Vec<String>) -> i32 {
     }
 }
 
-#[cfg(feature = "repl")]
 fn main() {
     let args = args().collect();
     exit(start(args));
-}
-
-#[cfg(not(feature = "repl"))]
-fn main() {
-    let args = args().collect::<Vec<_>>();
-    let file = match args.get(1) {
-        Some(file) => eval_file(file),
-        None => {
-            eprintln!("Error: expected file name");
-            exit(1);
-        }
-    };
-
-    match file {
-        Ok(n) => exit(n),
-        Err(e) => {
-            eprintln!("{}", e);
-            exit(1)
-        }
-    }
 }
