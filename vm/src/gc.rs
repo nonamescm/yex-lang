@@ -45,10 +45,6 @@ impl<T> GcRef<T> {
     fn ref_count(&self) -> usize {
         unsafe { self.inner.as_ref().count.get() }
     }
-
-    pub fn get(&self) -> &T {
-        unsafe { &self.inner.as_ref().inner }
-    }
 }
 
 impl<T> Clone for GcRef<T> {
@@ -83,7 +79,7 @@ impl<T> Drop for GcRef<T> {
 
 impl<T: PartialEq> PartialEq for GcRef<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.get() == other.get()
+        **self == **other
     }
 }
 
@@ -91,6 +87,6 @@ impl<T: Eq> Eq for GcRef<T> {}
 
 impl<T: Debug> Debug for GcRef<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:#?}", self.get())
+        write!(f, "{:#?}", **self)
     }
 }

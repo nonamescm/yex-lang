@@ -174,8 +174,8 @@ impl std::fmt::Display for Constant {
             ExternalFunction(_) => "<extern fun<?>>".to_string(),
             ExternalFunctionNoArg(_) => "<extern fun<0>".to_string(),
             Nil => "nil".to_string(),
-            List(xs) => format!("{}", xs.get()),
-            Table(ts) => format!("{}", ts.get()),
+            List(xs) => format!("{}", **xs),
+            Table(ts) => format!("{}", **ts),
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
@@ -191,7 +191,7 @@ impl Add for Constant {
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x + y)),
-            (Self::Str(x), Self::Str(y)) => Ok(Self::Str(GcRef::new(x.get().to_string() + &y))),
+            (Self::Str(x), Self::Str(y)) => Ok(Self::Str(GcRef::new(x.to_string() + &y))),
             (s, r) => panic!("Can't apply `+` operator between {} and {}", s, r),
         }
     }

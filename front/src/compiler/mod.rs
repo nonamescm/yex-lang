@@ -146,7 +146,7 @@ impl Compiler {
                     let body = patch_bytecode(
                         len,
                         bt_len,
-                        match f.body.get() {
+                        match &*f.body {
                             Either::Left(body) => body,
                             _ => unreachable!(),
                         },

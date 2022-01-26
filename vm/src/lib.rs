@@ -341,7 +341,7 @@ impl VirtualMachine {
         Ok(Constant::Nil)
     }
 
-    fn call_helper(&mut self, carity: usize) -> InterpretResult<(*const FunBody, usize, FunArgs)> {
+    fn call_helper(&mut self, carity: usize) -> InterpretResult<(FunBody, usize, FunArgs)> {
         let fun = self.pop();
         let fun = match fun {
             Constant::Fun(f) => f,
@@ -358,7 +358,7 @@ impl VirtualMachine {
             for elem in fun.args.iter() {
                 fargs.push(elem.clone())
             }
-            (fun.arity, &fun.body)
+            (fun.arity, fun.body.clone())
         };
 
         Ok((body, farity, fargs))
@@ -376,10 +376,10 @@ impl VirtualMachine {
             }
             Ordering::Less => self.push(Constant::Fun(GcRef::new(literal::Fun {
                 arity: farity - carity,
-                body: unsafe { (*body).clone() },
+                body: body.clone(),
                 args: fargs,
             }))),
-            Ordering::Equal => match unsafe { (*body).get() } {
+            Ordering::Equal => match &*body {
                 Either::Left(bytecode) => {
                     fargs.into_iter().for_each(|it| self.push(it));
                     self.run(bytecode)?;
@@ -407,7 +407,7 @@ impl VirtualMachine {
             Ordering::Equal => {
                 fargs.into_iter().for_each(|it| self.push(it));
 
-                match unsafe { &*body }.get() {
+                match &*body {
                     Either::Left(bytecode) if bytecode == self.bytecode() => {
                         self.call_frame().jump(0);
                     }
@@ -426,7 +426,7 @@ impl VirtualMachine {
             },
 
             Constant::Sym(key) => match &self.pop() {
-                Constant::Table(ts) => self.push(ts.get().get(&key).unwrap_or_else(nil)),
+                Constant::Table(ts) => self.push(ts.get(&key).unwrap_or_else(nil)),
                 other => panic!("Expected a table to index, found a `{}`", other)?,
             },
 

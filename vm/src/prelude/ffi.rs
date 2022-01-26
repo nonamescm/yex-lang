@@ -8,7 +8,7 @@ use dlopen::raw::Library;
 pub fn dlclose(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
     use Constant::Str;
     vm.dlopen_libs.remove(match &args[0] {
-        Str(libname) => libname.get(),
+        Str(libname) => &**libname,
         other => return panic!("dlclose()[0] expected str, found {}", other),
     });
     Ok(nil())
@@ -18,12 +18,12 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Con
     use Constant::*;
 
     let libname = match &args[0] {
-        Str(libname) => libname.get(),
+        Str(libname) => &*libname,
         other => return panic!("dlopen()[0] expected str, found {}", other),
     };
 
     let fn_name = match &args[1] {
-        Str(fn_name) => fn_name.get(),
+        Str(fn_name) => &*fn_name,
         other => return panic!("dlopen()[1] expected str, found {}", other),
     };
     let number_of_args = match &args[2] {

@@ -7,11 +7,10 @@ use crate::{
 use std::io::Write;
 mod ffi;
 mod list;
-mod str;
 
 fn puts(args: &[Constant]) -> InterpretResult<Constant> {
     match &args[0] {
-        Constant::Str(s) => println!("{}", s.get()),
+        Constant::Str(s) => println!("{}", &**s),
         other => println!("{}", other),
     };
     Ok(nil())
@@ -19,7 +18,7 @@ fn puts(args: &[Constant]) -> InterpretResult<Constant> {
 
 fn print(args: &[Constant]) -> InterpretResult<Constant> {
     match &args[0] {
-        Constant::Str(s) => print!("{}", s.get()),
+        Constant::Str(s) => print!("{}", &**s),
         other => print!("{}", other),
     };
     Ok(nil())
@@ -27,7 +26,7 @@ fn print(args: &[Constant]) -> InterpretResult<Constant> {
 
 fn input(args: &[Constant]) -> InterpretResult<Constant> {
     match &args[0] {
-        Constant::Str(s) => print!("{}", s.get()),
+        Constant::Str(s) => print!("{}", **s),
         other => print!("{}", other),
     };
 
@@ -75,7 +74,7 @@ fn get_os(_args: &[Constant]) -> InterpretResult<Constant> {
 fn num(args: &[Constant]) -> InterpretResult<Constant> {
     let str = match &args[0] {
         Constant::Sym(symbol) => symbol.to_str(),
-        Constant::Str(str) => str.get(),
+        Constant::Str(str) => &*str,
         n @ Constant::Num(..) => return Ok(n.clone()),
         other => panic!("Expected a string or a symbol, found {}", other)?,
     };
@@ -87,7 +86,7 @@ fn num(args: &[Constant]) -> InterpretResult<Constant> {
 }
 
 pub fn prelude() -> EnvTable {
-    use {self::str::*, ffi::*, list::*};
+    use {ffi::*, list::*};
 
     let mut prelude = EnvTable::with_capacity(64);
     macro_rules! insert_fn {
@@ -128,17 +127,12 @@ pub fn prelude() -> EnvTable {
     insert_fn!("type", r#type);
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
-    insert_fn!("split", str_split, 2);
 
     insert_fn!(@vm "map", map, 2);
     insert_fn!(@vm "filter", filter, 2);
     insert_fn!(@vm "fold", fold, 3);
     insert_fn!("rev", rev, 1);
     insert_fn!("insert", insert, 3);
-
-    insert_fn!("starts_with", starts_with, 2);
-    insert_fn!("ends_with", ends_with, 2);
-    insert_fn!("replace", replace, 3);
 
     insert_fn!("getos", get_os, 0);
 

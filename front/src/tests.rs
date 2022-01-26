@@ -158,7 +158,6 @@ fn test_compiler() {
         )
     );
 
-    println!("{:?}", compile("def _ = [1, 2, 3]").unwrap());
     assert_eq!(
         compile("def _ = [1, 2, 3]").unwrap(),
         (

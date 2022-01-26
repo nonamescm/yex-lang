@@ -37,7 +37,7 @@ impl List {
 
     /// Returns the list tail
     pub fn tail(&self) -> Self {
-        let tail = self.head.as_ref().map(|node| node.get().next.clone());
+        let tail = self.head.as_ref().map(|node| node.next.clone());
         let tail = match tail {
             Some(v) => v,
             None => None,
@@ -48,7 +48,7 @@ impl List {
 
     /// Returns the current element
     pub fn head(&self) -> Option<Constant> {
-        self.head.as_ref().map(|node| node.get().elem.clone())
+        self.head.as_ref().map(|node| node.elem.clone())
     }
 
     /// Returns a index into the list
@@ -70,7 +70,7 @@ impl List {
         let mut xs = self.head.as_ref();
         let mut count = 0;
         while xs != None {
-            xs = xs.unwrap().get().next.as_ref();
+            xs = xs.unwrap().next.as_ref();
             count += 1;
         }
         count
@@ -99,8 +99,8 @@ impl List {
         let mut node = self.head.as_ref();
         let mut list = Self::new();
         while let Some(elem) = node {
-            list = list.prepend(elem.get().elem.clone());
-            node = elem.get().next.as_ref()
+            list = list.prepend(elem.elem.clone());
+            node = elem.next.as_ref()
         }
         list
     }
@@ -128,8 +128,8 @@ impl Iterator for Iter {
     type Item = Constant;
     fn next(&mut self) -> Option<Self::Item> {
         self.next.clone().map(|node| {
-            self.next = node.get().next.clone();
-            node.get().elem.clone()
+            self.next = node.next.clone();
+            node.elem.clone()
         })
     }
 }
