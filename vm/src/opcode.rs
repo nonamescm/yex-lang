@@ -57,16 +57,6 @@ pub enum OpCode {
     /// The stack layout after running it: []
     Jmp(usize),
 
-    /// Creates a new scope
-    /// The stack layout before running this opcode: []
-    /// The stack layout after running it: []
-    Nsc,
-
-    /// Ends a scope
-    /// The stack layout before running this opcode: []
-    /// The stack layout after running it: []
-    Esc,
-
     /// Calls the value on the top of the stack, pushing the return value
     /// The stack layout before running this opcode: [fun, ...args]
     /// The stack layout after running it: [return-value]
@@ -161,18 +151,12 @@ pub enum OpCode {
     /// The stack layout before running this opcode: [const1, const2]
     /// The stack layout after running it: [result]
     Eq,
-    /// Check if the first value on the top of the stack is greater than the second
-    /// The stack layout before running this opcode: [const1, const2]
-    /// The stack layout after running it: [result]
-    Greater,
-    /// Check if the first value on the top of the stack is greater or equal than the second
-    /// The stack layout before running this opcode: [const1, const2]
-    /// The stack layout after running it: [result]
-    GreaterEq,
+
     /// Check if the first value on the top of the stack is less than the second
     /// The stack layout before running this opcode: [const1, const2]
     /// The stack layout after running it: [result]
     Less,
+
     /// Check if the first value on the top of the stack is less or equal than the second
     /// The stack layout before running this opcode: [const1, const2]
     /// The stack layout after running it: [result]

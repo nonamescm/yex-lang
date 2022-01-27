@@ -243,8 +243,6 @@ impl VirtualMachine {
                     continue;
                 }
 
-                Nsc | Esc => {}
-
                 Call(carity) => self.call(carity)?,
                 TCall(carity) => self.tcall(carity)?,
 
@@ -294,19 +292,6 @@ impl VirtualMachine {
                     let left = self.pop();
                     self.push(Constant::Bool(left == right))
                 }
-                Greater => {
-                    let right = self.pop();
-                    let left = self.pop();
-
-                    self.push(Constant::Bool(left.ord_cmp(&right)?.is_gt()))
-                }
-                GreaterEq => {
-                    let right = self.pop();
-                    let left = self.pop();
-
-                    self.push(Constant::Bool(left.ord_cmp(&right)?.is_ge()))
-                }
-
                 Less => {
                     let right = self.pop();
                     let left = self.pop();

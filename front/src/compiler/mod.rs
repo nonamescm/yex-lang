@@ -181,6 +181,12 @@ impl Compiler {
         self.emit_metadata(op)
     }
 
+    fn emit_all(&mut self, ops: &[OpCode]) {
+        for op in ops {
+            self.emit(*op);
+        }
+    }
+
     fn emit_metadata(&mut self, op: OpCodeMetadata) {
         let proxy = self.proxies.last_mut().unwrap();
         proxy.opcodes.push(op);
@@ -372,8 +378,6 @@ impl Compiler {
     fn condition(&mut self) -> ParseResult {
         assert_eq!(self.current.token, Tkt::If); // security check
 
-        self.emit(OpCode::Nsc); // creates a new scope
-
         let mut patch_stack = vec![];
 
         while matches!(self.current.token, Tkt::If) {
@@ -396,8 +400,6 @@ impl Compiler {
         patch_stack
             .into_iter()
             .for_each(|it| self.emit_patch(jmp, it));
-
-        self.emit(OpCode::Esc); // End the new scope
 
         Ok(())
     }
@@ -480,14 +482,15 @@ impl Compiler {
     fn equality(&mut self) -> ParseResult {
         self.pipe()?;
 
-        while let Tkt::Eq = self.current.token {
-            let operator = match self.current.token {
-                Tkt::Eq => OpCode::Eq,
+        while let Tkt::Eq | Tkt::Ne = self.current.token {
+            let operator: &[OpCode] = match self.current.token {
+                Tkt::Eq => &[OpCode::Eq],
+                Tkt::Ne => &[OpCode::Eq, OpCode::Not],
                 _ => unreachable!(),
             };
             self.next()?;
             self.pipe()?;
-            self.emit(operator);
+            self.emit_all(operator);
         }
 
         Ok(())
@@ -508,16 +511,16 @@ impl Compiler {
     fn cmp(&mut self) -> ParseResult {
         self.cons()?;
         while let Tkt::LessEq | Tkt::Less | Tkt::Greater | Tkt::GreaterEq = self.current.token {
-            let operator = match self.current.token {
-                Tkt::LessEq => OpCode::LessEq,
-                Tkt::Greater => OpCode::Greater,
-                Tkt::Less => OpCode::Less,
-                Tkt::GreaterEq => OpCode::GreaterEq,
+            let operator: &[OpCode] = match self.current.token {
+                Tkt::LessEq => &[OpCode::LessEq],
+                Tkt::Less => &[OpCode::Less],
+                Tkt::GreaterEq => &[OpCode::LessEq, OpCode::Not],
+                Tkt::Greater => &[OpCode::Less, OpCode::Not],
                 _ => unreachable!(),
             };
             self.next()?;
             self.cons()?;
-            self.emit(operator);
+            self.emit_all(operator);
         }
         Ok(())
     }

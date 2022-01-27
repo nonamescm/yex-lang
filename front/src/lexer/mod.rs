@@ -144,6 +144,10 @@ impl Lexer {
                 self.next();
                 TokenType::Eq
             }
+            '!' if self.peek_at(1) == '=' => {
+                self.next();
+                TokenType::Ne
+            }
 
             '|' if self.peek_at(1) == '>' => {
                 self.next();
