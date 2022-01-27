@@ -270,7 +270,7 @@ impl Compiler {
                 Tkt::Fn => self.fn_(),
                 Tkt::Become => self.become_(),
                 Tkt::Loop => self.loop_(),
-                _ => self.or(),
+                _ => self.pipe(),
             }?;
 
             if self.current.token != Tkt::Seq {
@@ -440,6 +440,18 @@ impl Compiler {
         Ok(())
     }
 
+    fn pipe(&mut self) -> ParseResult {
+        self.or()?;
+
+        while let Tkt::Pipe = self.current.token {
+            self.next()?;
+            self.or()?;
+            self.emit(OpCode::Call(1))
+        }
+
+        Ok(())
+    }
+
     fn or(&mut self) -> ParseResult {
         self.and()?;
 
@@ -480,7 +492,7 @@ impl Compiler {
     }
 
     fn equality(&mut self) -> ParseResult {
-        self.pipe()?;
+        self.cmp()?;
 
         while let Tkt::Eq | Tkt::Ne = self.current.token {
             let operator: &[OpCode] = match self.current.token {
@@ -489,20 +501,8 @@ impl Compiler {
                 _ => unreachable!(),
             };
             self.next()?;
-            self.pipe()?;
-            self.emit_all(operator);
-        }
-
-        Ok(())
-    }
-
-    fn pipe(&mut self) -> ParseResult {
-        self.cmp()?;
-
-        while let Tkt::Pipe = self.current.token {
-            self.next()?;
             self.cmp()?;
-            self.emit(OpCode::Call(1))
+            self.emit_all(operator);
         }
 
         Ok(())

@@ -38,7 +38,8 @@ def tests =
 		|> filter(fn x = x &&& 1)
 		|> map(fn x = x + 1)
 		|> rev
-		|> fold(1, fn x y = x * y) == 48, // checks that pipes work correctly
+		|> fold(1, fn x y = x * y)
+		|> (fn x = x == 48), // checks that pipes work correctly
 
 		insert(:k, 20, {}) == {:k = 20}, // tests the insertion of a new key
 		insert(:k, 20, {:k = 10}) == {:k = 20},
