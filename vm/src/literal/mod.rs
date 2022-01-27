@@ -2,7 +2,7 @@ use std::{
     cmp::Ordering,
     ffi::c_void,
     mem,
-    ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Shl, Shr, Sub},
+    ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub},
 };
 pub mod symbol;
 use crate::{
@@ -310,6 +310,19 @@ impl Shl for Constant {
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
             (x, y) => panic!("Can't apply bitwise `<<` between {} and {}", x, y),
+        }
+    }
+}
+
+impl Rem for Constant {
+    type Output = ConstantErr;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        use Constant::*;
+
+        match (self, rhs) {
+            (Num(x), Num(y)) => Ok(Num(x % y)),
+            (x, y) => panic!("Can't apply `%` between {} and {}", x, y),
         }
     }
 }

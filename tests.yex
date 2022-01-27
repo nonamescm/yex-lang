@@ -65,6 +65,8 @@ def tests =
 			then n
 			else become self(self, n - 1)
 		in f(f, 5) == 1, // check tail recursion
+
+		40 % 3 == 1, // check modulo
 	]
 
 def assert xs =

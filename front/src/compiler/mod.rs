@@ -560,7 +560,7 @@ impl Compiler {
     }
 
     fn term(&mut self) -> ParseResult {
-        self.fact()?; // expands to a unary rule
+        self.rem()?; // expands to a unary rule
 
         while let Tkt::Add | Tkt::Sub = self.current.token {
             let operator = match self.current.token {
@@ -569,8 +569,20 @@ impl Compiler {
                 _ => unreachable!(),
             };
             self.next()?;
-            self.fact()?;
+            self.rem()?;
             self.emit(operator);
+        }
+
+        Ok(())
+    }
+
+    fn rem(&mut self) -> ParseResult {
+        self.fact()?;
+
+        while let Tkt::Rem = self.current.token {
+            self.next()?;
+            self.fact()?;
+            self.emit(OpCode::Rem);
         }
 
         Ok(())

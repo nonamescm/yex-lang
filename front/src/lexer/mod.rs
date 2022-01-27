@@ -140,6 +140,7 @@ impl Lexer {
             '-' => TokenType::Sub,
             '/' => TokenType::Div,
             '*' => TokenType::Mul,
+            '%' => TokenType::Rem,
             '=' if self.peek_at(1) == '=' => {
                 self.next();
                 TokenType::Eq

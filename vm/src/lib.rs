@@ -278,6 +278,7 @@ impl VirtualMachine {
                 }
 
                 Add => binop!(+),
+                Rem => binop!(%),
                 Sub => binop!(-),
                 Mul => binop!(*),
                 Div => binop!(/),

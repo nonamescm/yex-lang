@@ -92,6 +92,11 @@ pub enum OpCode {
     /// The stack layout after running it: [result]
     Add,
 
+    /// Gets the remainder of the division of the two values on the stack top
+    /// The stack layout before running this opcode: [const1, const2]
+    /// The stack layout after running it: [result]
+    Rem,
+
     /// Subtract the two values on the stack top
     /// The stack layout before running this opcode: [const1, const2]
     /// The stack layout after running it: [result]
