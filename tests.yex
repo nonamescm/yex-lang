@@ -1,7 +1,7 @@
 def tests =
 	[
 		"hello" == "hello", // string equality
-		not("hello" == "world"),
+		"hello" != "world",
 
 		[1][0] == 1, // check that indexing on lists works
 		[1][1] == nil,
@@ -45,7 +45,7 @@ def tests =
 
 		{:k = 20} == {:k = 20}, // check for correct table comparison
 
-		not(0/0 == 0/0), // NaN checking
+		0/0 != 0/0, // NaN checking
 
 		let a = 0 in a + 10 == 10, // let binding
 		let a = 0 in let b = a + 10 in b + 10 == 20,
