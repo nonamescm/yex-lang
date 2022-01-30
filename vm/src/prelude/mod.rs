@@ -128,6 +128,12 @@ pub fn prelude() -> EnvTable {
         };
     }
 
+    macro_rules! insert_vm_fn {
+        ($($tt:tt)*) => {
+            insert_fn!(@vm $($tt)*)
+        }
+    }
+
     insert_fn!("puts", puts);
     insert_fn!("print", print);
     insert_fn!("input", input);
@@ -139,9 +145,9 @@ pub fn prelude() -> EnvTable {
     insert_fn!("num", num);
     insert_fn!("exit", exit);
 
-    insert_fn!(@vm "map", map, 2);
-    insert_fn!(@vm "filter", filter, 2);
-    insert_fn!(@vm "fold", fold, 3);
+    insert_vm_fn!("map", map, 2);
+    insert_vm_fn!("filter", filter, 2);
+    insert_vm_fn!("fold", fold, 3);
     insert_fn!("rev", rev, 1);
     insert_fn!("nth", nth, 2);
 
@@ -150,8 +156,8 @@ pub fn prelude() -> EnvTable {
 
     insert_fn!("getos", get_os, 0);
 
-    insert_fn!(@vm "dlopen", dlopen, 4);
-    insert_fn!(@vm "dlclose", dlclose, 1);
+    insert_vm_fn!("dlopen", dlopen, 4);
+    insert_vm_fn!("dlclose", dlclose, 1);
 
     prelude
 }
