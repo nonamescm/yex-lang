@@ -241,7 +241,7 @@ impl Compiler {
 
     fn peek(&mut self) -> Result<&Token, ParseError> {
         match self.lexer.peek().unwrap() {
-            Ok(tk) => Ok(&tk),
+            Ok(tk) => Ok(tk),
             Err(e) => Err(*e),
         }
     }
