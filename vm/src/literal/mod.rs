@@ -129,10 +129,10 @@ impl Constant {
             Num(_) => true,
             Nil => false,
             List(xs) => !xs.is_empty(),
-            Fun(_) => false,
+            Fun(_) => true,
             Table(ts) => !ts.is_empty(),
-            ExternalFunction(_) => false,
-            ExternalFunctionNoArg(_) => false,
+            ExternalFunction(_) => true,
+            ExternalFunctionNoArg(_) => true,
         }
     }
 }
