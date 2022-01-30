@@ -195,7 +195,12 @@ impl Lexer {
                 }
             }
             c if c.is_alphabetic() || c == '_' => {
-                let tk = self.take_while(|c| c.is_alphanumeric() || c == '_')?;
+                let mut tk = self.take_while(|c| c.is_alphanumeric() || c == '_')?;
+                while self.peek_at(1) == '\'' {
+                    self.next();
+                    tk.push('\'');
+                }
+
                 if let Some(tk) = fetch_keyword(&tk) {
                     tk
                 } else {
