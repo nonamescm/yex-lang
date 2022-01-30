@@ -7,6 +7,7 @@ use crate::{
 use std::io::Write;
 mod ffi;
 mod list;
+mod table;
 
 fn puts(args: &[Constant]) -> InterpretResult<Constant> {
     match &args[0] {
@@ -95,7 +96,7 @@ fn exit(args: &[Constant]) -> InterpretResult<Constant> {
 }
 
 pub fn prelude() -> EnvTable {
-    use {ffi::*, list::*};
+    use {ffi::*, list::*, table::*};
 
     let mut prelude = EnvTable::with_capacity(64);
     macro_rules! insert_fn {
@@ -142,7 +143,10 @@ pub fn prelude() -> EnvTable {
     insert_fn!(@vm "filter", filter, 2);
     insert_fn!(@vm "fold", fold, 3);
     insert_fn!("rev", rev, 1);
+    insert_fn!("nth", nth, 2);
+
     insert_fn!("insert", insert, 3);
+    insert_fn!("get", get, 2);
 
     insert_fn!("getos", get_os, 0);
 

@@ -3,15 +3,15 @@ def tests =
 		"hello" == "hello", // string equality
 		"hello" != "world",
 
-		[1][0] == 1, // check that indexing on lists works
-		[1][1] == nil,
+		nth 0 [1] == 1, // check that indexing on lists works
+		nth 1 [1] == nil,
 
-		head([]) == nil, // check if head works on empty list
+		head [] == nil, // check if head works on empty list
 
-		tail([]) == [], // check if tail works on empty list
+		tail [] == [], // check if tail works on empty list
 
-		{:a = 20}[:a] == 20, // checks that indexing in tables works
-		{:a = 20}[:b] == nil,
+		get :a {:a = 20} == 20, // checks that indexing in tables works
+		get :b {:a = 20} == nil,
 
 		not "", // check that the following are false
 		not nil,
@@ -35,14 +35,14 @@ def tests =
 		:a == :a, // check for symbol equality
 
 		[1,2,3,4,5,6]
-		|> filter(fn x = x &&& 1)
-		|> map(fn x = x + 1)
+		|> filter (fn x = x &&& 1)
+		|> map (fn x = x + 1)
 		|> rev
-		|> fold(1, fn x y = x * y)
+		|> fold 1 (fn x y = x * y)
 		|> (fn x = x == 48), // checks that pipes work correctly
 
-		insert(:k, 20, {}) == {:k = 20}, // tests the insertion of a new key
-		insert(:k, 20, {:k = 10}) == {:k = 20},
+		insert :k 20 {} == {:k = 20}, // tests the insertion of a new key
+		insert :k 20 {:k = 10} == {:k = 20},
 
 		{:k = 20} == {:k = 20}, // check for correct table comparison
 
@@ -63,26 +63,27 @@ def tests =
 		let f self n =
 			if n == 1
 			then n
-			else become self(self, n - 1)
-		in f(f, 5) == 1, // check tail recursion
+			else become self self (n - 1)
+		in f f 5 == 1, // check tail recursion
 
 		40 % 3 == 1, // check modulo
 	]
 
 def assert xs =
-	if xs[1] then
+	if nth 1 xs then
 		nil
 	else
-		puts("assertion failed at test " + str(xs[0]))
-		>> exit(1)
+		puts ("assertion failed at test " + (str (nth 0 xs)))
+		>> exit 1
 
 def enumerate =
 	let impl self idx acc xs =
 		if xs == [] then rev(acc)
-		else become self(self, idx + 1, [idx, head(xs)] :: acc, tail(xs))
-	in impl(impl, 0, [])
+		else become self self (idx + 1) ([idx, head(xs)] :: acc) (tail xs)
+	in impl impl 0 []
 
 def _ =
 	tests
 	|> enumerate
-	|> map(fn xs = assert(xs))
+	|> map assert
+	>> puts "all tests passed"

@@ -133,18 +133,26 @@ impl TokenType {
     pub fn is_expression(&self) -> bool {
         let kw = matches!(
             self,
-            Self::Become
-                | Self::Open
-                | Self::In
-                | Self::Fn
-                | Self::Eof
-                | Self::Else
-                | Self::Then
+            Self::Eof
                 | Self::Colon
                 | Self::Rbrack
                 | Self::Rparen
                 | Self::Rbrace
+                | Self::If
+                | Self::Else
+                | Self::Then
+                | Self::Loop
+                | Self::Def
+                | Self::Let
+                | Self::In
+                | Self::Fn
+                | Self::Become
+                | Self::Open
+                | Self::And
+                | Self::Or
+                | Self::Not
         );
+
         let op = self.is_binary_operator();
 
         !kw && !op

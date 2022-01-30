@@ -103,15 +103,17 @@ pub fn tail(args: &[Constant]) -> InterpretResult<Constant> {
     }
 }
 
-pub fn insert(args: &[Constant]) -> InterpretResult<Constant> {
-    let key = match &args[0] {
-        Constant::Sym(s) => *s,
-        other => return panic!("insert()[1] expected a symbol, found {}", other),
+pub fn nth(args: &[Constant]) -> InterpretResult<Constant> {
+    let n = match &args[0] {
+        Constant::Num(n) if n.fract() == 0.0 && *n >= 0.0 => *n as usize,
+        other => panic!(
+            "nth[1] expected a valid positive integer, but found {}",
+            other
+        )?,
     };
-    let value = args[1].clone();
 
-    match &args[2] {
-        Constant::Table(ts) => Ok(Constant::Table(GcRef::new(ts.insert(key, value)))),
-        other => panic!("insert()[0] expected a table, found {}", other),
+    match &args[1] {
+        Constant::List(xs) => Ok(xs.index(n)),
+        other => panic!("nth() expected a list, found {}", other),
     }
 }

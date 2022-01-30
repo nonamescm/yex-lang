@@ -21,7 +21,7 @@ use gc::GcRef;
 
 use crate::{
     error::InterpretResult,
-    literal::{nil, FunArgs, FunBody},
+    literal::{FunArgs, FunBody},
 };
 
 pub use crate::{
@@ -268,8 +268,6 @@ impl VirtualMachine {
                     };
                 }
 
-                Index => self.index()?,
-
                 Rev => {
                     let a = self.pop();
                     let b = self.pop();
@@ -347,33 +345,40 @@ impl VirtualMachine {
         Ok((body, farity, fargs))
     }
 
+    fn call_top(&mut self, fargs: FunArgs, body: FunBody) -> InterpretResult<()> {
+        match &*body {
+            Either::Left(bytecode) => {
+                fargs.into_iter().for_each(|it| self.push(it));
+                self.run(bytecode)?;
+            }
+            Either::Right(fp) => {
+                let arr = fargs.into_iter().rev().collect();
+                let ret = fp(self, arr)?;
+                self.push(ret)
+            }
+        }
+        Ok(())
+    }
+
     #[inline]
     fn call(&mut self, carity: usize) -> InterpretResult<()> {
         let (body, farity, fargs) = self.call_helper(carity)?;
+
         match carity.cmp(&farity) {
             Ordering::Greater => {
-                return panic!(
-                    "function expected {} arguments, but received {}",
-                    farity, carity
-                )
+                self.call_top(fargs, body)?;
+                self.call(carity - farity)?;
             }
+
             Ordering::Less => self.push(Constant::Fun(GcRef::new(literal::Fun {
                 arity: farity - carity,
-                body: body.clone(),
+                body,
                 args: fargs,
             }))),
-            Ordering::Equal => match &*body {
-                Either::Left(bytecode) => {
-                    fargs.into_iter().for_each(|it| self.push(it));
-                    self.run(bytecode)?;
-                }
-                Either::Right(fp) => {
-                    let arr = fargs.into_iter().rev().collect();
-                    let ret = fp(self, arr)?;
-                    self.push(ret)
-                }
-            },
+
+            Ordering::Equal => self.call_top(fargs, body)?,
         }
+
         Ok(())
     }
 
@@ -387,6 +392,7 @@ impl VirtualMachine {
             )?,
 
             Ordering::Less => panic!("Can't use partial application in a tail call")?,
+
             Ordering::Equal => {
                 fargs.into_iter().for_each(|it| self.push(it));
 
@@ -398,23 +404,6 @@ impl VirtualMachine {
                 }
             }
         }
-        Ok(())
-    }
-
-    fn index(&mut self) -> InterpretResult<()> {
-        match self.pop() {
-            Constant::Num(n) if n.fract() == 0.0 && n >= 0.0 => match &self.pop() {
-                Constant::List(xs) => self.push(xs.index(n as usize)),
-                other => panic!("Expected a list to index, found a `{}`", other)?,
-            },
-
-            Constant::Sym(key) => match &self.pop() {
-                Constant::Table(ts) => self.push(ts.get(&key).unwrap_or_else(nil)),
-                other => panic!("Expected a table to index, found a `{}`", other)?,
-            },
-
-            other => return panic!("Expected a integer to use as index, found a `{}`", other),
-        };
         Ok(())
     }
 

@@ -77,11 +77,6 @@ pub enum OpCode {
     /// The stack layout after running it: [new-table]
     Insert(Symbol),
 
-    /// Index into a list
-    /// The stack layout before running this opcode: [index, list]
-    /// The stack layout after running it: [index-value]
-    Index,
-
     /// Swap the two first elements in the stack
     /// The stack layout before running this opcode: [a, b]
     /// The stack layout after running it: [b, a]
