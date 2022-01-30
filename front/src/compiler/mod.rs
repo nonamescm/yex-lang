@@ -239,6 +239,13 @@ impl Compiler {
         Ok(())
     }
 
+    fn peek(&mut self) -> Result<&Token, ParseError> {
+        match self.lexer.peek().unwrap() {
+            Ok(tk) => Ok(&tk),
+            Err(e) => Err(*e),
+        }
+    }
+
     fn assert(&mut self, token: &[Tkt], err: impl Into<String>) -> ParseResult {
         if !token.contains(&self.current.token) {
             self.throw(err)
@@ -619,68 +626,31 @@ impl Compiler {
             self.unary()?; // emits the expression to be applied
             self.emit(operator)
         } else {
-            self.index()?;
+            self.call()?;
             self.next()?;
         }
 
         Ok(())
     }
 
-    fn call_args(&mut self, arity: &mut usize) -> ParseResult {
-        self.next()?;
-        self.next()?;
+    fn call_args(&mut self) -> Result<usize, ParseError> {
+        let mut arity = 0;
 
-        while self.current.token != Tkt::Rparen {
-            self.expression()?;
+        while self.peek()?.token.is_expression() {
+            self.next()?;
+            self.primary()?;
             self.emit(OpCode::Rev);
-            *arity += 1;
-            match &self.current.token {
-                Tkt::Rparen => break,
-                Tkt::Colon => self.next()?,
-                other => self.throw(format!(
-                    "Expected `,`, `)` or other token, found `{}`",
-                    other
-                ))?,
-            }
+            arity += 1;
         }
 
-        Ok(())
-    }
-
-    fn index(&mut self) -> ParseResult {
-        self.call()?; // Emits the expression to be indexed
-
-        while matches!(
-            self.lexer.peek().unwrap().as_ref().map(|c| &c.token),
-            Ok(Tkt::Lbrack)
-        ) {
-            self.next()?;
-            self.next()?;
-            self.expression()?; // emits the index to be acessed
-            self.emit(OpCode::Index);
-            self.assert(
-                &[Tkt::Rbrack],
-                format!("Expected `]` after index, found {}", self.current.token),
-            )?;
-        }
-        Ok(())
+        Ok(arity)
     }
 
     fn call(&mut self) -> ParseResult {
         self.primary()?; // compiles the called expresion
 
-        let mut arity = 0;
-        let mut is_call = false;
-
-        while matches!(
-            self.lexer.peek().unwrap().as_ref().map(|c| &c.token),
-            Ok(Tkt::Lparen)
-        ) {
-            self.call_args(&mut arity)?;
-            is_call = true;
-        }
-
-        if is_call {
+        if self.peek()?.token.is_expression() {
+            let arity = self.call_args()?;
             self.emit(OpCode::Call(arity));
         }
 
@@ -760,8 +730,6 @@ impl Compiler {
     }
 
     fn block(&mut self) -> ParseResult {
-        assert_eq!(self.current.token, Tkt::Lparen);
-
         self.next()?;
         self.expression()?;
         self.assert(
@@ -795,10 +763,7 @@ impl Compiler {
             Tkt::Nil => push!(Nil),
             Tkt::Lbrack => self.list()?,
             Tkt::Lbrace => self.table()?,
-            Tkt::Lparen => {
-                self.current.token = Tkt::Lparen; // `(` is needed for self.block() to work correctly
-                self.block()?;
-            }
+            Tkt::Lparen => self.block()?,
             tk => self.throw(format!("expected expression, found `{}`", tk))?,
         }
 

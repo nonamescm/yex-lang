@@ -1,9 +1,9 @@
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 /// Parse errors
 pub struct ParseError {
     line: usize,
     column: usize,
-    message: String,
+    message: &'static str,
 }
 
 impl std::fmt::Display for ParseError {
@@ -17,7 +17,7 @@ impl ParseError {
         Err(Self {
             line,
             column,
-            message,
+            message: Box::leak(message.into_boxed_str()),
         })
     }
 }
