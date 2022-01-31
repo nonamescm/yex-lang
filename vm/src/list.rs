@@ -111,7 +111,7 @@ impl std::fmt::Display for List {
         write!(f, "[")?;
         for (len, value) in self.iter().enumerate() {
             if len != self.len() - 1 {
-                write!(f, "{}, ", value)?;
+                write!(f, "{};", value)?;
             } else {
                 write!(f, "{}", value)?;
             }
