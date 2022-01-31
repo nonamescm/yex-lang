@@ -442,30 +442,27 @@ impl Compiler {
 
         let mut names = vec![];
 
-        while let Tkt::Name(name) = self.current.token.clone() {
-            self.next()?;
+        while self.current.token != Tkt::In {
+            let name = match take(&mut self.current.token) {
+                Tkt::Name(name) => name,
+                other => return self.throw(format!("Expected binding name, found `{}`", other)),
+            };
             let name = Symbol::new(name);
+            self.next()?;
 
             self.binding(name)?;
             names.push(name);
 
-            if self.current.token != Tkt::Semicolon {
-                break;
+            match &self.current.token {
+                Tkt::Semicolon => self.skip(Tkt::Semicolon)?,
+                Tkt::In => break,
+                _ => self.throw(format!(
+                    "Expected `;`, `]` or other token, found `{}`",
+                    &self.current.token
+                ))?,
             }
-            self.skip(Tkt::Semicolon)?;
-
-            self.next()?;
         }
-
-        self.skip(Tkt::Semicolon)?;
-
-        self.consume(
-            &[Tkt::In],
-            format!(
-                "Expected `in` after let expression, found {}",
-                self.current.token
-            ),
-        )?;
+        self.next()?; // skips the leading `in`
         self.expression()?;
 
         for name in names {

@@ -49,7 +49,11 @@ def tests =
 		0/0 != 0/0; // NaN checking
 
 		let a = 0 in a + 10 == 10; // let binding
-		let a = 0 in let b = a + 10 in b + 10 == 20;
+		let
+			a = 0;;
+			b = a + 10;;
+		in
+			b + 10 == 20;
 
 		#[1;2;3] == 3; // check if the len operator works
 		#"oi" == 2;
