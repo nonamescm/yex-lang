@@ -119,7 +119,7 @@ impl std::fmt::Display for TokenType {
             Self::Rbrack => ']'.into(),
             Self::Lbrace => '{'.into(),
             Self::Rbrace => '}'.into(),
-            Self::Semicolon => ','.into(),
+            Self::Semicolon => ';'.into(),
             Self::Seq => ">>".into(),
             Self::Pipe => "|>".into(),
             Self::Eof => "<eof>".into(),
