@@ -54,7 +54,7 @@ pub enum TokenType {
     Rbrack,
     Lbrace,
     Rbrace,
-    Colon,
+    Semicolon,
     Seq,
     Pipe,
 
@@ -119,7 +119,7 @@ impl std::fmt::Display for TokenType {
             Self::Rbrack => ']'.into(),
             Self::Lbrace => '{'.into(),
             Self::Rbrace => '}'.into(),
-            Self::Colon => ','.into(),
+            Self::Semicolon => ','.into(),
             Self::Seq => ">>".into(),
             Self::Pipe => "|>".into(),
             Self::Eof => "<eof>".into(),
@@ -134,7 +134,7 @@ impl TokenType {
         let kw = matches!(
             self,
             Self::Eof
-                | Self::Colon
+                | Self::Semicolon
                 | Self::Rbrack
                 | Self::Rparen
                 | Self::Rbrace

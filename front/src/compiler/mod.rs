@@ -261,6 +261,18 @@ impl Compiler {
         Ok(())
     }
 
+    fn skip_any(&mut self, token: &[Tkt]) -> ParseResult {
+        while token.contains(&self.current.token) {
+            self.next()?;
+        }
+
+        Ok(())
+    }
+
+    fn skip(&mut self, token: Tkt) -> ParseResult {
+        self.skip_any(&[token])
+    }
+
     fn throw(&self, err: impl Into<String>) -> ParseResult {
         ParseError::throw(self.current.line, self.current.column, err.into())
     }
@@ -411,27 +423,41 @@ impl Compiler {
         Ok(())
     }
 
-    fn let_(&mut self) -> ParseResult {
-        assert_eq!(self.current.token, Tkt::Let); // security check
-        self.next()?; // skips the let token
-
-        let name = match take(&mut self.current.token) {
-            Tkt::Name(v) => Symbol::new(v),
-            o => return self.throw(format!("Expected variable name after `let`, found `{}`", o)),
-        };
-        self.next()?;
-
+    fn binding(&mut self, name: Symbol) -> ParseResult {
         if matches!(self.current.token, Tkt::Name(_)) {
             self.function()?;
         } else {
-            self.consume(
-                &[Tkt::Assign],
-                format!("Expected `=` after name, found `{}`", self.current.token),
-            )?;
+            self.consume(&[Tkt::Assign], "Expected `=` after binding name")?;
             self.expression()?;
         }
 
         self.emit_save(name);
+
+        Ok(())
+    }
+
+    fn let_(&mut self) -> ParseResult {
+        assert_eq!(self.current.token, Tkt::Let); // security check
+        self.next()?;
+
+        let mut names = vec![];
+
+        while let Tkt::Name(name) = self.current.token.clone() {
+            self.next()?;
+            let name = Symbol::new(name);
+
+            self.binding(name)?;
+            names.push(name);
+
+            if self.current.token != Tkt::Semicolon {
+                break;
+            }
+            self.skip(Tkt::Semicolon)?;
+
+            self.next()?;
+        }
+
+        self.skip(Tkt::Semicolon)?;
 
         self.consume(
             &[Tkt::In],
@@ -442,7 +468,9 @@ impl Compiler {
         )?;
         self.expression()?;
 
-        self.emit_drop(name);
+        for name in names {
+            self.emit_drop(name);
+        }
 
         Ok(())
     }
@@ -659,23 +687,19 @@ impl Compiler {
 
     fn list(&mut self) -> ParseResult {
         let mut len = 0;
-        loop {
-            if matches!(self.current.token, Tkt::Rbrack) {
-                break;
-            }
-            self.next()?;
-            if matches!(self.current.token, Tkt::Rbrack) {
-                break;
-            }
+        self.next()?;
 
+        while self.current.token != Tkt::Rbrack {
             self.expression()?; // compiles the argument
             len += 1;
 
-            if !matches!(&self.current.token, Tkt::Colon | Tkt::Rbrack) {
-                self.throw(format!(
-                    "Expected `,`, `]` or other token, found `{}`",
+            match &self.current.token {
+                Tkt::Semicolon => self.skip(Tkt::Semicolon)?,
+                Tkt::Rbrack => break,
+                _ => self.throw(format!(
+                    "Expected `;`, `]` or other token, found `{}`",
                     &self.current.token
-                ))?;
+                ))?,
             }
         }
 
@@ -692,17 +716,10 @@ impl Compiler {
 
     fn table(&mut self) -> ParseResult {
         self.emit_const_push(Constant::Table(GcRef::new(Table::new())));
+        self.next()?;
 
-        loop {
-            if matches!(self.current.token, Tkt::Rbrace) {
-                break;
-            }
-            self.next()?;
-            if matches!(self.current.token, Tkt::Rbrace) {
-                break;
-            }
-
-            let sym = match self.current.token {
+        while self.current.token != Tkt::Rbrace {
+            let key = match self.current.token {
                 Tkt::Sym(s) => s,
                 ref other => {
                     return self.throw(format!("Expected symbol to use as key, found `{}`", other))
@@ -715,14 +732,16 @@ impl Compiler {
                 format!("Expected `=` after key, found {}", &self.current.token),
             )?;
 
-            self.expression()?; // compiles the argument
-            self.emit(OpCode::Insert(sym));
+            self.expression()?; // compiles the value
+            self.emit(OpCode::Insert(key));
 
-            if !matches!(&self.current.token, Tkt::Colon | Tkt::Rbrace) {
-                self.throw(format!(
-                    "Expected `,`, `]` or other token, found `{}`",
+            match &self.current.token {
+                Tkt::Semicolon => self.skip(Tkt::Semicolon)?,
+                Tkt::Rbrace => break,
+                _ => self.throw(format!(
+                    "Expected `;`, `}}` or other token, found `{}`",
                     &self.current.token
-                ))?;
+                ))?,
             }
         }
 
