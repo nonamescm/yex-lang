@@ -55,6 +55,7 @@ pub enum TokenType {
     Lbrace,
     Rbrace,
     Comma,
+    Semicolon,
     Seq,
     Pipe,
 
@@ -120,6 +121,7 @@ impl std::fmt::Display for TokenType {
             Self::Lbrace => '{'.into(),
             Self::Rbrace => '}'.into(),
             Self::Comma => ','.into(),
+            Self::Semicolon => ';'.into(),
             Self::Seq => ">>".into(),
             Self::Pipe => "|>".into(),
             Self::Eof => "<eof>".into(),
@@ -135,6 +137,7 @@ impl TokenType {
             self,
             Self::Eof
                 | Self::Comma
+                | Self::Semicolon
                 | Self::Rbrack
                 | Self::Rparen
                 | Self::Rbrace

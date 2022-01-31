@@ -241,6 +241,7 @@ impl Lexer {
                 TokenType::BitXor
             }
             ',' => TokenType::Comma,
+            ';' => TokenType::Semicolon,
             '<' if self.peek_at(1) == '=' => {
                 self.next();
                 TokenType::LessEq

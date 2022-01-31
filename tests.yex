@@ -50,8 +50,8 @@ def tests =
 
 		let a = 0 in a + 10 == 10, // let binding
 		let
-			a = 0,,
-			b = a + 10,,
+			a = 0;
+			b = a + 10;;;; // let binding with extra semicolons should be valid
 		in
 			b + 10 == 20,
 

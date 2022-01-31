@@ -454,10 +454,10 @@ impl Compiler {
             names.push(name);
 
             match &self.current.token {
-                Tkt::Comma => self.skip(Tkt::Comma)?,
+                Tkt::Semicolon => self.skip(Tkt::Semicolon)?,
                 Tkt::In => break,
                 _ => self.throw(format!(
-                    "Expected `,`, `]` or other token, found `{}`",
+                    "Expected `;`, `]` or other token, found `{}`",
                     &self.current.token
                 ))?,
             }
