@@ -84,7 +84,7 @@ impl std::fmt::Display for Table {
         write!(f, "{{")?;
         for (len, (key, value)) in self.iter().enumerate() {
             if len != self.len() - 1 {
-                write!(f, "{} = {};", key, value)?;
+                write!(f, "{} = {}, ", key, value)?;
             } else {
                 write!(f, "{} = {}", key, value)?;
             }

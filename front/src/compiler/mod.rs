@@ -454,10 +454,10 @@ impl Compiler {
             names.push(name);
 
             match &self.current.token {
-                Tkt::Semicolon => self.skip(Tkt::Semicolon)?,
+                Tkt::Comma => self.skip(Tkt::Comma)?,
                 Tkt::In => break,
                 _ => self.throw(format!(
-                    "Expected `;`, `]` or other token, found `{}`",
+                    "Expected `,`, `]` or other token, found `{}`",
                     &self.current.token
                 ))?,
             }
@@ -691,10 +691,10 @@ impl Compiler {
             len += 1;
 
             match &self.current.token {
-                Tkt::Semicolon => self.skip(Tkt::Semicolon)?,
+                Tkt::Comma => self.skip(Tkt::Comma)?,
                 Tkt::Rbrack => break,
                 _ => self.throw(format!(
-                    "Expected `;`, `]` or other token, found `{}`",
+                    "Expected `,`, `]` or other token, found `{}`",
                     &self.current.token
                 ))?,
             }
@@ -733,10 +733,10 @@ impl Compiler {
             self.emit(OpCode::Insert(key));
 
             match &self.current.token {
-                Tkt::Semicolon => self.skip(Tkt::Semicolon)?,
+                Tkt::Comma => self.skip(Tkt::Comma)?,
                 Tkt::Rbrace => break,
                 _ => self.throw(format!(
-                    "Expected `;`, `}}` or other token, found `{}`",
+                    "Expected `,`, `}}` or other token, found `{}`",
                     &self.current.token
                 ))?,
             }
