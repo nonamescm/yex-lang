@@ -60,3 +60,9 @@ impl Symbol {
         self.string
     }
 }
+
+impl<T: AsRef<str>> From<T> for Symbol {
+    fn from(str: T) -> Self {
+        Self::new(str.as_ref())
+    }
+}

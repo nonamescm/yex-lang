@@ -72,12 +72,15 @@ fn start(args: Vec<String>) -> i32 {
             println!("bytecode: {:#?}", &bytecode);
             println!("constants: {:#?}", &constants);
         }
+
         vm.set_consts(constants);
         if let Err(e) = vm.run(&bytecode) {
             eprintln!("{}", e)
         }
 
-        println!(">> {}", vm.pop_last());
+        let pop = vm.pop_last().clone();
+        println!(">> {}", pop);
+        vm.set_global("it", pop.clone());
         vm.reset();
     }
 }

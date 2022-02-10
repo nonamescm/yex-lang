@@ -130,8 +130,13 @@ impl VirtualMachine {
     }
 
     /// Get the value of a global variable
-    pub fn get_global<T: Into<Symbol>>(&self, name: Symbol) -> Option<Constant> {
-        self.globals.get(&name)
+    pub fn get_global<T: Into<Symbol>>(&self, name: T) -> Option<Constant> {
+        self.globals.get(&name.into())
+    }
+
+    /// Set the value of a global variable
+    pub fn set_global<T: Into<Symbol>>(&mut self, name: T, value: Constant) {
+        self.globals.insert(name.into(), value);
     }
 
     fn get_slot(&mut self) -> usize {

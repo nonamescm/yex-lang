@@ -27,6 +27,7 @@ impl List {
     }
 
     /// Prepends a value to the end, returning the list
+    #[must_use]
     pub fn prepend(&self, elem: Constant) -> Self {
         let node = GcRef::new(Node {
             elem,
@@ -36,6 +37,7 @@ impl List {
     }
 
     /// Returns the list tail
+    #[must_use]
     pub fn tail(&self) -> Self {
         let tail = self.head.as_ref().map(|node| node.next.clone());
         let tail = match tail {
@@ -90,11 +92,12 @@ impl List {
     /// Iterate over all elements of `self`
     pub fn iter(&self) -> Iter {
         Iter {
-            next: self.head.as_ref().map(GcRef::clone),
+            next: self.head.as_deref(),
         }
     }
 
     /// Reverses `self` without consuming it
+    #[must_use]
     pub fn rev(&self) -> Self {
         let mut node = self.head.as_ref();
         let mut list = Self::new();
@@ -120,15 +123,15 @@ impl std::fmt::Display for List {
     }
 }
 
-pub struct Iter {
-    next: Option<GcRef<Node>>,
+pub struct Iter<'a> {
+    next: Option<&'a Node>,
 }
 
-impl Iterator for Iter {
+impl<'a> Iterator for Iter<'a> {
     type Item = Constant;
     fn next(&mut self) -> Option<Self::Item> {
-        self.next.clone().map(|node| {
-            self.next = node.next.clone();
+        self.next.map(|node| {
+            self.next = node.next.as_deref();
             node.elem.clone()
         })
     }

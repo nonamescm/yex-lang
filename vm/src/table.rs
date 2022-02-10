@@ -42,6 +42,7 @@ impl Table {
     }
 
     /// Inserts an item in the table
+    #[must_use]
     pub fn insert(&self, key: Symbol, value: Constant) -> Self {
         let mut new = self.clone();
 
