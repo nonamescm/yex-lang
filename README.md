@@ -1,12 +1,15 @@
 # Yex
 
-## Contents:
+## Contents
 
-  * [About](#about)
-  * [Installation](#installation)
-  * [How to](#how-to)
-  * [TODO](#todo)
-  * [Contributing](#contributing)
+- [Yex](#yex)
+  - [Contents](#contents)
+  - [About](#about)
+  - [Installation](#installation)
+    - [NOTE](#note)
+  - [How to](#how-to)
+  - [TODO](#todo)
+  - [Contributing](#contributing)
 
 ## About
 
@@ -19,18 +22,21 @@ after that, run `cargo install --git https://github.com/nonamescm/yex-lang.git`.
 Done, yex is now installed!
 
 ### NOTE
-if you want the repl install it with this command `cargo install --git https://github.com/nonamescm/yex-lang.git --features=repl`
+
+if you want the repl install it with this command `cargo install --git https://github.com/nonamescm/yex-lang.git`
 
 ## How to
 
 A basic tutorial can be found at [DOCS.md](/DOCS.md)
 
 ## TODO
-  * [ ] Closures
-  * [x] Garbage collection
-  * [x] Lists
-  * [ ] Modules
+
+- [ ] Closures
+- [x] Garbage collection
+- [x] Lists
+- [ ] Modules
 
 ## Contributing
-  * Open an issue if you find any bug
-  * Submit a PR if you want to implement a new feature
+
+- Open an issue if you find any bug
+- Submit a PR if you want to implement a new feature

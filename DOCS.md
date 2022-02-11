@@ -1,11 +1,12 @@
 # Learn Yex
 
-## NOTE:
+## NOTE
+
 This tutorial assumes that you have previous experience with programming and
 already has the yex language installed.
 
 - [Learn Yex](#learn-yex)
-  - [NOTE:](#note)
+  - [NOTE](#note)
   - [Basics](#basics)
     - [Primitives](#primitives)
       - [Numbers](#numbers)
@@ -42,22 +43,24 @@ already has the yex language installed.
 ### Primitives
 
 Yex has the following primitive types:
-  * `fn` - Functions
-  * `num` - 64 bits floating-point numbers
-  * `str` - Strings
-  * `nil` - Null values
-  * `sym` - Compile-time hashed strings
-  * `bool` - Booleans (true and false)
-  * `list` - Singly linked lists
+
+- `fn` - Functions
+- `num` - 64 bits floating-point numbers
+- `str` - Strings
+- `nil` - Null values
+- `sym` - Compile-time hashed strings
+- `bool` - Booleans (true and false)
+- `list` - Singly linked lists
 
 They all support the equality `==` operator and the `#` len operator.
 
 #### Numbers
+
 Open the repl and start typing:
 
 ```ml
-yex> type(1)
->> "num"
+yex> type 1
+>> :num
 yex> 2+2
 >> 4
 yex> 2-2
@@ -90,8 +93,8 @@ Strings in yex are represented as UTF-8 encoded strings, they support
 concatenation, on the repl:
 
 ```ml
-yex> type("Example")
->> "str"
+yex> type "Example"
+>> :str
 yex> "Hello"
 >> "Hello"
 yex> "Hello " + "World"
@@ -104,8 +107,8 @@ Symbols in yex are represented as 64 bit unsigned integers. They are created
 using `:name` and are hashed at compile time, on the repl:
 
 ```ml
-yex> type(:symbol)
->> "sym"
+yex> type :symbol
+>> :sym
 yex> :sym
 >> :sym
 ```
@@ -118,8 +121,8 @@ Booleans in yex are just `true` and `false`, there is no magic behind the
 scenes.
 
 ```ml
-yex> type(true)
->> "bool"
+yex> type true
+>> :bool
 yex> true
 >> true
 yex> false
@@ -131,20 +134,20 @@ yex> false
 Null values in yex can be created using the `nil` keyword.
 
 ```ml
-yex> type(nil)
->> "nil"
+yex> type nil
+>> :nil
 yex> nil
 >> nil
 ```
 
 ### Structuring a program
 
-A yex program is just a lot of `let`s. There is no way of using expressions in
+A yex program is just a lot of `def`s. There is no way of using expressions in
 the top-level and there isn't any main function, so we usually create a
-`let _ = ...` to denotate the entry point, since it's going to
+`def _ = ...` to denotate the entry point, since it's going to
 be evaluated when the code runs.
 
-But, what is a `let`? Let's see it now.
+But, what is a `def`? Let's see it now.
 
 ## Variables
 
@@ -156,8 +159,8 @@ it's value, (but shadowing is still supported).
 Global variables are created using the `let` keyword, open a file and type this:
 
 ```ml
-let number = 42
-let _ = puts(number)
+def number = 42
+def _ = puts(number)
 ```
 
 Run it with the yex binary. It should print 42.
@@ -171,7 +174,7 @@ defines an expression to be runned after the declaration.
 Open a file and type:
 
 ```ml
-let _ =
+def _ =
   let number = 42
   in puts(number)
 ```
@@ -182,9 +185,10 @@ You can create multiple locals just using a lot of `let ... in` expression,
 like:
 
 ```ml
-let _ =
-  let a = 21
-  in let b = 21
+def _ =
+  let
+    a = 21;
+    b = 21;
   in puts(a + b)
 ```
 
@@ -200,8 +204,8 @@ Like in most other languages, lists can be instantiated using square brackets, o
 repl and type:
 
 ```ml
-yex> type([])
->> "list"
+yex> type []
+>> :list
 yex> [1, "hello", :symbol, [3, 4], true, nil]
 >> [1, "hello", :symbol, [3, 4], true, nil]
 ```
@@ -209,19 +213,22 @@ yex> [1, "hello", :symbol, [3, 4], true, nil]
 ### Operating on lists
 
 Lists support the following operations:
-  * `head()` - returns the first element of the list
-  * `tail()` - returns the tail of the list, (all elements except for the first)
-  * `::` - This is the cons operator, it adds a new element at the start of the
+
+- `head` - returns the first element of the list
+- `tail` - returns the tail of the list, (all elements except for the first)
+- `nth` - returns the nth element of the list
+- `::` - This is the cons operator, it adds a new element at the start of the
     list without mutating it.
-  * `#` - Returns the length of the list
+- `#` - Returns the length of the list
 
 On the repl:
 
 ```ml
-yex> head([1, 2, 3])
+yex> head [1, 2, 3]
 >> 1
-yex> tail([1, 2, 3])
+yex> tail [1, 2, 3]
 >> [2, 3]
+yex> nth 0 [1,2,3]
 yex> 0 :: [1, 2, 3]
 >> [0, 1, 2, 3]
 yex> #[1, 2, 3]
@@ -237,8 +244,8 @@ In yex, tables are implemented as HashMaps.
 Tables can be instantiated using curly braces, open the repl and type:
 
 ```ml
-yex> type({})
->> "table"
+yex> type {}
+>> :table
 yex> {:key = "value", :other_key = "other value"}
 >> {:key = "value", :other_key = "other value"}
 yex> {:key = "value", :other_key = "other value"}[:key]
@@ -255,12 +262,12 @@ Named functions are created using the `let` keyword, like variables. Open the
 repl and type:
 
 ```ml
-yex> let mul a b = a * b
+yex> def mul a b = a * b
 >> nil
-yex> mul(2, 3)
+yex> mul 2 3
 >> 6
-yex> type(mul)
->> "fn"
+yex> type mul
+>> :fn
 ```
 
 So, let me explain, first, we declare the function `mul`, receiving `a` and `b`
@@ -272,12 +279,12 @@ You can create anonymous functions using the `fn` keyword. Open the repl and
 type:
 
 ```ml
-yex> let mul = fn a b = a * b
+yex> def mul = fn a b = a * b
 >> nil
-yex> mul(2, 3)
+yex> mul 2 3
 >> 6
-yex> type(mul)
->> "fn"
+yex> type mul
+>> :fn
 ```
 
 ### Tail calls
@@ -286,11 +293,11 @@ Tail calls are an specific type of recursion where it just jumps to some
 previous instruction, you can create them using the `become` keyword, like:
 
 ```ml
-let until_0 num =
+def until_0 num =
   if num == 0 then
     0
   else
-    become until_0(num - 1)
+    become until_0 (num - 1)
 ```
 
 Tail calls just use a jump instruction, so they are faster than normal recursive
@@ -307,9 +314,9 @@ In the repl, type:
 ```ml
 yex> let mul a b = a * b
 >> nil
-yex> let double = mul(2) // returns mul() with the `a` argument already applied
+yex> let double = mul 2 // returns mul() with the `a` argument already applied
 >> nil
-yex> double(5)
+yex> double 5
 >> 10
 ```
 
@@ -343,15 +350,14 @@ computation.
 Open a file and type:
 
 ```ml
-let _ =
+def _ =
   puts("Hello")
   >> puts("World")
 ```
 
 This should print:
 
-
-```
+```txt
 Hello
 World
 ```
@@ -363,10 +369,10 @@ When working with high-order-functions, you might need to do something like:
 `|>` operator, that allows the use of a pipeline-like flow.
 
 ```ml
-rev([1, 2, 3])
-|> map(fn x = x * 2)
-|> fold(fn acc x = acc + x)
-// the same as `fold(fn acc x = acc + x, map(fn x = x * 2, rev([1, 2, 3])))`
+rev [1, 2, 3]
+|> map (fn x = x * 2)
+|> fold 0 (fn acc x = acc + x)
+// the same as `fold 0 (fn acc x = acc + x) (map (fn x = x * 2) (rev [1, 2, 3]))`
 ```
 
 ## Modules
@@ -378,39 +384,33 @@ import system in the future.
 
 You can import from a file using the `open` keyword, a simple example would be:
 
-```
+```ml
 // FILE: a.yex
-let greets p = puts("Hello " + p + "!")
+def greets p = puts ("Hello " + p + "!")
 ```
 
-```
+```ml
 // FILE: b.yex
 open "./a.yex"
-let _ = greets("nonamescm") // prints "Hello nonamescm!"
+def _ = greets "nonamescm" // prints "Hello nonamescm!"
 ```
 
 Make sure the two files are in the same directory and run b.yex.
 
 ## Builtin functions
 
-
-|    Name   |                        Description                        |
-|:---------:|:---------------------------------------------------------:|
-| `print`   | Prints a value without adding the new line                |
-| `puts`    | Prints a value with a newline at the end                  |
-| `str`     | Converts a value to string                                |
-| `input`   | Reads the input from the console                          |
-| `head`    | Returns the first element of a list                       |
-| `tail`    | Returns the tail of a list                                |
-| `type`    | Returns the string representation of the value's type     |
-| `inspect` | Returns the intern representation of the value            |
-| `getargs` | Returns the args that this program was started with       |
-| `fread`   | Reads a file content                                      |
-| `fwrite`  | Writes to a file                                          |
-| `remove`  | Deletes a file                                            |
-| `exists`  | Checks if a file exists                                   |
-| `system`  | Runs a shell command, returning the stdout and the stderr |
-| `getenv`  | Gets an environment variable                              |
-| `setenv`  | Sets an environment variable, `setenv("cool", "true")`    |
-| `split`   | Splits a string                                           |
-
+|   Name    |                      Description                      |
+| :-------: | :---------------------------------------------------: |
+|  `print`  |      Prints a value without adding the new line       |
+|  `puts`   |       Prints a value with a newline at the end        |
+|   `str`   |              Converts a value to string               |
+|  `input`  |           Reads the input from the console            |
+|  `head`   |          Returns the first element of a list          |
+|  `tail`   |              Returns the tail of a list               |
+|  `type`   | Returns the string representation of the value's type |
+| `inspect` |    Returns the intern representation of the value     |
+|   `nth`   |           Returns the nth element of a list           |
+|   `map`   |            Maps all the element on a list             |
+|  `fold`   |            Fold a list into a single value            |
+| `filter`  |           Filter all the elements on a list           |
+|   `rev`   |                    Reverse a list                     |
