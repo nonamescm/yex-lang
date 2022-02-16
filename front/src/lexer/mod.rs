@@ -196,9 +196,9 @@ impl Lexer {
             }
             c if c.is_alphabetic() || c == '_' => {
                 let mut tk = self.take_while(|c| c.is_alphanumeric() || c == '_')?;
-                while self.peek_at(1) == '\'' {
+                while matches!(self.peek_at(1), '?' | '!' | '\'') {
                     self.next();
-                    tk.push('\'');
+                    tk.push(self.current());
                 }
 
                 if let Some(tk) = fetch_keyword(&tk) {
