@@ -14,27 +14,22 @@ mod prelude;
 mod stack;
 mod table;
 
-use std::{cmp::Ordering, mem::MaybeUninit};
-
 use env::EnvTable;
 use gc::GcRef;
+use literal::{FunArgs, NativeFun};
 
-use crate::{
-    error::InterpretResult,
-    literal::{FunArgs, FunBody},
-};
+use crate::error::InterpretResult;
 
 pub use crate::{
     either::Either,
     list::List,
-    literal::{symbol::Symbol, Constant, Fun},
+    literal::{symbol::Symbol, Fun, Value},
     opcode::{OpCode, OpCodeMetadata},
     stack::StackVec,
     table::Table,
 };
 
 const STACK_SIZE: usize = 512;
-const RECURSION_LIMIT: usize = 768;
 
 static mut LINE: usize = 1;
 static mut COLUMN: usize = 1;
@@ -50,423 +45,316 @@ macro_rules! panic {
     }
 }
 
-struct CallFrame {
-    ip: *const OpCodeMetadata,
-    len: usize,
-    index: usize,
-    slot: usize,
-}
-
-impl CallFrame {
-    pub fn new(bytecode: BytecodeRef, slot: usize) -> Self {
-        Self {
-            ip: bytecode.as_ptr(),
-            len: bytecode.len(),
-            index: 0,
-            slot,
-        }
-    }
-
-    pub fn bytecode(&self) -> BytecodeRef {
-        unsafe { std::slice::from_raw_parts(self.ip.sub(self.index), self.len) }
-    }
-
-    pub fn jump(&mut self, count: usize) {
-        self.ip = unsafe { self.ip.offset((count as isize) - (self.index as isize)) };
-        self.index = count;
-    }
-
-    pub fn offset(&self) -> usize {
-        self.index
-    }
-
-    pub fn add(&mut self, count: usize) {
-        self.index += count;
-        unsafe { self.ip = self.ip.add(count) }
-    }
-
-    pub fn advance(&mut self) -> OpCodeMetadata {
-        let op = unsafe { *self.ip };
-        self.add(1);
-        op
-    }
-}
-
-type CallStack = StackVec<CallFrame, RECURSION_LIMIT>;
-type Stack = StackVec<Constant, STACK_SIZE>;
+type Stack = StackVec<Value, STACK_SIZE>;
 
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
 pub type Bytecode = Vec<OpCodeMetadata>;
 type BytecodeRef<'a> = &'a [OpCodeMetadata];
 use dlopen::raw::Library;
-use std::collections::HashMap;
+use std::{collections::HashMap, mem::swap};
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
 pub struct VirtualMachine {
-    constants: Vec<Constant>,
-    call_stack: CallStack,
     dlopen_libs: HashMap<String, GcRef<Library>>,
     stack: Stack,
-    locals: [MaybeUninit<Constant>; STACK_SIZE],
+    constants: Vec<Value>,
+    locals: [Value; 256],
     globals: EnvTable,
 }
 
 impl VirtualMachine {
     /// Reset the instruction pointer and the stack
     pub fn reset(&mut self) {
-        self.call_stack = StackVec::new();
-        self.stack = StackVec::new();
+        self.stack = stackvec![];
     }
 
     /// sets the constants for execution
-    pub fn set_consts(&mut self, constants: Vec<Constant>) {
+    pub fn set_consts(&mut self, constants: Vec<Value>) {
         self.constants = constants;
     }
 
     /// Pop's the last value on the stack
-    pub fn pop_last(&self) -> &Constant {
-        self.stack.last().unwrap_or(&Constant::Nil)
+    pub fn pop_last(&self) -> &Value {
+        self.stack.last().unwrap_or(&Value::Nil)
     }
 
     /// Get the value of a global variable
-    pub fn get_global<T: Into<Symbol>>(&self, name: T) -> Option<Constant> {
+    pub fn get_global<T: Into<Symbol>>(&self, name: T) -> Option<Value> {
         self.globals.get(&name.into())
     }
 
     /// Set the value of a global variable
-    pub fn set_global<T: Into<Symbol>>(&mut self, name: T, value: Constant) {
+    pub fn set_global<T: Into<Symbol>>(&mut self, name: T, value: Value) {
         self.globals.insert(name.into(), value);
     }
 
-    fn get_slot(&mut self) -> usize {
-        let slot = if !self.call_stack.is_empty() {
-            self.call_frame().slot + 1
-        } else {
-            0
-        };
-        slot
-    }
-
-    fn calc_slot(&mut self, slot: usize) -> usize {
-        self.get_slot() + slot
-    }
-
     /// Executes a given set of bytecode instructions
-    pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<Constant> {
-        let slot = self.get_slot();
-        self.call_stack.push(CallFrame::new(bytecode, slot));
-        let call_frame: *mut _ = self.call_frame();
-
-        macro_rules! binop {
-            ($op:tt) => {{
-                let right = self.pop();
-                let left = self.pop();
-
-                self.push((left $op right)?)
-            }}
-        }
-
-        macro_rules! unaop {
-            ($op:tt) => {{
-                let right = self.pop();
-
-                self.push(($op right)?)
-            }};
-        }
-
-        while unsafe { (*call_frame).offset() } < bytecode.len() {
+    pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<Value> {
+        let mut ip = 0;
+        while ip < bytecode.len() {
             self.debug_stack();
 
-            let inst = unsafe { (*call_frame).advance() };
-
             unsafe {
-                LINE = inst.line;
-                COLUMN = inst.column;
+                LINE = bytecode[ip].line;
+                COLUMN = bytecode[ip].column;
             }
 
-            use OpCode::*;
-            match inst.opcode {
-                Halt => break,
-                Push(n) => {
-                    if self.constants.len() <= n {
-                        panic!("err: can't find consts. Are you in repl?")?;
-                    }
+            let op = bytecode[ip].opcode;
+            match op {
+                OpCode::Halt => return Ok(Value::Nil),
 
-                    let val = self.constants[n].clone();
-                    self.push(val)
+                // Stack manipulation
+                OpCode::Push(value) => {
+                    let value = self.constants[value].clone();
+                    self.push(value);
                 }
-                Pop => {
+                OpCode::Pop => {
                     self.pop();
                 }
 
-                Dup => {
-                    let x = self.stack.pop();
-                    self.push(x.clone());
-                    self.push(x);
-                }
-
-                Save(val) => {
-                    let var = self.pop();
-                    let slot = self.calc_slot(val);
-                    self.locals[slot].write(var);
-                }
-
-                Savg(val) => {
+                OpCode::Dup => {
                     let value = self.pop();
-                    self.globals.insert(val, value);
-                    unsafe { (*call_frame).slot += 1 }
+                    self.push(value.clone());
+                    self.push(value);
                 }
 
-                Load(val) => unsafe {
-                    let slot = self.calc_slot(val);
-                    let var = self.locals[slot].assume_init_ref().clone();
-                    self.push(var);
-                },
-
-                Loag(name) => {
-                    if let Some(value) = self.globals.get(&name) {
-                        self.push(value)
-                    } else {
-                        panic!("Unknown global variable `{}`", name)?
-                    }
+                OpCode::Rev => {
+                    let (a, b) = self.pop_two();
+                    self.push(b);
+                    self.push(a);
                 }
 
-                Drop(val) => {
-                    let slot = self.calc_slot(val);
-                    self.locals[slot] = MaybeUninit::uninit()
-                }
-
-                Jmf(offset) => {
+                // jump instructions
+                OpCode::Jmp(offset) => ip = offset,
+                OpCode::Jmf(offset) => {
                     if !self.pop().to_bool() {
-                        unsafe { (*call_frame).jump(offset) };
-                        continue;
+                        ip = offset;
                     }
                 }
-                Jmp(offset) => {
-                    unsafe { (*call_frame).jump(offset) };
+
+                // function calls
+                OpCode::Call(arity) => self.call(arity)?,
+                OpCode::TCall(arity) => {
+                    self.valid_tail_call(arity, bytecode)?;
+                    ip = 0;
                     continue;
                 }
 
-                Call(carity) => self.call(carity)?,
-                TCall(carity) => self.tcall(carity)?,
+                // mathematical operators
+                OpCode::Add => self.binop(|a, b| a + b)?,
+                OpCode::Sub => self.binop(|a, b| a - b)?,
+                OpCode::Mul => self.binop(|a, b| a * b)?,
+                OpCode::Div => self.binop(|a, b| a / b)?,
+                OpCode::Rem => self.binop(|a, b| a % b)?,
 
-                Prep => {
-                    let val = self.pop();
+                // bitwise operators
+                OpCode::BitAnd => self.binop(|a, b| a & b)?,
+                OpCode::BitOr => self.binop(|a, b| a | b)?,
+                OpCode::Xor => self.binop(|a, b| a ^ b)?,
+                OpCode::Shl => self.binop(|a, b| a << b)?,
+                OpCode::Shr => self.binop(|a, b| a >> b)?,
 
-                    match self.pop() {
-                        Constant::List(xs) => {
-                            self.push(Constant::List(GcRef::new(xs.prepend(val))))
-                        }
-                        other => return panic!("Expected a list, found a `{}`", other),
-                    };
+                // comparison operators
+                OpCode::Eq => self.binop(|a, b| Ok(a == b))?,
+                OpCode::Less => {
+                    let (a, b) = self.pop_two();
+                    self.push(a.ord_cmp(&b)?.is_lt().into());
+                }
+                OpCode::LessEq => {
+                    let (a, b) = self.pop_two();
+                    self.push(a.ord_cmp(&b)?.is_le().into());
                 }
 
-                Insert(key) => {
+                // unary operators
+                OpCode::Not => {
                     let value = self.pop();
+                    self.push(!value);
+                }
+                OpCode::Len => {
+                    let value = self.pop();
+                    self.push(Value::Num(value.len() as f64));
+                }
+                OpCode::Neg => {
+                    let value = self.pop();
+                    self.try_push(-value)?;
+                }
 
-                    match self.pop() {
-                        Constant::Table(ts) => {
-                            self.push(Constant::Table(GcRef::new(ts.insert(key, value))))
-                        }
-                        other => return panic!("Expected a table, found a `{}`", other),
+                // locals manipulation
+                OpCode::Load(offset) => {
+                    let value = self.locals[offset].clone();
+                    self.push(value);
+                }
+                OpCode::Save(offset) => {
+                    let value = self.pop();
+                    self.locals[offset] = value;
+                }
+                OpCode::Drop(offset) => {
+                    self.locals[offset] = Value::Nil;
+                }
+
+                // globals manipulation
+                OpCode::Loag(name) => {
+                    let value = match self.get_global(name) {
+                        Some(value) => value,
+                        None => panic!("Undefined global variable: {}", name)?,
                     };
+                    self.push(value);
+                }
+                OpCode::Savg(name) => {
+                    let value = self.pop();
+                    self.set_global(name, value);
                 }
 
-                Rev => {
-                    let a = self.pop();
-                    let b = self.pop();
-                    self.push(a);
-                    self.push(b);
+                // table manipulation
+                OpCode::Insert(key) => {
+                    let (table, value) = self.pop_two();
+                    let table = match table {
+                        Value::Table(table) => table.insert(key, value),
+                        value => panic!("Expected table, got {}", value)?,
+                    };
+                    let table = Value::Table(GcRef::new(table.clone()));
+                    self.push(table);
                 }
 
-                Add => binop!(+),
-                Rem => binop!(%),
-                Sub => binop!(-),
-                Mul => binop!(*),
-                Div => binop!(/),
-                Xor => binop!(^),
-                Shl => binop!(>>),
-                Shr => binop!(<<),
-                BitAnd => binop!(&),
-                BitOr => binop!(|),
+                // list manipulation
+                OpCode::Prep => {
+                    let value = self.pop();
+                    let list = match self.pop() {
+                        Value::List(list) => list.prepend(value),
+                        value => panic!("Expected list, got {}", value)?,
+                    };
 
-                Eq => {
-                    let right = self.pop();
-                    let left = self.pop();
-                    self.push(Constant::Bool(left == right))
-                }
-                Less => {
-                    let right = self.pop();
-                    let left = self.pop();
-
-                    self.push(Constant::Bool(left.ord_cmp(&right)?.is_lt()))
-                }
-                LessEq => {
-                    let right = self.pop();
-                    let left = self.pop();
-
-                    self.push(Constant::Bool(left.ord_cmp(&right)?.is_le()))
-                }
-
-                Neg => unaop!(-),
-                Len => {
-                    let len = self.pop().len();
-                    self.push(Constant::Num(len as f64))
-                }
-                Not => {
-                    let right = self.pop();
-                    self.push(!right)
+                    self.push(Value::List(list));
                 }
             }
+
+            ip += 1;
         }
 
-        self.debug_stack();
-        self.call_stack.pop();
-
-        Ok(Constant::Nil)
-    }
-
-    fn call_helper(&mut self, carity: usize) -> InterpretResult<(FunBody, usize, FunArgs)> {
-        let fun = self.pop();
-        let fun = match fun {
-            Constant::Fun(f) => f,
-            other => return panic!("Can't call {}", other),
-        };
-
-        let mut fargs = StackVec::new();
-
-        while fargs.len() < carity {
-            fargs.push(self.pop())
-        }
-
-        let (farity, body) = {
-            for elem in fun.args.iter() {
-                fargs.push(elem.clone())
-            }
-            (fun.arity, fun.body.clone())
-        };
-
-        Ok((body, farity, fargs))
-    }
-
-    fn call_top(&mut self, fargs: FunArgs, body: FunBody) -> InterpretResult<()> {
-        match &*body {
-            Either::Left(bytecode) => {
-                fargs.into_iter().for_each(|it| self.push(it));
-                self.run(bytecode)?;
-            }
-            Either::Right(fp) => {
-                let arr = fargs.into_iter().rev().collect();
-                let ret = fp(self, arr)?;
-                self.push(ret)
-            }
-        }
-        Ok(())
-    }
-
-    #[inline]
-    fn call(&mut self, carity: usize) -> InterpretResult<()> {
-        let (body, farity, fargs) = self.call_helper(carity)?;
-
-        match carity.cmp(&farity) {
-            Ordering::Greater => {
-                self.call_top(fargs, body)?;
-                self.call(carity - farity)?;
-            }
-
-            Ordering::Less => self.push(Constant::Fun(GcRef::new(literal::Fun {
-                arity: farity - carity,
-                body,
-                args: fargs,
-            }))),
-
-            Ordering::Equal => self.call_top(fargs, body)?,
-        }
-
-        Ok(())
-    }
-
-    #[inline]
-    fn tcall(&mut self, carity: usize) -> InterpretResult<()> {
-        let (body, farity, fargs) = self.call_helper(carity)?;
-        match carity.cmp(&farity) {
-            Ordering::Greater => panic!(
-                "function expected {} arguments, but received {}",
-                farity, carity
-            )?,
-
-            Ordering::Less => panic!("Can't use partial application in a tail call")?,
-
-            Ordering::Equal => {
-                fargs.into_iter().for_each(|it| self.push(it));
-
-                match &*body {
-                    Either::Left(bytecode) if bytecode == self.bytecode() => {
-                        self.call_frame().jump(0);
-                    }
-                    _ => panic!("Can't use tail calls with different functions")?,
-                }
-            }
-        }
-        Ok(())
+        Ok(self.pop_last().clone())
     }
 
     #[cfg(debug_assertions)]
     /// Debug the values on the stack and in the bytecode
     pub fn debug_stack(&self) {
-        let call_stack = self.call_stack.last().unwrap();
-        eprintln!(
-            "stack: {:#?}\ninstruction: {:?}\n",
-            self.stack.iter().rev().collect::<Vec<&Constant>>(),
-            unsafe {
-                match call_stack.index.cmp(&call_stack.len) {
-                    Ordering::Greater => call_stack.ip.add(1).as_ref(),
-                    Ordering::Equal => None,
-                    Ordering::Less => call_stack.ip.as_ref(),
-                }
-            },
-        );
+        eprintln!("Stack: {:?}", self.stack);
     }
 
     #[cfg(not(debug_assertions))]
     /// Debug the values on the stack and in the bytecode
     pub fn debug_stack(&self) {}
 
+    fn call_args(&mut self, arity: usize, applied: &FunArgs) -> FunArgs {
+        let mut args = FunArgs::new();
+        for _ in 0..arity {
+            args.push(self.pop());
+        }
+        for arg in applied.iter() {
+            args.push(arg.clone());
+        }
+        args
+    }
+
+    pub(crate) fn call(&mut self, arity: usize) -> InterpretResult<()> {
+        let fun = match self.pop() {
+            Value::Fun(f) => f,
+            value => panic!("Expected a function to call, found {value}")?,
+        };
+
+        let args = self.call_args(arity, &fun.args);
+
+        if arity < fun.arity {
+            let ap = (*fun).clone().apply(args);
+            self.push(Value::Fun(GcRef::new(ap)));
+            return Ok(());
+        }
+
+        match &*fun.body {
+            Either::Left(bytecode) => self.call_bytecode(bytecode, args),
+            Either::Right(ptr) => self.call_native(*ptr, args),
+        }
+    }
+
+    fn call_bytecode(&mut self, bytecode: BytecodeRef, args: FunArgs) -> InterpretResult<()> {
+        for arg in args.iter() {
+            self.push(arg.clone());
+        }
+
+        let result = self.run(bytecode);
+        self.try_push(result)
+    }
+
+    fn call_native(&mut self, fp: NativeFun, args: FunArgs) -> InterpretResult<()> {
+        let args = args.iter().rev().cloned().collect();
+        let result = fp(self, args);
+        self.try_push(result)
+    }
+
+    fn valid_tail_call(&mut self, arity: usize, frame: BytecodeRef) -> InterpretResult<()> {
+        let fun = match self.pop() {
+            Value::Fun(fun) => fun,
+            value => panic!("Expected a function, found {value}")?,
+        };
+        match &*fun.body {
+            Either::Left(_) if fun.arity != arity => {
+                panic!(
+                    "Expected function with arity {}, found {}",
+                    arity, fun.arity
+                )
+            }
+            Either::Left(bytecode) if bytecode != frame => {
+                panic!("Tried to tail call a function with a different bytecode")
+            }
+            Either::Right(_) => {
+                panic!("Tried to use a tail call on a non-tail callable function")
+            }
+            Either::Left(_) => Ok(()),
+        }
+    }
+
     #[track_caller]
-    fn push(&mut self, constant: Constant) {
+    pub(crate) fn push(&mut self, constant: Value) {
         self.stack.push(constant)
     }
 
-    fn bytecode(&mut self) -> BytecodeRef {
-        self.call_stack.last().unwrap().bytecode()
-    }
-
-    fn call_frame(&mut self) -> &mut CallFrame {
-        self.call_stack.last_mut().unwrap()
-    }
-
     #[track_caller]
-    fn pop(&mut self) -> Constant {
+    pub(crate) fn pop(&mut self) -> Value {
         self.stack.pop()
+    }
+
+    fn binop<T, F>(&mut self, f: F) -> InterpretResult<()>
+    where
+        T: Into<Value>,
+        F: Fn(Value, Value) -> InterpretResult<T>,
+    {
+        let (a, b) = self.pop_two();
+        Ok(self.push(f(a, b)?.into()))
+    }
+
+    fn pop_two(&mut self) -> (Value, Value) {
+        let mut ret = (self.pop(), self.pop());
+        swap(&mut ret.0, &mut ret.1);
+        ret
+    }
+
+    fn try_push(&mut self, constant: InterpretResult<Value>) -> InterpretResult<()> {
+        Ok(self.push(constant?))
     }
 }
 
 impl Default for VirtualMachine {
     fn default() -> Self {
         const STACK: Stack = StackVec::new();
-        const CALL_STACK: CallStack = StackVec::new();
-        const UNINIT: MaybeUninit<Constant> = MaybeUninit::uninit();
+        const NIL: Value = Value::Nil;
 
         let prelude = prelude::prelude();
-
         Self {
-            constants: vec![],
-            call_stack: CALL_STACK,
             stack: STACK,
-            globals: prelude,
             dlopen_libs: HashMap::new(),
-            locals: [UNINIT; STACK_SIZE],
+            constants: Vec::new(),
+            locals: [NIL; 256],
+            globals: prelude,
         }
     }
 }

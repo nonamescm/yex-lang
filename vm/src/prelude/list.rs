@@ -1,23 +1,22 @@
 use crate::{
     error::InterpretResult,
-    gc::GcRef,
     list::List,
-    literal::{nil, Constant},
+    literal::{nil, Value},
     panic, VirtualMachine,
 };
 
-pub fn rev(args: &[Constant]) -> InterpretResult<Constant> {
+pub fn rev(args: &[Value]) -> InterpretResult<Value> {
     let xs = match &args[0] {
-        Constant::List(xs) => xs,
+        Value::List(xs) => xs,
         other => return panic!("rev[0] expected a list, but found `{}`", other),
     };
-    Ok(Constant::List(GcRef::new(xs.rev())))
+    Ok(Value::List(xs.rev()))
 }
 
-pub fn map(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
+pub fn map(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
     let fun = &args[0];
     let xs = match &args[1] {
-        Constant::List(xs) => xs,
+        Value::List(xs) => xs,
         other => return panic!("map[1] expected a list, but found `{}`", other),
     };
 
@@ -36,14 +35,14 @@ pub fn map(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Consta
             Err(e) => Err(e),
         })?;
 
-    Ok(Constant::List(GcRef::new(xs.rev())))
+    Ok(Value::List(xs.rev()))
 }
 
-pub fn fold(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
+pub fn fold(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
     let mut acc = args[0].clone();
     let fun = args[1].clone();
     let xs = match &args[2] {
-        Constant::List(xs) => xs,
+        Value::List(xs) => xs,
         other => panic!("fold[2] expected a list, but found `{}`", other)?,
     };
 
@@ -60,10 +59,10 @@ pub fn fold(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Const
     Ok(acc)
 }
 
-pub fn filter(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
+pub fn filter(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
     let fun = &args[0];
     let xs = match &args[1] {
-        Constant::List(xs) => xs,
+        Value::List(xs) => xs,
         other => panic!("filter[1] expected a list, but found `{}`", other)?,
     };
 
@@ -83,12 +82,12 @@ pub fn filter(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Con
         }
     }
 
-    Ok(Constant::List(GcRef::new(ys.rev())))
+    Ok(Value::List(ys.rev()))
 }
 
-pub fn head(args: &[Constant]) -> InterpretResult<Constant> {
+pub fn head(args: &[Value]) -> InterpretResult<Value> {
     match &args[0] {
-        Constant::List(xs) => Ok(match xs.head() {
+        Value::List(xs) => Ok(match xs.head() {
             Some(x) => x,
             None => nil(),
         }),
@@ -96,16 +95,16 @@ pub fn head(args: &[Constant]) -> InterpretResult<Constant> {
     }
 }
 
-pub fn tail(args: &[Constant]) -> InterpretResult<Constant> {
+pub fn tail(args: &[Value]) -> InterpretResult<Value> {
     match &args[0] {
-        Constant::List(xs) => Ok(Constant::List(GcRef::new(xs.tail()))),
+        Value::List(xs) => Ok(Value::List(xs.tail())),
         other => panic!("tail() expected a list, found {}", other),
     }
 }
 
-pub fn nth(args: &[Constant]) -> InterpretResult<Constant> {
+pub fn nth(args: &[Value]) -> InterpretResult<Value> {
     let n = match &args[0] {
-        Constant::Num(n) if n.fract() == 0.0 && *n >= 0.0 => *n as usize,
+        Value::Num(n) if n.fract() == 0.0 && *n >= 0.0 => *n as usize,
         other => panic!(
             "nth[1] expected a valid positive integer, but found {}",
             other
@@ -113,7 +112,7 @@ pub fn nth(args: &[Constant]) -> InterpretResult<Constant> {
     };
 
     match &args[1] {
-        Constant::List(xs) => Ok(xs.index(n)),
+        Value::List(xs) => Ok(xs.index(n)),
         other => panic!("nth() expected a list, found {}", other),
     }
 }

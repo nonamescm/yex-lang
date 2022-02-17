@@ -1,7 +1,7 @@
 use crate::{
     env::EnvTable,
     gc::GcRef,
-    literal::{nil, Constant},
+    literal::{nil, Value},
     panic, stackvec, InterpretResult, Symbol,
 };
 use std::io::Write;
@@ -9,25 +9,25 @@ mod ffi;
 mod list;
 mod table;
 
-fn puts(args: &[Constant]) -> InterpretResult<Constant> {
+fn puts(args: &[Value]) -> InterpretResult<Value> {
     match &args[0] {
-        Constant::Str(s) => println!("{}", &**s),
+        Value::Str(s) => println!("{}", &**s),
         other => println!("{}", other),
     };
     Ok(nil())
 }
 
-fn print(args: &[Constant]) -> InterpretResult<Constant> {
+fn print(args: &[Value]) -> InterpretResult<Value> {
     match &args[0] {
-        Constant::Str(s) => print!("{}", &**s),
+        Value::Str(s) => print!("{}", &**s),
         other => print!("{}", other),
     };
     Ok(nil())
 }
 
-fn input(args: &[Constant]) -> InterpretResult<Constant> {
+fn input(args: &[Value]) -> InterpretResult<Value> {
     match &args[0] {
-        Constant::Str(s) => print!("{}", **s),
+        Value::Str(s) => print!("{}", **s),
         other => print!("{}", other),
     };
 
@@ -41,54 +41,54 @@ fn input(args: &[Constant]) -> InterpretResult<Constant> {
     }
 
     input.pop();
-    Ok(Constant::Str(GcRef::new(input)))
+    Ok(Value::Str(GcRef::new(input)))
 }
 
-fn str(args: &[Constant]) -> InterpretResult<Constant> {
-    Ok(Constant::Str(GcRef::new(format!("{}", &args[0]))))
+fn str(args: &[Value]) -> InterpretResult<Value> {
+    Ok(Value::Str(GcRef::new(format!("{}", &args[0]))))
 }
 
-fn r#type(args: &[Constant]) -> InterpretResult<Constant> {
+fn r#type(args: &[Value]) -> InterpretResult<Value> {
     let type_name = match &args[0] {
-        Constant::List(_) => "list",
-        Constant::Table(_) => "table",
-        Constant::Str(_) => "str",
-        Constant::Num(_) => "num",
-        Constant::Bool(_) => "bool",
-        Constant::Sym(_) => "symbol",
-        Constant::Nil => "nil",
-        Constant::ExternalFunction(_) | Constant::ExternalFunctionNoArg(_) => "extern fn",
-        Constant::Fun { .. } => "fn",
+        Value::List(_) => "list",
+        Value::Table(_) => "table",
+        Value::Str(_) => "str",
+        Value::Num(_) => "num",
+        Value::Bool(_) => "bool",
+        Value::Sym(_) => "symbol",
+        Value::Nil => "nil",
+        Value::ExternalFunction(_) | Value::ExternalFunctionNoArg(_) => "extern fn",
+        Value::Fun { .. } => "fn",
     };
 
-    Ok(Constant::Sym(Symbol::new(type_name)))
+    Ok(Value::Sym(Symbol::new(type_name)))
 }
 
-fn inspect(args: &[Constant]) -> InterpretResult<Constant> {
-    Ok(Constant::Str(GcRef::new(format!("{:#?}", &args[0]))))
+fn inspect(args: &[Value]) -> InterpretResult<Value> {
+    Ok(Value::Str(GcRef::new(format!("{:#?}", &args[0]))))
 }
 
-fn get_os(_args: &[Constant]) -> InterpretResult<Constant> {
-    Ok(Constant::Str(GcRef::new(std::env::consts::OS.to_string())))
+fn get_os(_args: &[Value]) -> InterpretResult<Value> {
+    Ok(Value::Str(GcRef::new(std::env::consts::OS.to_string())))
 }
 
-fn num(args: &[Constant]) -> InterpretResult<Constant> {
+fn num(args: &[Value]) -> InterpretResult<Value> {
     let str = match &args[0] {
-        Constant::Sym(symbol) => symbol.to_str(),
-        Constant::Str(str) => &*str,
-        n @ Constant::Num(..) => return Ok(n.clone()),
+        Value::Sym(symbol) => symbol.to_str(),
+        Value::Str(str) => &*str,
+        n @ Value::Num(..) => return Ok(n.clone()),
         other => panic!("Expected a string or a symbol, found {}", other)?,
     };
 
     match str.parse::<f64>() {
-        Ok(n) => Ok(Constant::Num(n)),
+        Ok(n) => Ok(Value::Num(n)),
         Err(e) => panic!("{:?}", e),
     }
 }
 
-fn exit(args: &[Constant]) -> InterpretResult<Constant> {
+fn exit(args: &[Value]) -> InterpretResult<Value> {
     let code = match &args[0] {
-        Constant::Num(n) if n.fract() == 0.0 => *n as i32,
+        Value::Num(n) if n.fract() == 0.0 => *n as i32,
         other => panic!("Expected a valid int number, found {}", other)?,
     };
 
@@ -106,7 +106,7 @@ pub fn prelude() -> EnvTable {
         ($name: expr, $fn: expr, $arity:expr) => {
             prelude.insert(
                 $crate::Symbol::new($name),
-                Constant::Fun(GcRef::new(crate::literal::Fun {
+                Value::Fun(GcRef::new(crate::literal::Fun {
                     arity: $arity,
                     args: stackvec![],
                     body: GcRef::new($crate::Either::Right(|_, it| $fn(&*it))),
@@ -117,7 +117,7 @@ pub fn prelude() -> EnvTable {
         (@vm $name: expr, $fn: expr, $arity:expr) => {
             prelude.insert(
                 $crate::Symbol::new($name),
-                Constant::Fun(GcRef::new(crate::literal::Fun {
+                Value::Fun(GcRef::new(crate::literal::Fun {
                     arity: $arity,
                     args: stackvec![],
                     body: GcRef::new($crate::Either::Right(|vm, it| {

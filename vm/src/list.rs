@@ -1,6 +1,6 @@
 use crate::{
     gc::GcRef,
-    literal::{nil, Constant},
+    literal::{nil, Value},
 };
 
 type Link = Option<GcRef<Node>>;
@@ -11,7 +11,7 @@ pub struct List {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct Node {
-    elem: Constant,
+    elem: Value,
     next: Link,
 }
 
@@ -28,7 +28,7 @@ impl List {
 
     /// Prepends a value to the end, returning the list
     #[must_use]
-    pub fn prepend(&self, elem: Constant) -> Self {
+    pub fn prepend(&self, elem: Value) -> Self {
         let node = GcRef::new(Node {
             elem,
             next: self.head.clone(),
@@ -49,12 +49,12 @@ impl List {
     }
 
     /// Returns the current element
-    pub fn head(&self) -> Option<Constant> {
+    pub fn head(&self) -> Option<Value> {
         self.head.as_ref().map(|node| node.elem.clone())
     }
 
     /// Returns a index into the list
-    pub fn index(&self, index: usize) -> Constant {
+    pub fn index(&self, index: usize) -> Value {
         if index == 0 {
             self.head().unwrap_or_else(nil)
         } else {
@@ -79,7 +79,7 @@ impl List {
     }
 
     /// Converts list to Vec
-    pub fn to_vec(&self) -> Vec<Constant> {
+    pub fn to_vec(&self) -> Vec<Value> {
         let mut vec = vec![];
         let mut head = self.clone();
         while head.head().is_some() {
@@ -128,7 +128,7 @@ pub struct Iter<'a> {
 }
 
 impl<'a> Iterator for Iter<'a> {
-    type Item = Constant;
+    type Item = Value;
     fn next(&mut self) -> Option<Self::Item> {
         self.next.map(|node| {
             self.next = node.next.as_deref();
@@ -137,8 +137,8 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
-impl FromIterator<Constant> for List {
-    fn from_iter<T: IntoIterator<Item = Constant>>(iter: T) -> Self {
+impl FromIterator<Value> for List {
+    fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
         let mut list = Self::new();
         for item in iter.into_iter() {
             list = list.prepend(item)

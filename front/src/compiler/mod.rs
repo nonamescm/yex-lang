@@ -5,8 +5,7 @@ use crate::{
 };
 use std::{collections::HashMap, iter::Peekable, mem::take};
 use vm::{
-    gc::GcRef, stackvec, Bytecode, Constant, Either, Fun, List, OpCode, OpCodeMetadata, Symbol,
-    Table,
+    gc::GcRef, stackvec, Bytecode, Either, Fun, List, OpCode, OpCodeMetadata, Symbol, Table, Value,
 };
 
 type ParseResult = Result<(), ParseError>;
@@ -35,13 +34,13 @@ struct Proxy {
 
 pub struct Compiler {
     lexer: Peekable<Lexer>,
-    constants: Vec<Constant>,
+    constants: Vec<Value>,
     current: Token,
     proxies: Vec<Proxy>,
 }
 
 impl Compiler {
-    pub fn compile(lexer: Lexer) -> Result<(Bytecode, Vec<Constant>), ParseError> {
+    pub fn compile(lexer: Lexer) -> Result<(Bytecode, Vec<Value>), ParseError> {
         let mut this = Self {
             lexer: lexer.peekable(),
             constants: vec![],
@@ -67,7 +66,7 @@ impl Compiler {
         Ok((this.proxies.pop().unwrap().opcodes, this.constants))
     }
 
-    pub fn compile_expr(lexer: Lexer) -> Result<(Bytecode, Vec<Constant>), ParseError> {
+    pub fn compile_expr(lexer: Lexer) -> Result<(Bytecode, Vec<Value>), ParseError> {
         let mut this = Self {
             lexer: lexer.peekable(),
             constants: vec![],
@@ -137,12 +136,12 @@ impl Compiler {
         Ok(())
     }
 
-    fn compile_pather(&mut self, bytecode: Bytecode, constants: Vec<Constant>) {
+    fn compile_pather(&mut self, bytecode: Bytecode, constants: Vec<Value>) {
         let len = self.constants.len();
         let bt_len = self.compiled_opcodes();
         constants.into_iter().for_each(|it| {
             self.constants.push(match it {
-                Constant::Fun(f) => {
+                Value::Fun(f) => {
                     let body = patch_bytecode(
                         len,
                         bt_len,
@@ -151,7 +150,7 @@ impl Compiler {
                             _ => unreachable!(),
                         },
                     );
-                    Constant::Fun(GcRef::new(Fun {
+                    Value::Fun(GcRef::new(Fun {
                         arity: f.arity,
                         body: GcRef::new(Either::Left(body)),
                         args: f.args.clone(),
@@ -197,7 +196,7 @@ impl Compiler {
         proxy.opcodes[idx].opcode = intr;
     }
 
-    fn emit_const_push(&mut self, constant: Constant) {
+    fn emit_const_push(&mut self, constant: Value) {
         if let Some(idx) = self.constants.iter().position(|c| c == &constant) {
             self.emit(OpCode::Push(idx))
         } else {
@@ -338,7 +337,7 @@ impl Compiler {
         self.expression()?;
         let body = self.proxies.pop().unwrap();
 
-        self.emit_const_push(Constant::Fun(GcRef::new(Fun {
+        self.emit_const_push(Value::Fun(GcRef::new(Fun {
             body: GcRef::new(Either::Left(body.opcodes)),
             arity,
             args: stackvec![],
@@ -700,7 +699,7 @@ impl Compiler {
             }
         }
 
-        self.emit_const_push(Constant::List(GcRef::new(List::new())));
+        self.emit_const_push(Value::List(List::new()));
 
         while len > 0 {
             self.emit(OpCode::Rev);
@@ -712,7 +711,7 @@ impl Compiler {
     }
 
     fn table(&mut self) -> ParseResult {
-        self.emit_const_push(Constant::Table(GcRef::new(Table::new())));
+        self.emit_const_push(Value::Table(GcRef::new(Table::new())));
         self.next()?;
 
         while self.current.token != Tkt::Rbrace {
@@ -764,7 +763,7 @@ impl Compiler {
             }};
         }
 
-        use Constant::*;
+        use Value::*;
 
         match take(&mut self.current.token) {
             Tkt::Num(n) => push!(Num(n)),

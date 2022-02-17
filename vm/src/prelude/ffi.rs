@@ -1,12 +1,12 @@
 mod convs;
 use crate::{
-    literal::nil, literal::FFIFunction, literal::FFINoArgFunction, panic, stackvec, Constant,
-    GcRef, InterpretResult, VirtualMachine,
+    literal::nil, literal::FFIFunction, literal::FFINoArgFunction, panic, stackvec, GcRef,
+    InterpretResult, Value, VirtualMachine,
 };
 use dlopen::raw::Library;
 
-pub fn dlclose(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
-    use Constant::Str;
+pub fn dlclose(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
+    use Value::Str;
     vm.dlopen_libs.remove(match &args[0] {
         Str(libname) => &**libname,
         other => return panic!("dlclose()[0] expected str, found {}", other),
@@ -14,8 +14,8 @@ pub fn dlclose(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Co
     Ok(nil())
 }
 
-pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Constant> {
-    use Constant::*;
+pub fn dlopen(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
+    use Value::*;
 
     let libname = match &args[0] {
         Str(libname) => &*libname,
@@ -54,7 +54,7 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Con
                 Err(err) => return panic!("{}", err),
             };
 
-            let call = Constant::Fun(GcRef::new(crate::literal::Fun {
+            let call = Value::Fun(GcRef::new(crate::literal::Fun {
                 arity: *number_of_args as i64 as usize,
                 args: stackvec![ExternalFunctionNoArg(func), Str(GcRef::new(typeof_fun))],
                 body: GcRef::new(crate::Either::Right(|_, mut args| {
@@ -81,13 +81,13 @@ pub fn dlopen(vm: &mut VirtualMachine, args: &[Constant]) -> InterpretResult<Con
                 Ok(func) => func,
                 Err(err) => return panic!("{}", err),
             };
-            let call = Constant::Fun(GcRef::new(crate::literal::Fun {
+            let call = Value::Fun(GcRef::new(crate::literal::Fun {
                 arity: *number_of_args as i64 as usize,
                 args: stackvec![Str(GcRef::new(typeof_fun)), ExternalFunction(func)],
                 body: GcRef::new(crate::Either::Right(|_, args| match &args[0] {
                     ExternalFunction(fn_ptr) => {
                         let typeof_fun = match &args[1] {
-                            Constant::Str(s) => s,
+                            Value::Str(s) => s,
                             _ => unreachable!(),
                         };
                         let mut c_args = vec![];

@@ -5,12 +5,11 @@ use std::{
 };
 
 use crate::{
-    literal::{nil, Constant},
+    literal::{nil, Value},
     Symbol,
 };
 
 type Key = Symbol;
-type Value = Constant;
 
 #[derive(Debug, PartialEq, Clone)]
 struct Entry {
@@ -77,7 +76,7 @@ impl EnvTable {
     }
 
     /// Inserts an item in the table
-    pub fn insert(&mut self, key: Symbol, value: Constant) {
+    pub fn insert(&mut self, key: Symbol, value: Value) {
         if self.count + (self.capacity / Self::BASE_VALUE) >= self.capacity {
             let len = self.capacity * 2;
             self.realloc(len)
@@ -132,7 +131,7 @@ impl EnvTable {
     }
 
     /// Indexes an item in the table
-    pub fn get(&self, key: &Symbol) -> Option<Constant> {
+    pub fn get(&self, key: &Symbol) -> Option<Value> {
         unsafe {
             let (entry, init) = Self::find_entry(self.entries, self.capacity, key);
             if init {

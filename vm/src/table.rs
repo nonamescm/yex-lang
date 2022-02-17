@@ -1,7 +1,6 @@
-use crate::{Constant, GcRef, Symbol};
+use crate::{GcRef, Symbol, Value};
 
 type Key = Symbol;
-type Value = Constant;
 
 #[derive(Debug, PartialEq, Clone)]
 struct Entry {
@@ -43,7 +42,7 @@ impl Table {
 
     /// Inserts an item in the table
     #[must_use]
-    pub fn insert(&self, key: Symbol, value: Constant) -> Self {
+    pub fn insert(&self, key: Symbol, value: Value) -> Self {
         let mut new = self.clone();
 
         match new.find_entry_idx(&key) {
@@ -60,7 +59,7 @@ impl Table {
     }
 
     /// Indexes an item in the table
-    pub fn get(&self, key: &Symbol) -> Option<Constant> {
+    pub fn get(&self, key: &Symbol) -> Option<Value> {
         self.find_entry(key).map(|entry| entry.value.clone())
     }
 

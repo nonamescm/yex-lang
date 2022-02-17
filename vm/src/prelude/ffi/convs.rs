@@ -1,12 +1,12 @@
 use libc::c_void;
 
-use crate::{gc::GcRef, literal::nil, panic, Constant, InterpretResult};
+use crate::{gc::GcRef, literal::nil, panic, InterpretResult, Value};
 use std::{
     ffi::{CStr, CString},
     mem,
 };
 
-pub fn c_ptr_to_cont(ptr: *mut c_void, fun_ty: &str) -> InterpretResult<Constant> {
+pub fn c_ptr_to_cont(ptr: *mut c_void, fun_ty: &str) -> InterpretResult<Value> {
     match fun_ty {
         "num" => {
             if ptr.is_null() {
@@ -17,13 +17,13 @@ pub fn c_ptr_to_cont(ptr: *mut c_void, fun_ty: &str) -> InterpretResult<Constant
             unsafe {
                 let float_value = f.read();
 
-                Ok(Constant::Num(float_value))
+                Ok(Value::Num(float_value))
             }
         }
         "str" => unsafe {
             let c_str = CStr::from_ptr(ptr as *const i8);
             match c_str.to_str() {
-                Ok(s) => Ok(Constant::Str(GcRef::new(s.to_string()))),
+                Ok(s) => Ok(Value::Str(GcRef::new(s.to_string()))),
 
                 #[allow(unused_unsafe)]
                 Err(err) => panic!("{}", err),
@@ -33,8 +33,8 @@ pub fn c_ptr_to_cont(ptr: *mut c_void, fun_ty: &str) -> InterpretResult<Constant
         ty => panic!("unknown C Type: {}", ty),
     }
 }
-pub unsafe fn to_c_ptr(cont: &Constant) -> Result<*mut u8, String> {
-    use Constant::*;
+pub unsafe fn to_c_ptr(cont: &Value) -> Result<*mut u8, String> {
+    use Value::*;
     match cont {
         // yeah kek
         #[allow(clippy::wrong_transmute)]

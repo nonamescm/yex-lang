@@ -11,18 +11,18 @@ use crate::{
 };
 use symbol::Symbol;
 
-pub type NativeFun = fn(*mut VirtualMachine, Vec<Constant>) -> InterpretResult<Constant>;
+pub type NativeFun = fn(*mut VirtualMachine, Vec<Value>) -> InterpretResult<Value>;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
-pub type FunArgs = StackVec<Constant, 8>;
+pub type FunArgs = StackVec<Value, 8>;
 
 pub type FFINoArgFunction = unsafe extern "C" fn() -> *mut c_void;
 pub type FFIFunction = unsafe extern "C" fn(usize, *mut u8) -> *mut c_void;
 
-pub fn nil() -> Constant {
-    Constant::Nil
+pub fn nil() -> Value {
+    Value::Nil
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 /// Yex function struct
 pub struct Fun {
     /// The number of argument the function receives
@@ -33,9 +33,26 @@ pub struct Fun {
     pub args: FunArgs,
 }
 
+impl Fun {
+    /// Apply the function to the arguments, returing the partial application
+    pub fn apply(self, args: FunArgs) -> Self {
+        Self {
+            arity: self.arity - args.len(),
+            body: self.body,
+            args,
+        }
+    }
+}
+
+impl From<bool> for Value {
+    fn from(b: bool) -> Self {
+        Value::Bool(b)
+    }
+}
+
 /// Immediate values that can be consumed
 #[derive(Debug, PartialEq)]
-pub enum Constant {
+pub enum Value {
     /// float-precision numbers
     Num(f64),
     /// Strings
@@ -47,7 +64,7 @@ pub enum Constant {
     /// Functions
     Fun(GcRef<Fun>),
     /// Yex lists
-    List(GcRef<List>),
+    List(List),
     /// Yex Tables
     Table(GcRef<Table>),
     /// External Function
@@ -58,12 +75,12 @@ pub enum Constant {
     Nil,
 }
 
-impl Clone for Constant {
+impl Clone for Value {
     fn clone(&self) -> Self {
-        use Constant::*;
+        use Value::*;
 
         match self {
-            List(xs) => List(GcRef::clone(xs)),
+            List(xs) => List(xs.clone()),
             Table(ts) => Table(GcRef::clone(ts)),
             Str(str) => Str(GcRef::clone(str)),
             Fun(f) => Fun(GcRef::clone(f)),
@@ -77,7 +94,7 @@ impl Clone for Constant {
     }
 }
 
-impl Constant {
+impl Value {
     /// checks if the constant is `nil`
     pub fn is_nil(&self) -> bool {
         self == &Self::Nil
@@ -87,18 +104,18 @@ impl Constant {
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         match self {
-            Constant::List(xs) => xs.len(),
-            Constant::Num(_) => std::mem::size_of::<f64>(),
-            Constant::Sym(_) => std::mem::size_of::<Symbol>(),
-            Constant::Str(s) => s.len(),
-            Constant::Table(ts) => ts.len(),
-            Constant::Fun(f) => {
+            Value::List(xs) => xs.len(),
+            Value::Num(_) => std::mem::size_of::<f64>(),
+            Value::Sym(_) => std::mem::size_of::<Symbol>(),
+            Value::Str(s) => s.len(),
+            Value::Table(ts) => ts.len(),
+            Value::Fun(f) => {
                 mem::size_of_val(&f.arity) + mem::size_of_val(&f.body) + mem::size_of_val(&f.args)
             }
-            Constant::ExternalFunction(f) => mem::size_of_val(f),
-            Constant::ExternalFunctionNoArg(f) => mem::size_of_val(f),
-            Constant::Bool(_) => std::mem::size_of::<bool>(),
-            Constant::Nil => 4,
+            Value::ExternalFunction(f) => mem::size_of_val(f),
+            Value::ExternalFunctionNoArg(f) => mem::size_of_val(f),
+            Value::Bool(_) => std::mem::size_of::<bool>(),
+            Value::Nil => 4,
         }
     }
 
@@ -117,7 +134,7 @@ impl Constant {
 
     /// Convert the constant to a boolean
     pub fn to_bool(&self) -> bool {
-        use Constant::*;
+        use Value::*;
 
         match self {
             Bool(true) => true,
@@ -137,13 +154,13 @@ impl Constant {
     }
 }
 
-impl Default for Constant {
+impl Default for Value {
     fn default() -> Self {
         Self::Nil
     }
 }
 
-type ConstantErr = InterpretResult<Constant>;
+type ConstantErr = InterpretResult<Value>;
 
 macro_rules! panic {
     ($($tt:tt)+) => {
@@ -158,15 +175,15 @@ macro_rules! panic {
     }
 }
 
-impl From<Constant> for bool {
-    fn from(o: Constant) -> Self {
+impl From<Value> for bool {
+    fn from(o: Value) -> Self {
         o.to_bool()
     }
 }
 
-impl std::fmt::Display for Constant {
+impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use Constant::*;
+        use Value::*;
         let tk = match self {
             Fun(f) => {
                 format!("<fun({})>", f.arity)
@@ -174,7 +191,7 @@ impl std::fmt::Display for Constant {
             ExternalFunction(_) => "<extern fun<?>>".to_string(),
             ExternalFunctionNoArg(_) => "<extern fun<0>".to_string(),
             Nil => "nil".to_string(),
-            List(xs) => format!("{}", **xs),
+            List(xs) => format!("{}", *xs),
             Table(ts) => format!("{}", **ts),
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
@@ -185,7 +202,7 @@ impl std::fmt::Display for Constant {
     }
 }
 
-impl Add for Constant {
+impl Add for Value {
     type Output = ConstantErr;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -197,7 +214,7 @@ impl Add for Constant {
     }
 }
 
-impl Sub for Constant {
+impl Sub for Value {
     type Output = ConstantErr;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -208,7 +225,7 @@ impl Sub for Constant {
     }
 }
 
-impl Mul for Constant {
+impl Mul for Value {
     type Output = ConstantErr;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -219,7 +236,7 @@ impl Mul for Constant {
     }
 }
 
-impl Div for Constant {
+impl Div for Value {
     type Output = ConstantErr;
 
     fn div(self, rhs: Self) -> Self::Output {
@@ -230,7 +247,7 @@ impl Div for Constant {
     }
 }
 
-impl Neg for Constant {
+impl Neg for Value {
     type Output = ConstantErr;
 
     fn neg(self) -> Self::Output {
@@ -241,19 +258,19 @@ impl Neg for Constant {
     }
 }
 
-impl Not for Constant {
-    type Output = Constant;
+impl Not for Value {
+    type Output = Value;
 
     fn not(self) -> Self::Output {
         Self::Bool(!self.to_bool())
     }
 }
 
-impl BitXor for Constant {
+impl BitXor for Value {
     type Output = ConstantErr;
 
     fn bitxor(self, rhs: Self) -> Self::Output {
-        use Constant::*;
+        use Value::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
@@ -262,11 +279,11 @@ impl BitXor for Constant {
     }
 }
 
-impl BitAnd for Constant {
+impl BitAnd for Value {
     type Output = ConstantErr;
 
     fn bitand(self, rhs: Self) -> Self::Output {
-        use Constant::*;
+        use Value::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
@@ -275,11 +292,11 @@ impl BitAnd for Constant {
     }
 }
 
-impl BitOr for Constant {
+impl BitOr for Value {
     type Output = ConstantErr;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        use Constant::*;
+        use Value::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
@@ -288,11 +305,11 @@ impl BitOr for Constant {
     }
 }
 
-impl Shr for Constant {
+impl Shr for Value {
     type Output = ConstantErr;
 
     fn shr(self, rhs: Self) -> Self::Output {
-        use Constant::*;
+        use Value::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
@@ -301,11 +318,11 @@ impl Shr for Constant {
     }
 }
 
-impl Shl for Constant {
+impl Shl for Value {
     type Output = ConstantErr;
 
     fn shl(self, rhs: Self) -> Self::Output {
-        use Constant::*;
+        use Value::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
@@ -314,11 +331,11 @@ impl Shl for Constant {
     }
 }
 
-impl Rem for Constant {
+impl Rem for Value {
     type Output = ConstantErr;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        use Constant::*;
+        use Value::*;
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x % y)),
