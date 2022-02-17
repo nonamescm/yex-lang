@@ -35,6 +35,7 @@ pub struct Fun {
 
 impl Fun {
     /// Apply the function to the arguments, returing the partial application
+    #[must_use]
     pub fn apply(self, args: FunArgs) -> Self {
         Self {
             arity: self.arity - args.len(),
