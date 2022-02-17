@@ -22,7 +22,7 @@ pub fn nil() -> Value {
     Value::Nil
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 /// Yex function struct
 pub struct Fun {
     /// The number of argument the function receives
@@ -31,6 +31,12 @@ pub struct Fun {
     pub body: FunBody,
     /// The arguments that where already passed to the function
     pub args: FunArgs,
+}
+
+impl std::fmt::Debug for Fun {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<fun({})>", self.arity)
+    }
 }
 
 impl Fun {

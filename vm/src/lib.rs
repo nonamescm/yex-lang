@@ -59,8 +59,9 @@ use std::{collections::HashMap, mem::swap};
 pub struct VirtualMachine {
     dlopen_libs: HashMap<String, GcRef<Library>>,
     stack: Stack,
+    locals: [Value; 512],
+    used_locals: usize,
     constants: Vec<Value>,
-    locals: [Value; 256],
     globals: EnvTable,
 }
 
@@ -92,16 +93,20 @@ impl VirtualMachine {
 
     /// Executes a given set of bytecode instructions
     pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<Value> {
+        const NIL: Value = Value::Nil;
         let mut ip = 0;
-        while ip < bytecode.len() {
-            self.debug_stack();
+        let mut frame_locals = 0;
 
+        while ip < bytecode.len() {
             unsafe {
                 LINE = bytecode[ip].line;
                 COLUMN = bytecode[ip].column;
             }
 
             let op = bytecode[ip].opcode;
+
+            self.debug_stack(&op);
+
             match op {
                 OpCode::Halt => return Ok(Value::Nil),
 
@@ -127,10 +132,14 @@ impl VirtualMachine {
                 }
 
                 // jump instructions
-                OpCode::Jmp(offset) => ip = offset,
+                OpCode::Jmp(offset) => {
+                    ip = offset;
+                    continue;
+                }
                 OpCode::Jmf(offset) => {
                     if !self.pop().to_bool() {
                         ip = offset;
+                        continue;
                     }
                 }
 
@@ -183,15 +192,21 @@ impl VirtualMachine {
 
                 // locals manipulation
                 OpCode::Load(offset) => {
-                    let value = self.locals[offset].clone();
+                    let value = self.locals[offset + self.used_locals - frame_locals].clone();
                     self.push(value);
                 }
                 OpCode::Save(offset) => {
                     let value = self.pop();
-                    self.locals[offset] = value;
+                    if self.locals[offset] != NIL {
+                        self.used_locals += 1;
+                        frame_locals += 1;
+                    }
+                    self.locals[offset + self.used_locals - frame_locals] = value;
                 }
                 OpCode::Drop(offset) => {
-                    self.locals[offset] = Value::Nil;
+                    self.locals[offset + self.used_locals - frame_locals] = Value::Nil;
+                    frame_locals -= 1;
+                    self.used_locals -= 1;
                 }
 
                 // globals manipulation
@@ -233,19 +248,22 @@ impl VirtualMachine {
             ip += 1;
         }
 
+        self.used_locals -= frame_locals;
+
         Ok(self.pop_last().clone())
     }
 
     #[cfg(debug_assertions)]
     /// Debug the values on the stack and in the bytecode
-    pub fn debug_stack(&self) {
-        eprintln!("Stack: {:?}", self.stack);
+    pub fn debug_stack(&self, instruction: &OpCode) {
+        eprintln!("Stack: {:?} ({instruction:?})", self.stack);
     }
 
     #[cfg(not(debug_assertions))]
     /// Debug the values on the stack and in the bytecode
-    pub fn debug_stack(&self) {}
+    pub fn debug_stack(&self, _: &OpCode) {}
 
+    #[inline]
     fn call_args(&mut self, arity: usize, applied: &FunArgs) -> FunArgs {
         let mut args = FunArgs::new();
         for _ in 0..arity {
@@ -277,21 +295,24 @@ impl VirtualMachine {
         }
     }
 
+    #[inline]
     fn call_bytecode(&mut self, bytecode: BytecodeRef, args: FunArgs) -> InterpretResult<()> {
         for arg in args.iter() {
             self.push(arg.clone());
         }
 
-        let result = self.run(bytecode);
-        self.try_push(result)
+        self.run(bytecode)?;
+        Ok(())
     }
 
+    #[inline]
     fn call_native(&mut self, fp: NativeFun, args: FunArgs) -> InterpretResult<()> {
         let args = args.iter().rev().cloned().collect();
         let result = fp(self, args);
         self.try_push(result)
     }
 
+    #[inline]
     fn valid_tail_call(&mut self, arity: usize, frame: BytecodeRef) -> InterpretResult<()> {
         let fun = match self.pop() {
             Value::Fun(fun) => fun,
@@ -352,9 +373,10 @@ impl Default for VirtualMachine {
         let prelude = prelude::prelude();
         Self {
             stack: STACK,
+            locals: [NIL; 512],
+            used_locals: 0,
             dlopen_libs: HashMap::new(),
             constants: Vec::new(),
-            locals: [NIL; 256],
             globals: prelude,
         }
     }
