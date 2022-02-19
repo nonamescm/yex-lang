@@ -2,7 +2,7 @@ use crate::{
     env::EnvTable,
     gc::GcRef,
     literal::{nil, Value},
-    panic, stackvec, InterpretResult, Symbol,
+    panic, stackvec, InterpretResult, List, Symbol,
 };
 use std::io::Write;
 mod ffi;
@@ -86,6 +86,20 @@ fn num(args: &[Value]) -> InterpretResult<Value> {
     }
 }
 
+fn list(args: &[Value]) -> InterpretResult<Value> {
+    match &args[0] {
+        xs @ Value::List(_) => Ok(xs.clone()),
+        Value::Str(s) => {
+            let mut xs = List::new();
+            for c in s.chars() {
+                xs = xs.prepend(Value::Str(GcRef::new(c.to_string())));
+            }
+            Ok(Value::List(xs.rev()))
+        }
+        _ => panic!("Expected a string or a list, found {}", &args[0]),
+    }
+}
+
 fn exit(args: &[Value]) -> InterpretResult<Value> {
     let code = match &args[0] {
         Value::Num(n) if n.fract() == 0.0 => *n as i32,
@@ -140,6 +154,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("head", head);
     insert_fn!("tail", tail);
     insert_fn!("str", str);
+    insert_fn!("list", list);
     insert_fn!("type", r#type);
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
