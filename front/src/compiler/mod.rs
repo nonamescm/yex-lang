@@ -10,7 +10,8 @@ use vm::{
 
 type ParseResult = Result<(), ParseError>;
 
-fn patch_bytecode(len: usize, bt_len: usize, bytecode: &[OpCodeMetadata]) -> Bytecode {
+fn patch_bytecode(len: usize, bytecode: &Bytecode) -> Bytecode {
+    let bt_len = bytecode.len();
     bytecode
         .iter()
         .copied()
@@ -138,13 +139,11 @@ impl Compiler {
 
     fn compile_pather(&mut self, bytecode: Bytecode, constants: Vec<Value>) {
         let len = self.constants.len();
-        let bt_len = self.compiled_opcodes();
         constants.into_iter().for_each(|it| {
             self.constants.push(match it {
                 Value::Fun(f) => {
                     let body = patch_bytecode(
                         len,
-                        bt_len,
                         match &*f.body {
                             Either::Left(body) => body,
                             _ => unreachable!(),
@@ -159,7 +158,7 @@ impl Compiler {
                 other => other,
             })
         });
-        let bytecode = patch_bytecode(len, bt_len, &bytecode);
+        let bytecode = patch_bytecode(len, &bytecode);
         bytecode.into_iter().for_each(|it| self.emit_metadata(it));
     }
 
@@ -189,6 +188,11 @@ impl Compiler {
     fn emit_metadata(&mut self, op: OpCodeMetadata) {
         let proxy = self.proxies.last_mut().unwrap();
         proxy.opcodes.push(op);
+    }
+
+    fn emit_all_metadata(&mut self, ops: &[OpCodeMetadata]) {
+        let proxy = self.proxies.last_mut().unwrap();
+        proxy.opcodes.extend_from_slice(ops);
     }
 
     fn emit_patch(&mut self, intr: OpCode, idx: usize) {
@@ -278,6 +282,12 @@ impl Compiler {
 
     fn new_proxy(&mut self) {
         self.proxies.push(Proxy::default())
+    }
+
+    fn new_proxy_extend(&mut self) {
+        let mut proxy = Proxy::default();
+        proxy.vars = self.proxies.last().unwrap().vars.clone();
+        self.proxies.push(proxy)
     }
 
     fn expression(&mut self) -> ParseResult {
@@ -660,22 +670,38 @@ impl Compiler {
     fn call_args(&mut self) -> Result<usize, ParseError> {
         let mut arity = 0;
 
+        let mut args = Vec::new();
+
         while self.peek()?.token.is_expression() {
             self.next()?;
+
+            self.new_proxy_extend();
             self.primary()?;
-            self.emit(OpCode::Rev);
+            args.push(self.proxies.pop().unwrap().opcodes);
+
             arity += 1;
+        }
+
+        for arg in args.into_iter().rev() {
+            self.emit_all_metadata(&arg);
         }
 
         Ok(arity)
     }
 
     fn call(&mut self) -> ParseResult {
+        self.new_proxy_extend();
         self.primary()?; // compiles the called expresion
+        let callee = self.proxies.pop().unwrap().opcodes;
 
         if self.peek()?.token.is_expression() {
             let arity = self.call_args()?;
+
+            self.emit_all_metadata(&callee);
+
             self.emit(OpCode::Call(arity));
+        } else {
+            self.emit_all_metadata(&callee);
         }
 
         Ok(())

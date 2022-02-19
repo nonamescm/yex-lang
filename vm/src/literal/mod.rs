@@ -18,10 +18,6 @@ pub type FunArgs = StackVec<Value, 8>;
 pub type FFINoArgFunction = unsafe extern "C" fn() -> *mut c_void;
 pub type FFIFunction = unsafe extern "C" fn(usize, *mut u8) -> *mut c_void;
 
-pub fn nil() -> Value {
-    Value::Nil
-}
-
 #[derive(PartialEq, Clone)]
 /// Yex function struct
 pub struct Fun {
@@ -35,7 +31,11 @@ pub struct Fun {
 
 impl std::fmt::Debug for Fun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<fun({})>", self.arity)
+        write!(
+            f,
+            "Fun {{ arity: {}, body: {:?}, args: {:?} }}",
+            self.arity, self.body, self.args
+        )
     }
 }
 
@@ -49,6 +49,10 @@ impl Fun {
             args,
         }
     }
+}
+
+pub fn nil() -> Value {
+    Value::Nil
 }
 
 impl From<bool> for Value {

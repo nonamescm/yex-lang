@@ -31,6 +31,7 @@ pub use crate::{
 };
 
 const STACK_SIZE: usize = 512;
+const NIL: Value = Value::Nil;
 
 static mut LINE: usize = 1;
 static mut COLUMN: usize = 1;
@@ -51,7 +52,8 @@ type Stack = StackVec<Value, STACK_SIZE>;
 /// Bytecode for the virtual machine, contains the instructions to be executed and the constants to
 /// be loaded
 pub type Bytecode = Vec<OpCodeMetadata>;
-type BytecodeRef<'a> = &'a [OpCodeMetadata];
+
+type BytecodeRef<'a> = &'a Bytecode;
 use dlopen::raw::Library;
 use std::{collections::HashMap, mem::swap};
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
@@ -59,7 +61,7 @@ use std::{collections::HashMap, mem::swap};
 pub struct VirtualMachine {
     dlopen_libs: HashMap<String, GcRef<Library>>,
     stack: Stack,
-    locals: [Value; 512],
+    locals: [Value; 1024],
     used_locals: usize,
     constants: Vec<Value>,
     globals: EnvTable,
@@ -93,17 +95,17 @@ impl VirtualMachine {
 
     /// Executes a given set of bytecode instructions
     pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<Value> {
-        const NIL: Value = Value::Nil;
         let mut ip = 0;
         let mut frame_locals = 0;
 
         while ip < bytecode.len() {
-            unsafe {
-                LINE = bytecode[ip].line;
-                COLUMN = bytecode[ip].column;
-            }
-
-            let op = bytecode[ip].opcode;
+            let bytecode = &*bytecode;
+            let op = unsafe {
+                let op = bytecode[ip];
+                LINE = op.line;
+                COLUMN = op.column;
+                op.opcode
+            };
 
             self.debug_stack(&op);
 
@@ -197,14 +199,12 @@ impl VirtualMachine {
                 }
                 OpCode::Save(offset) => {
                     let value = self.pop();
-                    if self.locals[offset] != NIL {
-                        self.used_locals += 1;
-                        frame_locals += 1;
-                    }
+
+                    self.used_locals += 1;
+                    frame_locals += 1;
                     self.locals[offset + self.used_locals - frame_locals] = value;
                 }
-                OpCode::Drop(offset) => {
-                    self.locals[offset + self.used_locals - frame_locals] = Value::Nil;
+                OpCode::Drop(_) => {
                     frame_locals -= 1;
                     self.used_locals -= 1;
                 }
@@ -264,14 +264,20 @@ impl VirtualMachine {
     pub fn debug_stack(&self, _: &OpCode) {}
 
     #[inline]
-    fn call_args(&mut self, arity: usize, applied: &FunArgs) -> FunArgs {
+    fn call_args(&mut self, arity: usize, fun: &Fun) -> FunArgs {
         let mut args = FunArgs::new();
+
+        if fun.arity == arity && fun.args.is_empty() && fun.body.is_left() {
+            return args;
+        }
+
         for _ in 0..arity {
             args.push(self.pop());
         }
-        for arg in applied.iter() {
+        for arg in fun.args.iter() {
             args.push(arg.clone());
         }
+
         args
     }
 
@@ -281,7 +287,7 @@ impl VirtualMachine {
             value => panic!("Expected a function to call, found {value}")?,
         };
 
-        let args = self.call_args(arity, &fun.args);
+        let args = self.call_args(arity, &fun);
 
         if arity < fun.arity {
             let ap = (*fun).clone().apply(args);
@@ -307,7 +313,7 @@ impl VirtualMachine {
 
     #[inline]
     fn call_native(&mut self, fp: NativeFun, args: FunArgs) -> InterpretResult<()> {
-        let args = args.iter().rev().cloned().collect();
+        let args = args.iter().cloned().collect();
         let result = fp(self, args);
         self.try_push(result)
     }
@@ -350,8 +356,9 @@ impl VirtualMachine {
         T: Into<Value>,
         F: Fn(Value, Value) -> InterpretResult<T>,
     {
-        let (a, b) = self.pop_two();
-        Ok(self.push(f(a, b)?.into()))
+        let a = self.pop();
+        let b = self.pop();
+        Ok(self.push(f(b, a)?.into()))
     }
 
     fn pop_two(&mut self) -> (Value, Value) {
@@ -368,12 +375,11 @@ impl VirtualMachine {
 impl Default for VirtualMachine {
     fn default() -> Self {
         const STACK: Stack = StackVec::new();
-        const NIL: Value = Value::Nil;
 
         let prelude = prelude::prelude();
         Self {
             stack: STACK,
-            locals: [NIL; 512],
+            locals: [NIL; 1024],
             used_locals: 0,
             dlopen_libs: HashMap::new(),
             constants: Vec::new(),
