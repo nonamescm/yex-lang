@@ -1,48 +1,9 @@
-use front::compile;
+use rustyline::Editor;
+use std::{env::args, process::exit};
 
-use std::{env::args, fs::read_to_string, process::exit};
-use vm::VirtualMachine;
-use {front::compile_expr, rustyline::Editor};
-
-fn eval_file(file: &str) -> Result<i32, front::ParseError> {
-    let mut vm = VirtualMachine::default();
-
-    let file = read_to_string(file).unwrap_or_else(|_| {
-        eprintln!("File not found");
-        exit(1)
-    });
-
-    if file.is_empty() {
-        return Ok(0);
-    }
-
-    let (bytecode, constants) = compile(file)?;
-    #[cfg(debug_assertions)]
-    {
-        println!("bytecode: {:#?}", &bytecode);
-        println!("constants: {:#?}", &constants);
-    }
-    vm.set_consts(constants);
-    if let Err(e) = vm.run(&bytecode) {
-        eprintln!("{}", e)
-    }
-
-    Ok(0)
-}
-
-fn start(args: Vec<String>) -> i32 {
-    let mut vm = VirtualMachine::default();
+fn start(_: Vec<String>) -> i32 {
     let mut repl = Editor::<()>::new();
 
-    if args.len() > 1 {
-        return match eval_file(&args[1]) {
-            Ok(n) => n,
-            Err(e) => {
-                eprintln!("{}", e);
-                1
-            }
-        };
-    }
     loop {
         let line = match repl.readline("yex> ").map(|it| it.trim().to_string()) {
             Ok(str) => {
@@ -55,33 +16,14 @@ fn start(args: Vec<String>) -> i32 {
             continue;
         }
 
-        let (bytecode, constants) = {
-            if line.trim().starts_with("def") {
-                compile(line)
-            } else {
-                compile_expr(line)
+        match front::parse(line) {
+            Ok(ast) => {
+                eprintln!("{:#?}", ast);
             }
-            .unwrap_or_else(|e| {
-                eprintln!("{}", e);
-                (vec![], vec![])
-            })
-        };
-
-        #[cfg(debug_assertions)]
-        {
-            println!("bytecode: {:#?}", &bytecode);
-            println!("constants: {:#?}", &constants);
+            Err(err) => {
+                eprintln!("{}", err);
+            }
         }
-
-        vm.set_consts(constants);
-        if let Err(e) = vm.run(&bytecode) {
-            eprintln!("{}", e)
-        }
-
-        let pop = vm.pop_last().clone();
-        println!(">> {}", pop);
-        vm.set_global("it", pop.clone());
-        vm.reset();
     }
 }
 

@@ -4,7 +4,7 @@ pub enum TokenType {
     Num(f64),
     Str(String),
     Sym(vm::Symbol),
-    Name(String),
+    Name(vm::Symbol),
     True,
     False,
     Nil,
@@ -75,7 +75,7 @@ impl std::fmt::Display for TokenType {
             Self::Num(n) => n.to_string(),
             Self::Str(s) => "\"".to_owned() + s + "\"",
             Self::Sym(s) => format!(":{}", s),
-            Self::Name(v) => v.into(),
+            Self::Name(v) => format!("{}", v),
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),
             Self::Nil => "nil".into(),
@@ -189,6 +189,7 @@ impl TokenType {
                 | Self::Shl
                 | Self::And
                 | Self::Or
+                | Self::Comma
         )
     }
 }

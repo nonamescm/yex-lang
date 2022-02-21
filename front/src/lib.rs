@@ -1,25 +1,19 @@
 #![deny(missing_docs)]
 //! Compiler for the yex language
-mod compiler;
 mod error;
 mod lexer;
+mod parser;
 mod tokens;
 
 pub use error::ParseError;
 
-use compiler::Compiler;
 use lexer::Lexer;
+use parser::{ast::Stmt, Parser};
 
-/// Compiles a given string into yex bytecode
-pub fn compile<T: Into<String>>(
-    str: T,
-) -> Result<(vm::Bytecode, Vec<vm::Constant>), error::ParseError> {
-    Compiler::compile(Lexer::new(str))
-}
-
-/// Compiles a given expression into yex bytecode
-pub fn compile_expr<T: Into<String>>(
-    str: T,
-) -> Result<(vm::Bytecode, Vec<vm::Constant>), error::ParseError> {
-    Compiler::compile_expr(Lexer::new(str))
+/// Parses a given string into an AST
+pub fn parse<T: Into<String>>(str: T) -> Result<Vec<Stmt>, error::ParseError> {
+    let lexer = Lexer::new(str);
+    let parser = Parser::new(lexer)?;
+    let ast = parser.parse()?;
+    Ok(ast)
 }

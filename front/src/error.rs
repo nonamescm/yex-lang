@@ -6,6 +6,8 @@ pub struct ParseError {
     message: &'static str,
 }
 
+pub type ParseResult<T> = Result<T, ParseError>;
+
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[{}:{}] {}", self.line, self.column, self.message)
