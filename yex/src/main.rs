@@ -16,12 +16,23 @@ fn start(_: Vec<String>) -> i32 {
             continue;
         }
 
-        match front::parse(line) {
-            Ok(ast) => {
-                eprintln!("{:#?}", ast);
+        if line.starts_with("def") {
+            match front::parse(line) {
+                Ok(ast) => {
+                    eprintln!("{:#?}", ast);
+                }
+                Err(err) => {
+                    eprintln!("{}", err);
+                }
             }
-            Err(err) => {
-                eprintln!("{}", err);
+        } else {
+            match front::parse_expr(line) {
+                Ok(ast) => {
+                    eprintln!("{:#?}", ast);
+                }
+                Err(err) => {
+                    eprintln!("{}", err);
+                }
             }
         }
     }

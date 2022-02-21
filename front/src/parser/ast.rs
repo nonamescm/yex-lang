@@ -2,19 +2,63 @@ use vm::Symbol;
 
 use crate::tokens::TokenType;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BaseType {
     pub ty: Symbol,
     pub args: Option<Vec<Type>>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FnType(pub Vec<Type>);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Type {
     Base(BaseType),
     Fn(FnType),
+}
+
+impl Type {
+    pub fn num() -> Self {
+        Self::Base(BaseType {
+            ty: Symbol::new("Num"),
+            args: None,
+        })
+    }
+
+    pub fn string() -> Self {
+        Self::Base(BaseType {
+            ty: Symbol::new("String"),
+            args: None,
+        })
+    }
+
+    pub fn bool() -> Self {
+        Self::Base(BaseType {
+            ty: Symbol::new("Bool"),
+            args: None,
+        })
+    }
+
+    pub fn sym() -> Self {
+        Self::Base(BaseType {
+            ty: Symbol::new("Sym"),
+            args: None,
+        })
+    }
+
+    pub fn unit() -> Self {
+        Self::Base(BaseType {
+            ty: Symbol::new("Unit"),
+            args: None,
+        })
+    }
+
+    pub fn list(ty: Self) -> Self {
+        Self::Base(BaseType {
+            ty: Symbol::new("List"),
+            args: Some(vec![ty])
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -141,9 +185,9 @@ pub enum ExprKind {
     },
     Lambda {
         args: Vec<VarDecl>, // specifies the arguments name and types
-        ty: FnType, // the type of the entire function, like Int -> Int -> Int
-        ret: Type, // the return type of the function
-        body: Box<Expr>, // the function body
+        ty: FnType,         // the type of the entire function, like Int -> Int -> Int
+        ret: Type,          // the return type of the function
+        body: Box<Expr>,    // the function body
     },
     App {
         callee: Box<Expr>,
@@ -197,8 +241,19 @@ pub enum Literal {
     Str(String),
     Bool(bool),
     Sym(Symbol),
-    Fun(Vec<Symbol>, Box<Expr>),
     Unit,
+}
+
+impl Literal {
+    pub fn type_of(&self) -> Type {
+        match self {
+            Self::Num(..) => Type::num(),
+            Self::Str(..) => Type::string(),
+            Self::Bool(..) => Type::bool(),
+            Self::Sym(..) => Type::sym(),
+            Self::Unit => Type::unit(),
+        }
+    }
 }
 
 #[derive(Debug)]

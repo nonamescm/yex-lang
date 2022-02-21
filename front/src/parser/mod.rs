@@ -34,6 +34,10 @@ impl Parser {
         Ok(stmts)
     }
 
+    pub fn parse_expr(mut self) -> ParseResult<Expr> {
+        self.expr()
+    }
+
     fn def_bind(&mut self) -> ParseResult<Stmt> {
         self.expect(Tkt::Def)?;
         let line = self.current.line;
