@@ -6,7 +6,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{Expr, ExprKind, Literal, Stmt, StmtKind, Type, VarDecl};
+use self::ast::{BaseType, Expr, ExprKind, Literal, Stmt, StmtKind, Type, VarDecl, FnType};
 
 pub mod ast;
 
@@ -86,7 +86,40 @@ impl Parser {
         }
     }
 
+    fn blocktype(&mut self) -> ParseResult<Type> {
+        self.expect(Tkt::Lparen)?;
+        let ty = self.type_()?;
+        self.expect(Tkt::Rparen)?;
+
+        Ok(ty)
+    }
+
     fn type_(&mut self) -> ParseResult<Type> {
+        let mut types = vec![];
+
+        loop {
+            types.push(self.base_type()?);
+
+            if self.current.token != Tkt::Arrow {
+                break;
+            }
+            self.next()?;
+        }
+
+        let ty = if types.len() == 1 {
+            types.pop().unwrap()
+        } else {
+            Type::Fn(FnType(types))
+        };
+
+        Ok(ty)
+    }
+
+    fn base_type(&mut self) -> ParseResult<Type> {
+        if self.current.token == Tkt::Lparen {
+            return self.blocktype();
+        }
+
         let ty = match take(&mut self.current.token) {
             Tkt::Name(id) => id,
             other => self.throw(format!("Expected type name, found {}", other))?,
@@ -99,10 +132,10 @@ impl Parser {
             let args = Some(self.generics()?);
             self.expect(Tkt::Rbrack)?;
 
-            Type { ty, args }
+            Type::Base(BaseType { ty, args })
         } else {
             self.next()?;
-            Type { ty, args: None }
+            Type::Base(BaseType { ty, args: None })
         };
 
         Ok(ty)
@@ -183,8 +216,17 @@ impl Parser {
 
         let args = self.args()?;
 
+        let mut types = vec![];
+
+        for arg in args.iter() {
+            types.push(arg.ty.clone());
+        }
+
         self.expect(Tkt::Colon)?;
         let ty = self.type_()?;
+
+        types.push(ty.clone());
+
 
         self.expect(Tkt::Assign)?;
 
@@ -193,7 +235,8 @@ impl Parser {
         Ok(Expr::new(
             ExprKind::Lambda {
                 args,
-                ty,
+                ty: FnType(types),
+                ret: ty,
                 body: Box::new(body),
             },
             line,

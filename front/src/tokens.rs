@@ -59,6 +59,7 @@ pub enum TokenType {
     Semicolon,
     Seq,
     Pipe,
+    Arrow,
 
     Eof,
 }
@@ -126,6 +127,7 @@ impl std::fmt::Display for TokenType {
             Self::Semicolon => ';'.into(),
             Self::Seq => ">>".into(),
             Self::Pipe => "|>".into(),
+            Self::Arrow => "->".into(),
             Self::Eof => "<eof>".into(),
         };
 

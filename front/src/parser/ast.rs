@@ -2,10 +2,19 @@ use vm::Symbol;
 
 use crate::tokens::TokenType;
 
-#[derive(Debug)]
-pub struct Type {
+#[derive(Clone, Debug)]
+pub struct BaseType {
     pub ty: Symbol,
-    pub args: Option<Vec<Self>>,
+    pub args: Option<Vec<Type>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct FnType(pub Vec<Type>);
+
+#[derive(Clone, Debug)]
+pub enum Type {
+    Base(BaseType),
+    Fn(FnType),
 }
 
 #[derive(Debug)]
@@ -131,9 +140,10 @@ pub enum ExprKind {
         body: Box<Expr>,
     },
     Lambda {
-        args: Vec<VarDecl>,
-        ty: Type,
-        body: Box<Expr>,
+        args: Vec<VarDecl>, // specifies the arguments name and types
+        ty: FnType, // the type of the entire function, like Int -> Int -> Int
+        ret: Type, // the return type of the function
+        body: Box<Expr>, // the function body
     },
     App {
         callee: Box<Expr>,
