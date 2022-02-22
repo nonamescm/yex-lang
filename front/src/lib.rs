@@ -17,6 +17,11 @@ pub fn parse<T: Into<String>>(str: T) -> Result<Vec<Stmt>, error::ParseError> {
     let lexer = Lexer::new(str);
     let parser = Parser::new(lexer)?;
     let ast = parser.parse()?;
+
+    let ctx = Context::new();
+    for stmt in &ast {
+        typecheck::typecheck_stmt(&ctx, &stmt)?;
+    }
     Ok(ast)
 }
 

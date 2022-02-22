@@ -1,6 +1,6 @@
 use crate::{
     error::ParseResult,
-    parser::ast::{Expr, ExprKind, Type},
+    parser::ast::{Expr, ExprKind, Stmt, StmtKind, Type},
     ParseError,
 };
 use std::collections::HashMap;
@@ -38,7 +38,7 @@ pub fn assert_type(ctx: &Context, node: &Expr, ty: &Type) -> ParseResult<()> {
         throw(
             &node,
             format!(
-                "This expression was expected to have type, {:?}, but here it has type {:?}",
+                "This expression was expected to have type, {}, but here it has type {}",
                 ty, typ
             ),
         )
@@ -96,8 +96,8 @@ pub fn typecheck(ctx: &Context, node: &Expr) -> ParseResult<Type> {
 
         ExprKind::List(xs) => {
             let ty = typecheck(ctx, &xs[0])?; // TODO: add support for empty lists
-            for i in 1..xs.len() {
-                assert_type(&ctx, &xs[i], &ty)?;
+            for item in xs.iter().skip(1) {
+                assert_type(&ctx, item, &ty)?;
             }
             Ok(Type::list(ty))
         }
@@ -111,6 +111,37 @@ pub fn typecheck(ctx: &Context, node: &Expr) -> ParseResult<Type> {
             typecheck(&ctx, &body)
         }
 
+        ExprKind::Lambda {
+            args,
+            ret,
+            ty,
+            body,
+        } => {
+            let mut ctx = ctx.clone();
+            for arg in args.iter() {
+                ctx.vars.insert(arg.name, arg.ty.clone());
+            }
+
+            assert_type(&ctx, &body, &ret)?;
+
+            Ok(Type::Fn(ty.clone()))
+        }
+
         _ => todo!(),
     }
+}
+
+pub fn typecheck_stmt(ctx: &Context, def: &Stmt) -> ParseResult<()> {
+    match &def.kind {
+        StmtKind::Def { bind, value } => {
+            let ty = &bind.ty;
+            let mut ctx = ctx.clone();
+            ctx.vars.insert(bind.name, bind.ty.clone());
+
+            assert_type(&ctx, &value, ty)?;
+        }
+
+        _ => todo!(),
+    }
+    Ok(())
 }

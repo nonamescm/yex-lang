@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use vm::Symbol;
 
 use crate::tokens::TokenType;
@@ -8,13 +10,58 @@ pub struct BaseType {
     pub args: Option<Vec<Type>>,
 }
 
+impl Display for BaseType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.ty)?;
+
+        if let Some(ref args) = self.args {
+            write!(f, "[")?;
+
+            for (idx, arg) in args.iter().enumerate() {
+                if idx == args.len() - 1 {
+                    write!(f, "{}", arg)?;
+                } else {
+                    write!(f, "{}, ", arg)?;
+                }
+            }
+
+            write!(f, "]")?;
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FnType(pub Vec<Type>);
+
+impl Display for FnType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (idx, ty) in self.0.iter().enumerate() {
+            if idx == self.0.len() - 1 {
+                write!(f, "{}", ty)?;
+            } else {
+                write!(f, "{} -> ", ty)?;
+            }
+        }
+
+        Ok(())
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Type {
     Base(BaseType),
     Fn(FnType),
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Base(ty) => write!(f, "{}", ty),
+            Self::Fn(ty) => write!(f, "{}", ty),
+        }
+    }
 }
 
 impl Type {
@@ -56,7 +103,7 @@ impl Type {
     pub fn list(ty: Self) -> Self {
         Self::Base(BaseType {
             ty: Symbol::new("List"),
-            args: Some(vec![ty])
+            args: Some(vec![ty]),
         })
     }
 }
