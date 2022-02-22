@@ -6,7 +6,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{BaseType, Expr, ExprKind, Literal, Stmt, StmtKind, Type, VarDecl, FnType};
+use self::ast::{BaseType, Expr, ExprKind, FnType, Literal, Stmt, StmtKind, Type, VarDecl};
 
 pub mod ast;
 
@@ -40,6 +40,11 @@ impl Parser {
 
     fn def_bind(&mut self) -> ParseResult<Stmt> {
         self.expect(Tkt::Def)?;
+
+        if self.peek()?.token == Tkt::Lparen {
+            return self.def_fn();
+        }
+
         let line = self.current.line;
         let column = self.current.column;
 
@@ -47,6 +52,27 @@ impl Parser {
 
         self.expect(Tkt::Assign)?;
         let value = self.expr()?;
+
+        Ok(Stmt::new(StmtKind::Def { bind, value }, line, column))
+    }
+
+    fn def_fn(&mut self) -> ParseResult<Stmt> {
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let name = match take(&mut self.current.token) {
+            Tkt::Name(id) => id,
+            other => self.throw(format!("Expected name, found {}", other))?,
+        };
+
+        self.next()?;
+        let value = self.function()?;
+        let ty = match value.kind {
+            ExprKind::Lambda { ref ty, .. } => Type::Fn(ty.clone()),
+            _ => unreachable!(),
+        };
+
+        let bind = VarDecl::new(name, ty);
 
         Ok(Stmt::new(StmtKind::Def { bind, value }, line, column))
     }
@@ -164,7 +190,7 @@ impl Parser {
             expr = match self.current.token {
                 Tkt::Let => self.bind()?,
                 Tkt::If => self.condition()?,
-                Tkt::Fn => self.function()?,
+                Tkt::Fn => self.fn_()?,
                 _ => self.logic_or()?,
             };
 
@@ -213,8 +239,12 @@ impl Parser {
         Ok(args)
     }
 
-    fn function(&mut self) -> ParseResult<Expr> {
+    fn fn_(&mut self) -> ParseResult<Expr> {
         self.expect(Tkt::Fn)?;
+        self.function()
+    }
+
+    fn function(&mut self) -> ParseResult<Expr> {
         let line = self.current.line;
         let column = self.current.column;
 
@@ -230,7 +260,6 @@ impl Parser {
         let ty = self.type_()?;
 
         types.push(ty.clone());
-
 
         self.expect(Tkt::Assign)?;
 
@@ -258,11 +287,45 @@ impl Parser {
         self.expect(Tkt::Colon)?;
         let ty = self.type_()?;
 
-        Ok(VarDecl { name, ty })
+        Ok(VarDecl::new(name, ty))
+    }
+
+    fn bind_fn(&mut self) -> ParseResult<Expr> {
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let name = match take(&mut self.current.token) {
+            Tkt::Name(id) => id,
+            other => self.throw(format!("Expected name, found {}", other))?,
+        };
+
+        self.next()?;
+        let value = self.function()?;
+        let ty = match value.kind {
+            ExprKind::Lambda { ref ty, .. } => Type::Fn(ty.clone()),
+            _ => unreachable!(),
+        };
+
+        self.expect(Tkt::In)?;
+        let body = self.expr()?;
+
+        Ok(Expr::new(
+            ExprKind::Bind {
+                bind: VarDecl::new(name, ty),
+                value: Box::new(value),
+                body: Box::new(body),
+            },
+            line,
+            column,
+        ))
     }
 
     fn bind(&mut self) -> ParseResult<Expr> {
         self.expect(Tkt::Let)?;
+        if self.peek()?.token == Tkt::Lparen {
+            return self.bind_fn();
+        }
+
         let line = self.current.line;
         let column = self.current.column;
 

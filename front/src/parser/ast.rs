@@ -114,6 +114,12 @@ pub struct VarDecl {
     pub ty: Type,
 }
 
+impl VarDecl {
+    pub fn new(name: Symbol, ty: Type) -> Self {
+        Self { name, ty }
+    }
+}
+
 #[derive(Debug)]
 pub enum CmpOp {
     Less,
