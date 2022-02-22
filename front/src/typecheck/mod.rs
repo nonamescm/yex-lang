@@ -156,13 +156,13 @@ fn typecheck_app(ctx: &Context, callee: &Expr, args: &[Expr]) -> ParseResult<Typ
     match ty {
         Type::Fn(ret) if args.len() != ret.0.len() - 1 => throw(
             callee,
-            format!("Expected {} arguments, but got {}", ret.0.len(), args.len()),
+            format!("Expected {} arguments, but got {}", ret.0.len() - 1, args.len()),
         ),
         Type::Fn(ret) => {
             for (arg, ty) in args.iter().zip(ret.0.iter()) {
                 assert_type(ctx, arg, ty)?;
             }
-            Ok(Type::Fn(ret))
+            Ok(ret.0.last().unwrap().clone())
         }
         _ => throw(callee, format!("Expected a function type, found {}", ty)),
     }

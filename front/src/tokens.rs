@@ -60,6 +60,7 @@ pub enum TokenType {
     Seq,
     Pipe,
     Arrow,
+    FatArrow,
 
     Eof,
 }
@@ -128,6 +129,7 @@ impl std::fmt::Display for TokenType {
             Self::Seq => ">>".into(),
             Self::Pipe => "|>".into(),
             Self::Arrow => "->".into(),
+            Self::FatArrow => "=>".into(),
             Self::Eof => "<eof>".into(),
         };
 

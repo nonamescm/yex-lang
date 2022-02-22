@@ -228,13 +228,25 @@ impl Parser {
     }
 
     fn args(&mut self) -> ParseResult<Vec<VarDecl>> {
+        self.assert(Tkt::Lparen)?;
+
         let mut args = vec![];
 
-        while self.current.token == Tkt::Lparen {
-            self.next()?;
-            args.push(self.var_decl()?);
-            self.expect(Tkt::Rparen)?;
+        self.next()?;
+        while self.current.token != Tkt::Rparen {
+            let var = self.var_decl()?;
+            args.push(var);
+
+            match &self.current.token {
+                Tkt::Comma => self.skip(Tkt::Comma)?,
+                Tkt::Rparen => break,
+                _ => self.throw(format!(
+                    "Expected `,`, `)` or other token, found `{}`",
+                    &self.current.token
+                ))?,
+            }
         }
+        self.next()?;
 
         Ok(args)
     }
@@ -261,7 +273,7 @@ impl Parser {
 
         types.push(ty.clone());
 
-        self.expect(Tkt::Assign)?;
+        self.expect(Tkt::FatArrow)?;
 
         let body = self.expr()?;
 
@@ -549,18 +561,38 @@ impl Parser {
         }
     }
 
+    fn call_args(&mut self) -> ParseResult<Vec<Expr>> {
+        let mut args = vec![];
+
+        self.next()?;
+        while self.current.token != Tkt::Rparen {
+            println!("{}", self.current.token);
+            args.push(self.expr()?);
+
+            match &self.current.token {
+                Tkt::Comma => self.skip(Tkt::Comma)?,
+                Tkt::Rparen => break,
+                _ => self.throw(format!(
+                    "Expected `,`, `)` or other token, found `{}`",
+                    &self.current.token
+                ))?,
+            }
+        }
+
+        Ok(args)
+    }
+
     fn call(&mut self) -> ParseResult<Expr> {
         let callee = self.primary()?;
 
-        let mut args = Vec::new();
-        while self.peek()?.token.is_expression() {
+        let args = if self.peek()?.token == Tkt::Lparen {
             self.next()?;
-            args.push(self.primary()?);
-        }
-
-        if args.is_empty() {
-            Ok(callee)
+            Some(self.call_args()?)
         } else {
+            None
+        };
+
+        if let Some(args) = args {
             let line = callee.line;
             let column = callee.column;
 
@@ -572,6 +604,8 @@ impl Parser {
                 line,
                 column,
             ))
+        } else {
+            Ok(callee)
         }
     }
 
