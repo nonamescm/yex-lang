@@ -168,14 +168,13 @@ fn typecheck_app(ctx: &Context, callee: &Expr, args: &[Expr]) -> ParseResult<Typ
     }
 }
 
-pub fn typecheck_stmt(ctx: &Context, def: &Stmt) -> ParseResult<()> {
+pub fn typecheck_stmt(ctx: &mut Context, def: &Stmt) -> ParseResult<()> {
     match &def.kind {
         StmtKind::Def { bind, value } => {
             let ty = &bind.ty;
-            let mut ctx = ctx.clone();
             ctx.vars.insert(bind.name, bind.ty.clone());
 
-            assert_type(&ctx, &value, ty)?;
+            assert_type(ctx, &value, ty)?;
         }
 
         _ => todo!(),
