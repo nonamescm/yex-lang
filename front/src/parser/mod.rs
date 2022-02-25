@@ -282,7 +282,7 @@ impl Parser {
             let column = left.column;
 
             left = Expr::new(
-                ExprKind::Logic {
+                ExprKind::Binary {
                     left: Box::new(left),
                     op,
                     right: Box::new(right),
@@ -308,7 +308,7 @@ impl Parser {
             let column = left.column;
 
             left = Expr::new(
-                ExprKind::Logic {
+                ExprKind::Binary {
                     left: Box::new(left),
                     op,
                     right: Box::new(right),
@@ -330,7 +330,7 @@ impl Parser {
             let right = self.cmp()?;
 
             left = Expr::new(
-                ExprKind::Eq {
+                ExprKind::Binary {
                     left: Box::new(left),
                     op: op.token.try_into().unwrap(),
                     right: Box::new(right),
@@ -352,7 +352,7 @@ impl Parser {
             let right = self.cons()?;
 
             left = Expr::new(
-                ExprKind::Cmp {
+                ExprKind::Binary {
                     left: Box::new(left),
                     op: op.token.try_into().unwrap(),
                     right: Box::new(right),
@@ -371,7 +371,7 @@ impl Parser {
         while let Tkt::Cons = self.current.token {
             let op = take(&mut self.current);
             self.next()?;
-            let right = self.bitwise()?;
+            let right = self.cons()?;
 
             left = Expr::new(
                 ExprKind::Cons {
@@ -396,7 +396,7 @@ impl Parser {
             let right = self.term()?;
 
             left = Expr::new(
-                ExprKind::Bitwise {
+                ExprKind::Binary {
                     left: Box::new(left),
                     op: op.token.try_into().unwrap(),
                     right: Box::new(right),
@@ -418,7 +418,7 @@ impl Parser {
             let right = self.fact()?;
 
             left = Expr::new(
-                ExprKind::Math {
+                ExprKind::Binary {
                     left: Box::new(left),
                     op: op.token.try_into().unwrap(),
                     right: Box::new(right),
@@ -440,7 +440,7 @@ impl Parser {
             let right = self.prefix()?;
 
             left = Expr::new(
-                ExprKind::Math {
+                ExprKind::Binary {
                     left: Box::new(left),
                     op: op.token.try_into().unwrap(),
                     right: Box::new(right),
@@ -459,7 +459,7 @@ impl Parser {
             self.next()?;
             let right = self.prefix()?;
             Ok(Expr::new(
-                ExprKind::UnOp(op.token, Box::new(right)),
+                ExprKind::UnOp(op.token.try_into().unwrap(), Box::new(right)),
                 op.line,
                 op.column,
             ))
