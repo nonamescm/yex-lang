@@ -8,7 +8,7 @@ use std::io::Write;
 mod list;
 mod table;
 
-fn puts(args: &[Value]) -> InterpretResult<Value> {
+fn println(args: &[Value]) -> InterpretResult<Value> {
     match &args[0] {
         Value::Str(s) => println!("{}", &**s),
         other => println!("{}", other),
@@ -145,7 +145,7 @@ pub fn prelude() -> EnvTable {
         }
     }
 
-    insert_fn!("puts", puts);
+    insert_fn!("println", println);
     insert_fn!("print", print);
     insert_fn!("input", input);
     insert_fn!("head", head);
