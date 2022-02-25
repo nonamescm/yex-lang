@@ -147,7 +147,7 @@ impl Compiler {
             // compiles a lambda expression
             ExprKind::Lambda { args, body } => self.lambda_expr(&args, body, loc),
 
-            ExprKind::App { callee, args } => {
+            ExprKind::App { callee, args, tail } => {
                 // iterate over the arguments
                 // pushing them onto the stack
                 for arg in args.iter().rev() {
@@ -157,8 +157,14 @@ impl Compiler {
                 // compiles the caller
                 self.expr(callee);
 
+                let len = self.scope().opcodes.len();
+
                 // emits the `Call` opcode
-                self.emit_op(OpCode::Call(args.len()), loc);
+                if *tail {
+                    self.emit_op(OpCode::TCall(len), loc);
+                } else {
+                    self.emit_op(OpCode::Call(len), loc);
+                }
             }
 
             ExprKind::Var(name) => {

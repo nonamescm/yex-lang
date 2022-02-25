@@ -141,8 +141,9 @@ pub enum ExprKind {
         body: Box<Expr>,    // the function body
     },
     App {
-        callee: Box<Expr>,
-        args: Vec<Expr>,
+        callee: Box<Expr>, // the function to call
+        args: Vec<Expr>,   // the arguments
+        tail: bool,        // true if the call is a tail call
     },
 
     Var(Symbol),
