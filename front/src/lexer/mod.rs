@@ -186,7 +186,6 @@ impl Lexer {
                     _ => TokenType::Sym(Symbol::new(sym)),
                 }
             }
-            ':' => TokenType::Colon,
             '=' => TokenType::Assign,
             '"' if self.peek_at(1) == '"' => {
                 self.next();

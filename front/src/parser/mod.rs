@@ -6,7 +6,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{BaseType, Expr, ExprKind, FnType, Literal, Stmt, StmtKind, Type, VarDecl};
+use self::ast::{Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl};
 
 pub mod ast;
 
@@ -67,12 +67,7 @@ impl Parser {
 
         self.next()?;
         let value = self.function()?;
-        let ty = match value.kind {
-            ExprKind::Lambda { ref ty, .. } => Type::Fn(ty.clone()),
-            _ => unreachable!(),
-        };
-
-        let bind = VarDecl::new(name, ty);
+        let bind = VarDecl::new(name);
 
         Ok(Stmt::new(StmtKind::Def { bind, value }, line, column))
     }
@@ -114,73 +109,6 @@ impl Parser {
             Ok(t) => Ok(t),
             Err(e) => Err(*e),
         }
-    }
-
-    fn blocktype(&mut self) -> ParseResult<Type> {
-        self.expect(Tkt::Lparen)?;
-        let ty = self.type_()?;
-        self.expect(Tkt::Rparen)?;
-
-        Ok(ty)
-    }
-
-    fn type_(&mut self) -> ParseResult<Type> {
-        let mut types = vec![];
-
-        loop {
-            types.push(self.base_type()?);
-
-            if self.current.token != Tkt::Arrow {
-                break;
-            }
-            self.next()?;
-        }
-
-        let ty = if types.len() == 1 {
-            types.pop().unwrap()
-        } else {
-            Type::Fn(FnType(types))
-        };
-
-        Ok(ty)
-    }
-
-    fn base_type(&mut self) -> ParseResult<Type> {
-        if self.current.token == Tkt::Lparen {
-            return self.blocktype();
-        }
-
-        let ty = match take(&mut self.current.token) {
-            Tkt::Name(id) => id,
-            other => self.throw(format!("Expected type name, found {}", other))?,
-        };
-
-        let ty = if self.peek()?.token == Tkt::Lbrack {
-            self.next()?;
-            self.next()?;
-
-            let args = Some(self.generics()?);
-            self.expect(Tkt::Rbrack)?;
-
-            Type::Base(BaseType { ty, args })
-        } else {
-            self.next()?;
-            Type::Base(BaseType { ty, args: None })
-        };
-
-        Ok(ty)
-    }
-
-    fn generics(&mut self) -> ParseResult<Vec<Type>> {
-        let mut args = Vec::new();
-        loop {
-            args.push(self.type_()?);
-            if self.current.token == Tkt::Rbrack {
-                break;
-            }
-            self.expect(Tkt::Comma)?;
-        }
-        Ok(args)
     }
 
     fn expr(&mut self) -> ParseResult<Expr> {
@@ -262,17 +190,6 @@ impl Parser {
 
         let args = self.args()?;
 
-        let mut types = vec![];
-
-        for arg in args.iter() {
-            types.push(arg.ty.clone());
-        }
-
-        self.expect(Tkt::Colon)?;
-        let ty = self.type_()?;
-
-        types.push(ty.clone());
-
         self.expect(Tkt::FatArrow)?;
 
         let body = self.expr()?;
@@ -280,8 +197,6 @@ impl Parser {
         Ok(Expr::new(
             ExprKind::Lambda {
                 args,
-                ty: FnType(types),
-                ret: ty,
                 body: Box::new(body),
             },
             line,
@@ -296,10 +211,8 @@ impl Parser {
         };
 
         self.next()?;
-        self.expect(Tkt::Colon)?;
-        let ty = self.type_()?;
 
-        Ok(VarDecl::new(name, ty))
+        Ok(VarDecl::new(name))
     }
 
     fn bind_fn(&mut self) -> ParseResult<Expr> {
@@ -313,17 +226,13 @@ impl Parser {
 
         self.next()?;
         let value = self.function()?;
-        let ty = match value.kind {
-            ExprKind::Lambda { ref ty, .. } => Type::Fn(ty.clone()),
-            _ => unreachable!(),
-        };
 
         self.expect(Tkt::In)?;
         let body = self.expr()?;
 
         Ok(Expr::new(
             ExprKind::Bind {
-                bind: VarDecl::new(name, ty),
+                bind: VarDecl::new(name),
                 value: Box::new(value),
                 body: Box::new(body),
             },
@@ -566,7 +475,6 @@ impl Parser {
 
         self.next()?;
         while self.current.token != Tkt::Rparen {
-            println!("{}", self.current.token);
             args.push(self.expr()?);
 
             match &self.current.token {
