@@ -5,6 +5,8 @@
 This tutorial assumes that you have previous experience with programming and
 already has the yex language installed.
 
+If anything here doesn't work as expected, please open an issue.
+
 - [Learn Yex](#learn-yex)
   - [NOTE](#note)
   - [Basics](#basics)
@@ -21,14 +23,11 @@ already has the yex language installed.
   - [Lists](#lists)
     - [Creating lists](#creating-lists)
     - [Operating on lists](#operating-on-lists)
-  - [Tables](#tables)
-    - [Creating tables](#creating-tables)
   - [Functions](#functions)
     - [Creating functions](#creating-functions)
       - [Named Functions](#named-functions)
       - [Anonymous Functions](#anonymous-functions)
     - [Tail calls](#tail-calls)
-    - [Partial application](#partial-application)
   - [Controw flow](#controw-flow)
     - [Conditional execution](#conditional-execution)
       - [If and else](#if-and-else)
@@ -59,7 +58,7 @@ They all support the equality `==` operator and the `#` len operator.
 Open the repl and start typing:
 
 ```ml
-yex> type 1
+yex> type(1)
 >> :num
 yex> 2+2
 >> 4
@@ -93,7 +92,7 @@ Strings in yex are represented as UTF-8 encoded strings, they support
 concatenation, on the repl:
 
 ```ml
-yex> type "Example"
+yex> type("Example")
 >> :str
 yex> "Hello"
 >> "Hello"
@@ -107,7 +106,7 @@ Symbols in yex are represented as 64 bit unsigned integers. They are created
 using `:name` and are hashed at compile time, on the repl:
 
 ```ml
-yex> type :symbol
+yex> type(:symbol)
 >> :sym
 yex> :sym
 >> :sym
@@ -121,7 +120,7 @@ Booleans in yex are just `true` and `false`, there is no magic behind the
 scenes.
 
 ```ml
-yex> type true
+yex> type(true)
 >> :bool
 yex> true
 >> true
@@ -134,7 +133,7 @@ yex> false
 Null values in yex can be created using the `nil` keyword.
 
 ```ml
-yex> type nil
+yex> type(nil)
 >> :nil
 yex> nil
 >> nil
@@ -186,9 +185,8 @@ like:
 
 ```ml
 def _ =
-  let
-    a = 21;
-    b = 21;
+  let a = 21
+  in let b = 21
   in puts(a + b)
 ```
 
@@ -204,7 +202,7 @@ Like in most other languages, lists can be instantiated using square brackets, o
 repl and type:
 
 ```ml
-yex> type []
+yex> type([])
 >> :list
 yex> [1, "hello", :symbol, [3, 4], true, nil]
 >> [1, "hello", :symbol, [3, 4], true, nil]
@@ -224,32 +222,15 @@ Lists support the following operations:
 On the repl:
 
 ```ml
-yex> head [1, 2, 3]
+yex> head([1, 2, 3])
 >> 1
-yex> tail [1, 2, 3]
+yex> tail([1, 2, 3])
 >> [2, 3]
-yex> nth 0 [1,2,3]
+yex> nth(0, [1,2,3])
 yex> 0 :: [1, 2, 3]
 >> [0, 1, 2, 3]
 yex> #[1, 2, 3]
 >> 3
-```
-
-## Tables
-
-In yex, tables are implemented as HashMaps.
-
-### Creating tables
-
-Tables can be instantiated using curly braces, open the repl and type:
-
-```ml
-yex> type {}
->> :table
-yex> {:key = "value", :other_key = "other value"}
->> {:key = "value", :other_key = "other value"}
-yex> {:key = "value", :other_key = "other value"}[:key]
->> "value"
 ```
 
 ## Functions
@@ -262,11 +243,11 @@ Named functions are created using the `let` keyword, like variables. Open the
 repl and type:
 
 ```ml
-yex> def mul a b = a * b
+yex> def mul(a, b) => a * b
 >> nil
-yex> mul 2 3
+yex> mul(2, 3)
 >> 6
-yex> type mul
+yex> type(mul)
 >> :fn
 ```
 
@@ -279,11 +260,11 @@ You can create anonymous functions using the `fn` keyword. Open the repl and
 type:
 
 ```ml
-yex> def mul = fn a b = a * b
+yex> def mul = fn(a, b) => a * b
 >> nil
-yex> mul 2 3
+yex> mul(2, 3)
 >> 6
-yex> type mul
+yex> type(mul)
 >> :fn
 ```
 
@@ -292,33 +273,17 @@ yex> type mul
 Tail calls are an specific type of recursion where it just jumps to some
 previous instruction, you can create them using the `become` keyword, like:
 
-```ml
-def until_0 num =
+```
+def until_0(num) =>
   if num == 0 then
     0
   else
-    become until_0 (num - 1)
+    become until_0(num - 1)
 ```
 
 Tail calls just use a jump instruction, so they are faster than normal recursive
 functions. A important detail about tail calls is that they can only be used to
 do recursion, they can't call any arbitrary function.
-
-### Partial application
-
-Functions in yex support partial application, or, in other words, you can call a
-function with missing arguments and it will return another function.
-
-In the repl, type:
-
-```ml
-yex> let mul a b = a * b
->> nil
-yex> let double = mul 2 // returns mul() with the `a` argument already applied
->> nil
-yex> double 5
->> 10
-```
 
 ## Controw flow
 
@@ -369,10 +334,9 @@ When working with high-order-functions, you might need to do something like:
 `|>` operator, that allows the use of a pipeline-like flow.
 
 ```ml
-rev [1, 2, 3]
-|> map (fn x = x * 2)
-|> fold 0 (fn acc x = acc + x)
-// the same as `fold 0 (fn acc x = acc + x) (map (fn x = x * 2) (rev [1, 2, 3]))`
+rev([1, 2, 3])
+|> map(fn(x) => x * 2)
+|> fold(0, fn(acc, x) => acc + x)
 ```
 
 ## Modules
