@@ -76,6 +76,7 @@ fn start(args: Vec<String>) -> i32 {
                 }
             }
         }
+        vm.reset();
     }
 }
 
