@@ -111,7 +111,7 @@ impl Compiler {
             }
 
             ExprKind::App { callee, args } => {
-                for arg in args {
+                for arg in args.iter().rev() {
                     self.expr(arg);
                 }
                 self.expr(callee);

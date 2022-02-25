@@ -272,7 +272,7 @@ impl VirtualMachine {
         for _ in 0..arity {
             args.push(self.pop());
         }
-        args.reverse()
+        args
     }
 
     pub(crate) fn call(&mut self, arity: usize) -> InterpretResult<()> {
