@@ -159,16 +159,12 @@ impl Compiler {
                 self.emit_ops((*op).into(), &node.location);
             }
 
-            ExprKind::List(xs) if xs.len() >= 1 => {
+            ExprKind::List(xs) => {
                 self.emit_const(Value::List(List::new()), &node.location);
                 for x in xs.iter().rev() {
                     self.expr(x);
                     self.emit_op(OpCode::Prep, &node.location);
                 }
-            }
-
-            ExprKind::List(..) => {
-                self.emit_const(Value::List(List::new()), &node.location);
             }
 
             ExprKind::Cons { head, tail } => {
@@ -195,7 +191,6 @@ impl Compiler {
                 self.expr(value);
                 self.emit_op(OpCode::Savg(bind.name), &node.location);
             }
-            _ => todo!()
         }
     }
 

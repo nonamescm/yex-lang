@@ -82,6 +82,8 @@ impl<T, const S: usize> StackVec<T, S> {
     }
 
     /// Reverses the StackVec in place
+    #[must_use]
+    #[track_caller]
     pub fn reverse(self) -> Self {
         self.into_iter().rev().collect()
     }

@@ -40,26 +40,26 @@ pub enum BinOp {
     Or,
 }
 
-impl<'a> Into<&'a [OpCode]> for BinOp {
-    fn into(self) -> &'a [OpCode] {
-        match self {
-            Self::Less => &[OpCode::Less],
-            Self::LessEq => &[OpCode::LessEq],
-            Self::Greater => &[OpCode::Not, OpCode::Less],
-            Self::GreaterEq => &[OpCode::Not, OpCode::LessEq],
-            Self::Add => &[OpCode::Add],
-            Self::Sub => &[OpCode::Sub],
-            Self::Mul => &[OpCode::Mul],
-            Self::Div => &[OpCode::Div],
-            Self::BitAnd => &[OpCode::BitAnd],
-            Self::BitOr => &[OpCode::BitOr],
-            Self::BitXor => &[OpCode::Xor],
-            Self::Shr => &[OpCode::Shr],
-            Self::Shl => &[OpCode::Shl],
-            Self::Eq => &[OpCode::Eq],
-            Self::Ne => &[OpCode::Not, OpCode::Eq],
-            Self::And => unreachable!(),
-            Self::Or => unreachable!(),
+impl<'a> From<BinOp> for &'a [OpCode] {
+    fn from(op: BinOp) -> &'a [OpCode] {
+        match op {
+            BinOp::Less => &[OpCode::Less],
+            BinOp::LessEq => &[OpCode::LessEq],
+            BinOp::Greater => &[OpCode::Not, OpCode::Less],
+            BinOp::GreaterEq => &[OpCode::Not, OpCode::LessEq],
+            BinOp::Add => &[OpCode::Add],
+            BinOp::Sub => &[OpCode::Sub],
+            BinOp::Mul => &[OpCode::Mul],
+            BinOp::Div => &[OpCode::Div],
+            BinOp::BitAnd => &[OpCode::BitAnd],
+            BinOp::BitOr => &[OpCode::BitOr],
+            BinOp::BitXor => &[OpCode::Xor],
+            BinOp::Shr => &[OpCode::Shr],
+            BinOp::Shl => &[OpCode::Shl],
+            BinOp::Eq => &[OpCode::Eq],
+            BinOp::Ne => &[OpCode::Not, OpCode::Eq],
+            BinOp::And => unreachable!(),
+            BinOp::Or => unreachable!(),
         }
     }
 }
@@ -109,11 +109,11 @@ impl TryFrom<TokenType> for UnOp {
     }
 }
 
-impl<'a> Into<&'a [OpCode]> for UnOp {
-    fn into(self) -> &'a [OpCode] {
-        match self {
-            Self::Not => &[OpCode::Not],
-            Self::Neg => &[OpCode::Neg],
+impl<'a> From<UnOp> for &'a [OpCode] {
+    fn from(op: UnOp) -> &'a [OpCode] {
+        match op {
+            UnOp::Not => &[OpCode::Not],
+            UnOp::Neg => &[OpCode::Neg],
         }
     }
 }
@@ -182,9 +182,9 @@ impl PartialEq<Value> for Literal {
     }
 }
 
-impl Into<Value> for Literal {
-    fn into(self) -> Value {
-        match self {
+impl From<Literal> for Value {
+    fn from(lit: Literal) -> Value {
+        match lit {
             Literal::Num(n) => Value::Num(n),
             Literal::Str(s) => Value::Str(GcRef::new(s)),
             Literal::Bool(b) => Value::Bool(b),
@@ -244,5 +244,4 @@ impl Stmt {
 #[derive(Debug)]
 pub enum StmtKind {
     Def { bind: VarDecl, value: Expr },
-    Open(String),
 }

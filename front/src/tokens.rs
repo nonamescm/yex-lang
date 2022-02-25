@@ -135,67 +135,6 @@ impl std::fmt::Display for TokenType {
     }
 }
 
-impl TokenType {
-    pub fn is_expression(&self) -> bool {
-        let kw = matches!(
-            self,
-            Self::Eof
-                | Self::Comma
-                | Self::Semicolon
-                | Self::Rbrack
-                | Self::Rparen
-                | Self::Rbrace
-                | Self::If
-                | Self::Else
-                | Self::Then
-                | Self::Loop
-                | Self::Def
-                | Self::Let
-                | Self::In
-                | Self::Fn
-                | Self::Become
-                | Self::Open
-                | Self::And
-                | Self::Or
-                | Self::Not
-        );
-
-        let op = self.is_binary_operator();
-
-        !kw && !op
-    }
-
-    pub fn is_binary_operator(&self) -> bool {
-        matches!(
-            self,
-            Self::Add
-                | Self::Sub
-                | Self::Mul
-                | Self::Div
-                | Self::Rem
-                | Self::Eq
-                | Self::Ne
-                | Self::Greater
-                | Self::GreaterEq
-                | Self::Less
-                | Self::LessEq
-                | Self::Assign
-                | Self::Cons
-                | Self::Len
-                | Self::Seq
-                | Self::Pipe
-                | Self::BitAnd
-                | Self::BitOr
-                | Self::BitXor
-                | Self::Shr
-                | Self::Shl
-                | Self::And
-                | Self::Or
-                | Self::Comma
-        )
-    }
-}
-
 pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
     match word.as_ref() {
         "if" => Some(TokenType::If),

@@ -6,7 +6,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl};
+use self::ast::{Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, Location};
 
 pub mod ast;
 
@@ -112,20 +112,23 @@ impl Parser {
     }
 
     fn expr(&mut self) -> ParseResult<Expr> {
-        let mut expr;
+        let mut expr = match self.current.token {
+            Tkt::Let => self.bind()?,
+            Tkt::If => self.condition()?,
+            Tkt::Fn => self.fn_()?,
+            _ => self.logic_or()?,
+        };
 
-        loop {
-            expr = match self.current.token {
-                Tkt::Let => self.bind()?,
-                Tkt::If => self.condition()?,
-                Tkt::Fn => self.fn_()?,
-                _ => self.logic_or()?,
-            };
-
-            if self.current.token != Tkt::Seq {
-                break;
-            }
+        while self.current.token == Tkt::Seq {
             self.next()?;
+            expr.kind = ExprKind::Seq {
+                left: Box::new(take(&mut expr)),
+                right: Box::new(self.expr()?),
+            };
+            expr.location = Location {
+                line: self.current.line,
+                column: self.current.column,
+            };
         }
 
         Ok(expr)
@@ -454,7 +457,7 @@ impl Parser {
     }
 
     fn prefix(&mut self) -> ParseResult<Expr> {
-        if let Tkt::Sub | Tkt::Not | Tkt::Len = &self.current.token {
+        if let Tkt::Sub | Tkt::Not = &self.current.token {
             let op = take(&mut self.current);
             self.next()?;
             let right = self.prefix()?;
