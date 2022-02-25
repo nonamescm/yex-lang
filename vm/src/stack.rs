@@ -81,6 +81,11 @@ impl<T, const S: usize> StackVec<T, S> {
         self.pop();
     }
 
+    /// Reverses the StackVec in place
+    pub fn reverse(self) -> Self {
+        self.into_iter().rev().collect()
+    }
+
     #[track_caller]
     /// Returns a reference to the last element
     pub fn last(&self) -> Option<&T> {
@@ -213,5 +218,11 @@ impl<T, const S: usize> IntoIterator for StackVec<T, S> {
             array: self,
             next: 0,
         }
+    }
+}
+
+impl<T, const S: usize> From<StackVec<T, S>> for Vec<T> {
+    fn from(stackvec: StackVec<T, S>) -> Self {
+        stackvec.into_iter().collect()
     }
 }

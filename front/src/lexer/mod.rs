@@ -1,3 +1,5 @@
+use vm::Symbol;
+
 use crate::error::ParseError;
 use crate::tokens::{fetch_keyword, Token, TokenType};
 
@@ -137,6 +139,10 @@ impl Lexer {
 
             '+' => TokenType::Add,
             '#' => TokenType::Len,
+            '-' if self.peek_at(1) == '>' => {
+                self.next();
+                TokenType::Arrow
+            }
             '-' => TokenType::Sub,
             '/' => TokenType::Div,
             '*' => TokenType::Mul,
@@ -144,6 +150,10 @@ impl Lexer {
             '=' if self.peek_at(1) == '=' => {
                 self.next();
                 TokenType::Eq
+            }
+            '=' if self.peek_at(1) == '>' => {
+                self.next();
+                TokenType::FatArrow
             }
             '!' if self.peek_at(1) == '=' => {
                 self.next();
@@ -173,7 +183,7 @@ impl Lexer {
                     "false" => TokenType::False,
                     "nil" => TokenType::Nil,
                     "\0" => self.throw("expected symbol string after `:`, found <eof>")?,
-                    _ => TokenType::Sym(vm::Symbol::new(sym)),
+                    _ => TokenType::Sym(Symbol::new(sym)),
                 }
             }
             '=' => TokenType::Assign,
@@ -204,7 +214,7 @@ impl Lexer {
                 if let Some(tk) = fetch_keyword(&tk) {
                     tk
                 } else {
-                    TokenType::Name(tk)
+                    TokenType::Name(Symbol::new(tk))
                 }
             }
 

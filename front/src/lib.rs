@@ -3,23 +3,34 @@
 mod compiler;
 mod error;
 mod lexer;
+mod parser;
 mod tokens;
 
+use compiler::Compiler;
 pub use error::ParseError;
 
-use compiler::Compiler;
+use error::ParseResult;
 use lexer::Lexer;
+use parser::Parser;
+use vm::{Bytecode, Value};
 
-/// Compiles a given string into yex bytecode
-pub fn compile<T: Into<String>>(
-    str: T,
-) -> Result<(vm::Bytecode, Vec<vm::Value>), error::ParseError> {
-    Compiler::compile(Lexer::new(str))
+/// Parses a given string into an AST
+pub fn parse<T: Into<String>>(str: T) -> ParseResult<(Bytecode, Vec<Value>)> {
+    let lexer = Lexer::new(str);
+    let parser = Parser::new(lexer)?;
+    let ast = parser.parse()?;
+
+    let compiler = Compiler::new();
+    Ok(compiler.compile_stmts(&ast))
 }
 
-/// Compiles a given expression into yex bytecode
-pub fn compile_expr<T: Into<String>>(
-    str: T,
-) -> Result<(vm::Bytecode, Vec<vm::Value>), error::ParseError> {
-    Compiler::compile_expr(Lexer::new(str))
+/// Parses the given string in a single expression
+pub fn parse_expr<T: Into<String>>(str: T) -> ParseResult<(Bytecode, Vec<Value>)> {
+    let lexer = Lexer::new(str);
+
+    let parser = Parser::new(lexer)?;
+    let ast = parser.parse_expr()?;
+
+    let compiler = Compiler::new();
+    Ok(compiler.compile_expr(&ast))
 }

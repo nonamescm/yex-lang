@@ -2,10 +2,9 @@ use crate::{
     env::EnvTable,
     gc::GcRef,
     literal::{nil, Value},
-    panic, stackvec, InterpretResult, List, Symbol,
+    panic, InterpretResult, List, Symbol,
 };
 use std::io::Write;
-mod ffi;
 mod list;
 mod table;
 
@@ -110,7 +109,7 @@ fn exit(args: &[Value]) -> InterpretResult<Value> {
 }
 
 pub fn prelude() -> EnvTable {
-    use {ffi::*, list::*, table::*};
+    use {list::*, table::*};
 
     let mut prelude = EnvTable::with_capacity(64);
     macro_rules! insert_fn {
@@ -122,7 +121,6 @@ pub fn prelude() -> EnvTable {
                 $crate::Symbol::new($name),
                 Value::Fun(GcRef::new(crate::literal::Fun {
                     arity: $arity,
-                    args: stackvec![],
                     body: GcRef::new($crate::Either::Right(|_, it| $fn(&*it))),
                 })),
             )
@@ -133,7 +131,6 @@ pub fn prelude() -> EnvTable {
                 $crate::Symbol::new($name),
                 Value::Fun(GcRef::new(crate::literal::Fun {
                     arity: $arity,
-                    args: stackvec![],
                     body: GcRef::new($crate::Either::Right(|vm, it| {
                         $fn(unsafe { vm.as_mut().unwrap() }, &*it)
                     })),
@@ -170,9 +167,6 @@ pub fn prelude() -> EnvTable {
     insert_fn!("get", get, 2);
 
     insert_fn!("getos", get_os, 0);
-
-    insert_vm_fn!("dlopen", dlopen, 4);
-    insert_vm_fn!("dlclose", dlclose, 1);
 
     prelude
 }

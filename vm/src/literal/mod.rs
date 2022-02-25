@@ -25,29 +25,15 @@ pub struct Fun {
     pub arity: usize,
     /// The function body
     pub body: FunBody,
-    /// The arguments that where already passed to the function
-    pub args: FunArgs,
 }
 
 impl std::fmt::Debug for Fun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Fun {{ arity: {}, body: {:?}, args: {:?} }}",
-            self.arity, self.body, self.args
+            "Fun {{ arity: {}, body: {:?} }}",
+            self.arity, self.body
         )
-    }
-}
-
-impl Fun {
-    /// Apply the function to the arguments, returing the partial application
-    #[must_use]
-    pub fn apply(self, args: FunArgs) -> Self {
-        Self {
-            arity: self.arity - args.len(),
-            body: self.body,
-            args,
-        }
     }
 }
 
@@ -120,9 +106,7 @@ impl Value {
             Value::Sym(_) => std::mem::size_of::<Symbol>(),
             Value::Str(s) => s.len(),
             Value::Table(ts) => ts.len(),
-            Value::Fun(f) => {
-                mem::size_of_val(&f.arity) + mem::size_of_val(&f.body) + mem::size_of_val(&f.args)
-            }
+            Value::Fun(f) => mem::size_of_val(&f),
             Value::ExternalFunction(f) => mem::size_of_val(f),
             Value::ExternalFunctionNoArg(f) => mem::size_of_val(f),
             Value::Bool(_) => std::mem::size_of::<bool>(),

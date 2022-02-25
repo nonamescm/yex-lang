@@ -1,48 +1,46 @@
-use front::compile;
-
-use std::{env::args, fs::read_to_string, process::exit};
+use rustyline::Editor;
+use std::{env::args, fs, process::exit};
 use vm::VirtualMachine;
-use {front::compile_expr, rustyline::Editor};
 
-fn eval_file(file: &str) -> Result<i32, front::ParseError> {
+fn eval_file(file: &str) {
+    let file = match fs::read_to_string(file) {
+        Ok(file) => file,
+        Err(..) => {
+            eprintln!("error reading {}", file);
+            exit(1);
+        }
+    };
+
+    let (bt, ct) = match front::parse(file) {
+        Ok(res) => res,
+        Err(e) => {
+            eprintln!("{}", e);
+            exit(1);
+        }
+    };
     let mut vm = VirtualMachine::default();
 
-    let file = read_to_string(file).unwrap_or_else(|_| {
-        eprintln!("File not found");
-        exit(1)
-    });
 
-    if file.is_empty() {
-        return Ok(0);
+    vm.set_consts(ct);
+    if let Err(e) = vm.run(&bt) {
+        eprintln!("{}", e);
+        exit(1);
     }
 
-    let (bytecode, constants) = compile(file)?;
-    #[cfg(debug_assertions)]
-    {
-        println!("bytecode: {:#?}", &bytecode);
-        println!("constants: {:#?}", &constants);
-    }
-    vm.set_consts(constants);
-    if let Err(e) = vm.run(&bytecode) {
-        eprintln!("{}", e)
-    }
-
-    Ok(0)
 }
 
 fn start(args: Vec<String>) -> i32 {
-    let mut vm = VirtualMachine::default();
     let mut repl = Editor::<()>::new();
 
     if args.len() > 1 {
-        return match eval_file(&args[1]) {
-            Ok(n) => n,
-            Err(e) => {
-                eprintln!("{}", e);
-                1
-            }
-        };
+        for args in args.iter().skip(1) {
+            eval_file(args);
+        }
+        return 0;
     }
+
+    let mut vm = VirtualMachine::default();
+
     loop {
         let line = match repl.readline("yex> ").map(|it| it.trim().to_string()) {
             Ok(str) => {
@@ -55,33 +53,29 @@ fn start(args: Vec<String>) -> i32 {
             continue;
         }
 
-        let (bytecode, constants) = {
-            if line.trim().starts_with("def") {
-                compile(line)
-            } else {
-                compile_expr(line)
+        if line.starts_with("def") {
+            match front::parse(line) {
+                Ok((bt, ct)) => {
+                    vm.set_consts(ct);
+                    vm.run(&bt).unwrap_or_else(|e| println!("{}", e));
+                    println!("{}", vm.pop_last());
+                }
+                Err(err) => {
+                    eprintln!("{}", err);
+                }
             }
-            .unwrap_or_else(|e| {
-                eprintln!("{}", e);
-                (vec![], vec![])
-            })
-        };
-
-        #[cfg(debug_assertions)]
-        {
-            println!("bytecode: {:#?}", &bytecode);
-            println!("constants: {:#?}", &constants);
+        } else {
+            match front::parse_expr(line) {
+                Ok((bt, ct)) => {
+                    vm.set_consts(ct);
+                    vm.run(&bt).unwrap_or_else(|e| println!("{}", e));
+                    println!("{}", vm.pop_last());
+                }
+                Err(err) => {
+                    eprintln!("{}", err);
+                }
+            }
         }
-
-        vm.set_consts(constants);
-        if let Err(e) = vm.run(&bytecode) {
-            eprintln!("{}", e)
-        }
-
-        let pop = vm.pop_last().clone();
-        println!(">> {}", pop);
-        vm.set_global("it", pop.clone());
-        vm.reset();
     }
 }
 

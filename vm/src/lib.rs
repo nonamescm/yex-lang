@@ -54,12 +54,10 @@ type Stack = StackVec<Value, STACK_SIZE>;
 pub type Bytecode = Vec<OpCodeMetadata>;
 
 type BytecodeRef<'a> = &'a Bytecode;
-use dlopen::raw::Library;
-use std::{collections::HashMap, mem::swap};
+use std::mem::swap;
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
 pub struct VirtualMachine {
-    dlopen_libs: HashMap<String, GcRef<Library>>,
     stack: Stack,
     locals: [Value; 1024],
     used_locals: usize,
@@ -94,7 +92,7 @@ impl VirtualMachine {
     }
 
     /// Executes a given set of bytecode instructions
-    pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<Value> {
+    pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<()> {
         let mut ip = 0;
         let mut frame_locals = 0;
 
@@ -110,7 +108,7 @@ impl VirtualMachine {
             self.debug_stack(&op);
 
             match op {
-                OpCode::Halt => return Ok(Value::Nil),
+                OpCode::Halt => return Ok(()),
 
                 // Stack manipulation
                 OpCode::Push(value) => {
@@ -250,7 +248,7 @@ impl VirtualMachine {
 
         self.used_locals -= frame_locals;
 
-        Ok(self.pop_last().clone())
+        Ok(())
     }
 
     #[cfg(debug_assertions)]
@@ -267,18 +265,14 @@ impl VirtualMachine {
     fn call_args(&mut self, arity: usize, fun: &Fun) -> FunArgs {
         let mut args = FunArgs::new();
 
-        if fun.arity == arity && fun.args.is_empty() && fun.body.is_left() {
+        if fun.arity == arity && fun.body.is_left() {
             return args;
         }
 
         for _ in 0..arity {
             args.push(self.pop());
         }
-        for arg in fun.args.iter() {
-            args.push(arg.clone());
-        }
-
-        args
+        args.reverse()
     }
 
     pub(crate) fn call(&mut self, arity: usize) -> InterpretResult<()> {
@@ -290,30 +284,24 @@ impl VirtualMachine {
         let args = self.call_args(arity, &fun);
 
         if arity < fun.arity {
-            let ap = (*fun).clone().apply(args);
-            self.push(Value::Fun(GcRef::new(ap)));
-            return Ok(());
+            panic!("Wrong number of arguments: expected {}, got {}", fun.arity, arity)?;
         }
 
         match &*fun.body {
-            Either::Left(bytecode) => self.call_bytecode(bytecode, args),
+            Either::Left(bytecode) => self.call_bytecode(bytecode),
             Either::Right(ptr) => self.call_native(*ptr, args),
         }
     }
 
     #[inline]
-    fn call_bytecode(&mut self, bytecode: BytecodeRef, args: FunArgs) -> InterpretResult<()> {
-        for arg in args.iter() {
-            self.push(arg.clone());
-        }
-
+    fn call_bytecode(&mut self, bytecode: BytecodeRef) -> InterpretResult<()> {
         self.run(bytecode)?;
         Ok(())
     }
 
     #[inline]
     fn call_native(&mut self, fp: NativeFun, args: FunArgs) -> InterpretResult<()> {
-        let args = args.iter().cloned().collect();
+        let args = args.into();
         let result = fp(self, args);
         self.try_push(result)
     }
@@ -381,7 +369,6 @@ impl Default for VirtualMachine {
             stack: STACK,
             locals: [NIL; 1024],
             used_locals: 0,
-            dlopen_libs: HashMap::new(),
             constants: Vec::new(),
             globals: prelude,
         }
