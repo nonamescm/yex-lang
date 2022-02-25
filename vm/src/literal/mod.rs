@@ -6,7 +6,7 @@ use std::{
 };
 pub mod symbol;
 use crate::{
-    error::InterpretResult, gc::GcRef, list::List, stack::StackVec, table::Table, Bytecode, Either,
+    error::InterpretResult, gc::GcRef, list::List, stack::StackVec, Bytecode, Either,
     VirtualMachine,
 };
 use symbol::Symbol;
@@ -62,8 +62,6 @@ pub enum Value {
     Fun(GcRef<Fun>),
     /// Yex lists
     List(List),
-    /// Yex Tables
-    Table(GcRef<Table>),
     /// External Function
     ExternalFunctionNoArg(FFINoArgFunction),
     /// External Function With Arguments
@@ -78,7 +76,6 @@ impl Clone for Value {
 
         match self {
             List(xs) => List(xs.clone()),
-            Table(ts) => Table(GcRef::clone(ts)),
             Str(str) => Str(GcRef::clone(str)),
             Fun(f) => Fun(GcRef::clone(f)),
             Bool(b) => Bool(*b),
@@ -105,7 +102,6 @@ impl Value {
             Value::Num(_) => std::mem::size_of::<f64>(),
             Value::Sym(_) => std::mem::size_of::<Symbol>(),
             Value::Str(s) => s.len(),
-            Value::Table(ts) => ts.len(),
             Value::Fun(f) => mem::size_of_val(&f),
             Value::ExternalFunction(f) => mem::size_of_val(f),
             Value::ExternalFunctionNoArg(f) => mem::size_of_val(f),
@@ -142,7 +138,6 @@ impl Value {
             Nil => false,
             List(xs) => !xs.is_empty(),
             Fun(_) => true,
-            Table(ts) => !ts.is_empty(),
             ExternalFunction(_) => true,
             ExternalFunctionNoArg(_) => true,
         }
@@ -187,7 +182,6 @@ impl std::fmt::Display for Value {
             ExternalFunctionNoArg(_) => "<extern fun<0>".to_string(),
             Nil => "nil".to_string(),
             List(xs) => format!("{}", *xs),
-            Table(ts) => format!("{}", **ts),
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),

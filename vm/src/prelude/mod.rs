@@ -6,7 +6,6 @@ use crate::{
 };
 use std::io::Write;
 mod list;
-mod table;
 
 fn println(args: &[Value]) -> InterpretResult<Value> {
     match &args[0] {
@@ -50,7 +49,6 @@ fn str(args: &[Value]) -> InterpretResult<Value> {
 fn r#type(args: &[Value]) -> InterpretResult<Value> {
     let type_name = match &args[0] {
         Value::List(_) => "list",
-        Value::Table(_) => "table",
         Value::Str(_) => "str",
         Value::Num(_) => "num",
         Value::Bool(_) => "bool",
@@ -109,7 +107,7 @@ fn exit(args: &[Value]) -> InterpretResult<Value> {
 }
 
 pub fn prelude() -> EnvTable {
-    use {list::*, table::*};
+    use list::*;
 
     let mut prelude = EnvTable::with_capacity(64);
     macro_rules! insert_fn {
@@ -162,9 +160,6 @@ pub fn prelude() -> EnvTable {
     insert_vm_fn!("fold", fold, 3);
     insert_fn!("rev", rev, 1);
     insert_fn!("nth", nth, 2);
-
-    insert_fn!("insert", insert, 3);
-    insert_fn!("get", get, 2);
 
     insert_fn!("getos", get_os, 0);
 

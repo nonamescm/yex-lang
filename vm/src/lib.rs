@@ -13,10 +13,8 @@ mod literal;
 mod opcode;
 mod prelude;
 mod stack;
-mod table;
 
 use env::EnvTable;
-use gc::GcRef;
 use literal::{FunArgs, NativeFun};
 
 use crate::error::InterpretResult;
@@ -27,7 +25,6 @@ pub use crate::{
     literal::{symbol::Symbol, Fun, Value},
     opcode::{OpCode, OpCodeMetadata},
     stack::StackVec,
-    table::Table,
 };
 
 const STACK_SIZE: usize = 512;
@@ -218,17 +215,6 @@ impl VirtualMachine {
                 OpCode::Savg(name) => {
                     let value = self.pop();
                     self.set_global(name, value);
-                }
-
-                // table manipulation
-                OpCode::Insert(key) => {
-                    let (table, value) = self.pop_two();
-                    let table = match table {
-                        Value::Table(table) => table.insert(key, value),
-                        value => panic!("Expected table, got {}", value)?,
-                    };
-                    let table = Value::Table(GcRef::new(table.clone()));
-                    self.push(table);
                 }
 
                 // list manipulation

@@ -72,11 +72,6 @@ pub enum OpCode {
     /// The stack layout after running it: [new-list]
     Prep,
 
-    /// Insert a value in a table, pushing the new table
-    /// The stack layout before running this opcode: [table, value]
-    /// The stack layout after running it: [new-table]
-    Insert(Symbol),
-
     /// Swap the two first elements in the stack
     /// The stack layout before running this opcode: [a, b]
     /// The stack layout after running it: [b, a]
