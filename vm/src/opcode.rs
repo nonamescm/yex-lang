@@ -175,6 +175,13 @@ pub struct OpCodeMetadata {
     pub opcode: OpCode,
 }
 
+impl OpCodeMetadata {
+    /// Creates a new [`OpCodeMetadata`]
+    pub fn new(line: usize, column: usize, opcode: OpCode) -> Self {
+        Self { line, column, opcode }
+    }
+}
+
 impl std::fmt::Debug for OpCodeMetadata {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.opcode)

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use vm::{gc::GcRef, Bytecode, Either, Fun, List, OpCode, OpCodeMetadata, Symbol, Value};
 
-use crate::parser::ast::{Expr, ExprKind, Literal, VarDecl, Stmt, StmtKind, Location};
+use crate::parser::ast::{BinOp, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
 
 #[derive(Default)]
 struct Scope {
@@ -79,88 +79,168 @@ impl Compiler {
         self.emit_op(OpCode::Save(len), node);
     }
 
+    fn if_expr(&mut self, cond: &Expr, then: &Expr, else_: &Expr, loc: &Location) {
+        // compiles the codition
+        self.expr(cond);
+
+        // keeps track of the jump offset
+        let then_label = self.scope().opcodes.len();
+        self.emit_op(OpCode::Jmf(0), loc);
+
+        // compiles the then branch
+        self.expr(then);
+
+        // keeps track of the else jump offset
+        let else_label = self.scope().opcodes.len();
+        self.emit_op(OpCode::Jmp(0), loc);
+
+        // fix the then jump offset
+        self.scope_mut().opcodes[then_label].opcode = OpCode::Jmf(self.scope().opcodes.len());
+
+        self.expr(else_);
+
+        // fix the else jump offset
+        self.scope_mut().opcodes[else_label].opcode = OpCode::Jmp(self.scope().opcodes.len());
+    }
+
+    fn lambda_expr(&mut self, args: &[VarDecl], body: &Expr, loc: &Location) {
+        // creates the lambda scope
+        let mut scope = Scope {
+            opcodes: Vec::new(),
+            locals: HashMap::new(),
+        };
+
+        for (idx, arg) in args.iter().enumerate() {
+            // insert the argument into the scope
+            scope.locals.insert(arg.name, idx);
+
+            // pushes the opcode to save the argument
+            let op = OpCodeMetadata::new(loc.line, loc.column, OpCode::Save(idx));
+            scope.opcodes.push(op);
+        }
+
+        self.scope_stack.push(scope);
+
+        // compiles the body
+        self.expr(body);
+
+        // pops the lambda scope
+        let Scope { opcodes, .. } = self.scope_stack.pop().unwrap();
+
+        // convert it to a `Fun` struct
+        let func = Fun {
+            body: GcRef::new(Either::Left(opcodes)),
+            arity: args.len(),
+        };
+
+        // push the function onto the stack
+        self.emit_const(Value::Fun(GcRef::new(func)), &loc)
+    }
+
     fn expr(&mut self, node: &Expr) {
+        let loc = &node.location;
+
         match &node.kind {
-            ExprKind::Lit(lit) => self.emit_lit(lit, &node.location),
+            // pushes a literal value onto the stack
+            ExprKind::Lit(lit) => self.emit_lit(lit, loc),
 
-            ExprKind::Lambda { args, body } => {
-                let mut scope = Scope {
-                    opcodes: Vec::new(),
-                    locals: HashMap::new(),
-                };
-
-                for (idx, arg) in args.iter().enumerate() {
-                    scope.locals.insert(arg.name, idx);
-                    scope.opcodes.push(OpCodeMetadata {
-                        line: node.location.line,
-                        column: node.location.column,
-                        opcode: OpCode::Save(idx),
-                    });
-                }
-
-                self.scope_stack.push(scope);
-                self.expr(body);
-                let Scope { opcodes, .. } = self.scope_stack.pop().unwrap();
-
-                let func = Fun {
-                    body: GcRef::new(Either::Left(opcodes)),
-                    arity: args.len(),
-                };
-
-                self.emit_const(Value::Fun(GcRef::new(func)), &node.location)
-            }
+            // compiles a lambda expression
+            ExprKind::Lambda { args, body } => self.lambda_expr(&args, body, loc),
 
             ExprKind::App { callee, args } => {
+                // iterate over the arguments
+                // pushing them onto the stack
                 for arg in args.iter().rev() {
                     self.expr(arg);
                 }
+
+                // compiles the caller
                 self.expr(callee);
-                self.emit_op(OpCode::Call(args.len()), &node.location);
+
+                // emits the `Call` opcode
+                self.emit_op(OpCode::Call(args.len()), loc);
             }
 
             ExprKind::Var(name) => {
+                // get the local index
                 let pred = self.scope().locals.get(name).copied();
 
                 if let Some(idx) = pred {
-                    self.emit_op(OpCode::Load(idx), &node.location);
+                    // if the variable is in the current scope
+                    // emit the `Load` opcode, which loads a local
+                    self.emit_op(OpCode::Load(idx), loc);
                 } else {
-                    self.emit_op(OpCode::Loag(*name), &node.location);
+                    // otherwise emit the `Loag` opcode, which loads a global
+                    self.emit_op(OpCode::Loag(*name), loc);
                 }
             }
 
-            ExprKind::If { cond, then, else_ } => {
-                self.expr(cond);
-                let then_label = self.scope().opcodes.len();
-                self.emit_op(OpCode::Jmf(0), &node.location);
-
-                self.expr(then);
-
-                let else_label = self.scope().opcodes.len();
-                self.emit_op(OpCode::Jmp(0), &node.location);
-
-                self.scope_mut().opcodes[then_label].opcode =
-                    OpCode::Jmf(self.scope().opcodes.len());
-
-                self.expr(else_);
-
-                self.scope_mut().opcodes[else_label].opcode =
-                    OpCode::Jmp(self.scope().opcodes.len());
-            }
+            ExprKind::If { cond, then, else_ } => self.if_expr(cond, then, else_, loc),
 
             ExprKind::Bind { bind, value, body } => {
+                // compiles the value
                 self.expr(value);
-                self.emit_save(*bind, &node.location);
+
+                // emits the `Save` instruction
+                self.emit_save(*bind, loc);
+
+                // compiles the assignment body
                 self.expr(body);
+            }
+
+            ExprKind::Binary { left, op, right } if op == &BinOp::And => {
+                // compiles the left side of the and expression
+                self.expr(left);
+
+                // duplicate the value on the stack
+                self.emit_op(OpCode::Dup, loc);
+
+                // keeps track of the jump location
+                let then_label = self.scope().opcodes.len();
+                self.emit_op(OpCode::Jmf(0), loc);
+
+                // pop's the duplicated left value
+                self.emit_op(OpCode::Pop, loc);
+                self.expr(right);
+
+                // fix the jump offset
+                self.scope_mut().opcodes[then_label].opcode =
+                    OpCode::Jmf(self.scope().opcodes.len());
+            }
+
+            ExprKind::Binary { left, op, right } if op == &BinOp::Or => {
+                // compiles the left side of the or expression
+                self.expr(left);
+
+                self.emit_op(OpCode::Dup, loc);
+
+                // apply a unary not to the value on the stack
+                self.emit_op(OpCode::Not, loc);
+
+                // keeps track of the jump location
+                let then_label = self.scope().opcodes.len();
+                self.emit_op(OpCode::Jmf(0), loc);
+
+                // compiles the right side of the or expression
+                self.expr(right);
+
+                // fix the jump offset
+                self.scope_mut().opcodes[then_label].opcode =
+                    OpCode::Jmf(self.scope().opcodes.len());
             }
 
             ExprKind::Binary { left, op, right } => {
                 self.expr(left);
                 self.expr(right);
-                self.emit_ops((*op).into(), &node.location);
+                self.emit_ops((*op).into(), loc);
             }
 
             ExprKind::List(xs) => {
+                // emits the empty list
                 self.emit_const(Value::List(List::new()), &node.location);
+
+                // prepend each element to the list, in the reverse order
+                // since it's a linked list
                 for x in xs.iter().rev() {
                     self.expr(x);
                     self.emit_op(OpCode::Prep, &node.location);
@@ -170,6 +250,8 @@ impl Compiler {
             ExprKind::Cons { head, tail } => {
                 self.expr(tail);
                 self.expr(head);
+
+                // prepend the head to the tail
                 self.emit_op(OpCode::Prep, &node.location);
             }
 

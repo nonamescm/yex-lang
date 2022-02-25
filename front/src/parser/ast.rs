@@ -1,9 +1,15 @@
 use vm::{gc::GcRef, OpCode, Symbol, Value};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Location {
     pub line: usize,
     pub column: usize,
+}
+
+impl Default for Location {
+    fn default() -> Self {
+        Self { line: 0, column: 0 }
+    }
 }
 
 use crate::tokens::TokenType;
@@ -19,7 +25,7 @@ impl VarDecl {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinOp {
     Less,
     LessEq,
