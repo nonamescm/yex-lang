@@ -1,5 +1,0 @@
-// Copilot, what's the best programming language?
-//
-// The answer is:
-//
-//   Go.

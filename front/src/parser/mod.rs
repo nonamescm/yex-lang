@@ -6,7 +6,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
+use self::ast::{Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, Location};
 
 pub mod ast;
 
@@ -116,7 +116,6 @@ impl Parser {
             Tkt::Let => self.bind()?,
             Tkt::If => self.condition()?,
             Tkt::Fn => self.fn_()?,
-            Tkt::Become => self.become_()?,
             _ => self.logic_or()?,
         };
 
@@ -186,11 +185,6 @@ impl Parser {
     fn fn_(&mut self) -> ParseResult<Expr> {
         self.expect(Tkt::Fn)?;
         self.function()
-    }
-
-    fn become_(&mut self) -> ParseResult<Expr> {
-        self.expect(Tkt::Become)?;
-        self.call(true)
     }
 
     fn function(&mut self) -> ParseResult<Expr> {
@@ -473,7 +467,7 @@ impl Parser {
                 op.column,
             ))
         } else {
-            let expr = self.call(false)?;
+            let expr = self.call()?;
             self.next()?;
             Ok(expr)
         }
@@ -499,7 +493,7 @@ impl Parser {
         Ok(args)
     }
 
-    fn call(&mut self, tail: bool) -> ParseResult<Expr> {
+    fn call(&mut self) -> ParseResult<Expr> {
         let callee = self.primary()?;
 
         let args = if self.peek()?.token == Tkt::Lparen {
@@ -517,7 +511,6 @@ impl Parser {
                 ExprKind::App {
                     callee: Box::new(callee),
                     args,
-                    tail,
                 },
                 line,
                 column,
