@@ -193,7 +193,7 @@ impl Parser {
 
         let args = self.args()?;
 
-        self.expect(Tkt::FatArrow)?;
+        self.expect(Tkt::Assign)?;
 
         let body = self.expr()?;
 
