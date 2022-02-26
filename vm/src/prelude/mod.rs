@@ -43,7 +43,11 @@ fn input(args: &[Value]) -> InterpretResult<Value> {
 }
 
 fn str(args: &[Value]) -> InterpretResult<Value> {
-    Ok(Value::Str(GcRef::new(format!("{}", &args[0]))))
+    if let Value::Str(s) = &args[0] {
+        Ok(Value::Str(s.clone()))
+    } else {
+        Ok(Value::Str(GcRef::new(format!("{}", &args[0]))))
+    }
 }
 
 fn r#type(args: &[Value]) -> InterpretResult<Value> {
