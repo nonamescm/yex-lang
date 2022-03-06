@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use vm::{gc::GcRef, Bytecode, Either, Fun, List, OpCode, OpCodeMetadata, Symbol, Value};
+use vm::{gc::GcRef, Bytecode, Either, Fun, List, OpCode, OpCodeMetadata, Symbol, Value, stackvec};
 
 use crate::parser::ast::{BinOp, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
 
@@ -131,6 +131,7 @@ impl Compiler {
         let func = Fun {
             body: GcRef::new(Either::Left(opcodes)),
             arity: args.len(),
+            args: stackvec![],
         };
 
         // push the function onto the stack

@@ -25,15 +25,30 @@ pub struct Fun {
     pub arity: usize,
     /// The function body
     pub body: FunBody,
+    /// The function Arguments
+    pub args: FunArgs,
+}
+
+impl Fun {
+    /// Apply the function to the given arguments
+    pub fn apply(&self, args: FunArgs) -> Self {
+        Fun {
+            arity: self.arity + self.args.len() - args.len(),
+            body: self.body.clone(),
+            args,
+        }
+    }
 }
 
 impl std::fmt::Debug for Fun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Fun {{ arity: {}, body: {:?} }}",
-            self.arity, self.body
-        )
+        write!(f, "Fun {{ arity: {}, body: {:?} }}", self.arity, self.body)
+    }
+}
+
+impl std::fmt::Display for Fun {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<fun({})>", self.arity)
     }
 }
 

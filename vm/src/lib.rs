@@ -15,6 +15,7 @@ mod prelude;
 mod stack;
 
 use env::EnvTable;
+use gc::GcRef;
 use literal::{FunArgs, NativeFun};
 
 use crate::error::InterpretResult;
@@ -249,15 +250,16 @@ impl VirtualMachine {
 
     #[inline]
     fn call_args(&mut self, arity: usize, fun: &Fun) -> FunArgs {
-        let mut args = FunArgs::new();
-
-        if fun.arity == arity && fun.body.is_left() {
-            return args;
+        if fun.arity == arity && fun.body.is_left() && fun.args.is_empty() {
+            return stackvec![];
         }
+
+        let mut args = fun.args.clone();
 
         for _ in 0..arity {
             args.push(self.pop());
         }
+
         args
     }
 
@@ -269,18 +271,27 @@ impl VirtualMachine {
 
         let args = self.call_args(arity, &fun);
 
+        if arity > fun.arity {
+            panic!("Too many arguments for function {}", *fun)?;
+        }
+
         if arity < fun.arity {
-            panic!("Wrong number of arguments: expected {}, got {}", fun.arity, arity)?;
+            self.push(Value::Fun(GcRef::new(fun.apply(args))));
+            return Ok(());
         }
 
         match &*fun.body {
-            Either::Left(bytecode) => self.call_bytecode(bytecode),
+            Either::Left(bytecode) => self.call_bytecode(bytecode, args),
             Either::Right(ptr) => self.call_native(*ptr, args),
         }
     }
 
     #[inline]
-    fn call_bytecode(&mut self, bytecode: BytecodeRef) -> InterpretResult<()> {
+    fn call_bytecode(&mut self, bytecode: BytecodeRef, args: FunArgs) -> InterpretResult<()> {
+        for arg in args {
+            self.push(arg);
+        }
+
         self.run(bytecode)?;
         Ok(())
     }

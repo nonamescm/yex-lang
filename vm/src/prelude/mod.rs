@@ -124,6 +124,7 @@ pub fn prelude() -> EnvTable {
                 Value::Fun(GcRef::new(crate::literal::Fun {
                     arity: $arity,
                     body: GcRef::new($crate::Either::Right(|_, it| $fn(&*it))),
+                    args: $crate::StackVec::new(),
                 })),
             )
         };
@@ -136,6 +137,7 @@ pub fn prelude() -> EnvTable {
                     body: GcRef::new($crate::Either::Right(|vm, it| {
                         $fn(unsafe { vm.as_mut().unwrap() }, &*it)
                     })),
+                    args: $crate::StackVec::new(),
                 })),
             )
         };
