@@ -1,5 +1,7 @@
 use std::{iter::Peekable, mem::take};
 
+use vm::Symbol;
+
 use crate::{
     error::{ParseError, ParseResult},
     lexer::Lexer,
@@ -28,15 +30,69 @@ impl Parser {
     pub fn parse(mut self) -> ParseResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
         while self.current.token != Tkt::Eof {
-            stmts.push(self.def_bind()?);
+            if self.current.token == Tkt::Type {
+                stmts.push(self.type_bind()?);
+            }else {
+                stmts.push(self.def_bind()?);
+            }
         }
-
+        println!("{:#?}", stmts);
+        
         Ok(stmts)
     }
 
     pub fn parse_expr(mut self) -> ParseResult<Expr> {
         self.expr()
     }
+
+    fn type_bind(&mut self) -> ParseResult<Stmt> {
+        self.next()?;
+        let name = match take(&mut self.current.token) {
+            Tkt::Name(id) => id,
+            other => self.throw(format!("Expected name, found {}", other))?,
+        };
+        
+        self.next()?;
+        self.expect(Tkt::Lparen)?;
+        let mut params = Vec::new();
+        while(self.current.token != Tkt::Rparen) {
+           
+            match self.current.token {
+                Tkt::Name(id) => {
+                    params.push(id);
+                },
+                _ => {}
+            }
+            self.next();
+        }
+
+        let mut defs = vec![];
+    
+        while self.current.token != Tkt::End {
+            self.next();
+            if self.current.token == Tkt::Def {
+                let line = self.current.line;
+                let column = self.current.column;
+                self.next();
+                let name = match take(&mut self.current.token) {
+                    Tkt::Name(id) => id,
+                    other => self.throw(format!("Expected name, found {}", other))?,
+                };
+                self.next();
+                let mut args = self.args()?;
+                args.splice(0..0, [VarDecl::new(Symbol::new("this"))]);
+                self.expect(Tkt::Assign)?;
+
+                let body = self.expr()?;
+                defs.push(StmtKind::Def { bind: VarDecl::new(name), value: Expr::new(ExprKind::Lambda { args: args, body: Box::new(body)}, line, column)});
+            }
+        
+        }
+
+        self.next();
+
+        Ok(Stmt::new(StmtKind::Type { name: name, args: params, defs: defs }, self.current.line, self.current.column))
+    } 
 
     fn def_bind(&mut self) -> ParseResult<Stmt> {
         self.expect(Tkt::Def)?;
@@ -166,6 +222,9 @@ impl Parser {
         self.next()?;
         while self.current.token != Tkt::Rparen {
             let var = self.var_decl()?;
+            if var.name.to_str() == "this" {
+                self.throw("Cannot use \"this\" as an argument name")?;
+            }
             args.push(var);
 
             match &self.current.token {

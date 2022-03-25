@@ -23,6 +23,8 @@ pub enum TokenType {
     And,
     Or,
     Not,
+    Type,
+    End,
 
     // logical operators
     Add,
@@ -60,6 +62,7 @@ pub enum TokenType {
     Pipe,
     Arrow,
     FatArrow,
+    Dot,
 
     Eof,
 }
@@ -94,6 +97,8 @@ impl std::fmt::Display for TokenType {
             Self::And => "and".into(),
             Self::Or => "or".into(),
             Self::Not => "not".into(),
+            Self::Type => "type".into(),
+            Self::End => "end".into(),
 
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
@@ -128,7 +133,10 @@ impl std::fmt::Display for TokenType {
             Self::Pipe => "|>".into(),
             Self::Arrow => "->".into(),
             Self::FatArrow => "=>".into(),
+            Self::Dot => ".".into(),
+
             Self::Eof => "<eof>".into(),
+            
         };
 
         write!(f, "{}", res)
@@ -153,6 +161,8 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "and" => Some(TokenType::And),
         "or" => Some(TokenType::Or),
         "not" => Some(TokenType::Not),
+        "type" => Some(TokenType::Type),
+        "end" => Some(TokenType::End),
         _ => None,
     }
 }

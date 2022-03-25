@@ -18,6 +18,7 @@ fn eval_file(file: &str) {
             exit(1);
         }
     };
+
     let mut vm = VirtualMachine::default();
 
 
