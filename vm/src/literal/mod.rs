@@ -10,7 +10,6 @@ use crate::{
     VirtualMachine,
 };
 use symbol::Symbol;
-use crate::struct_type::YexType;
 
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Value>) -> InterpretResult<Value>;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
@@ -82,8 +81,6 @@ pub enum Value {
     ExternalFunctionNoArg(FFINoArgFunction),
     /// External Function With Arguments
     ExternalFunction(FFIFunction),
-    /// Rust-like structs
-    Type(YexType),
     /// null
     Nil,
 }
@@ -101,7 +98,6 @@ impl Clone for Value {
             Sym(s) => Sym(*s),
             ExternalFunction(f) => ExternalFunction(*f),
             ExternalFunctionNoArg(f) => ExternalFunctionNoArg(*f),
-            Type(t) => Type(t.clone()), // i wish i didnt have to clone that shit, might find a better solution afterwards
             Nil => Nil,
         }
     }
@@ -118,14 +114,13 @@ impl Value {
     pub fn len(&self) -> usize {
         match self {
             Value::List(xs) => xs.len(),
-            Value::Num(_) => std::mem::size_of::<f64>(),
-            Value::Sym(_) => std::mem::size_of::<Symbol>(),
+            Value::Num(_) => mem::size_of::<f64>(),
+            Value::Sym(_) => mem::size_of::<Symbol>(),
             Value::Str(s) => s.len(),
             Value::Fun(f) => mem::size_of_val(&f),
             Value::ExternalFunction(f) => mem::size_of_val(f),
             Value::ExternalFunctionNoArg(f) => mem::size_of_val(f),
-            Value::Bool(_) => std::mem::size_of::<bool>(),
-            Value::Type(t) => mem::size_of_val(t),
+            Value::Bool(_) => mem::size_of::<bool>(),
             Value::Nil => 4,
         }
     }
@@ -160,7 +155,6 @@ impl Value {
             Fun(_) => true,
             ExternalFunction(_) => true,
             ExternalFunctionNoArg(_) => true,
-            Type(_) => true,
         }
     }
 }
@@ -207,7 +201,6 @@ impl std::fmt::Display for Value {
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
             Bool(b) => b.to_string(),
-            Type(t) => format!("{}", t),
         };
         write!(f, "{}", tk)
     }

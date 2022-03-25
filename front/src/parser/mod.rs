@@ -1,14 +1,12 @@
 use std::{iter::Peekable, mem::take};
 
-use vm::Symbol;
-
 use crate::{
     error::{ParseError, ParseResult},
     lexer::Lexer,
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, Location};
+use self::ast::{Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
 
 pub mod ast;
 
@@ -32,12 +30,11 @@ impl Parser {
         while self.current.token != Tkt::Eof {
             if self.current.token == Tkt::Type {
                 stmts.push(self.type_bind()?);
-            }else {
+            } else {
                 stmts.push(self.def_bind()?);
             }
         }
-        println!("{:#?}", stmts);
-        
+
         Ok(stmts)
     }
 
@@ -46,53 +43,38 @@ impl Parser {
     }
 
     fn type_bind(&mut self) -> ParseResult<Stmt> {
-        self.next()?;
-        let name = match take(&mut self.current.token) {
-            Tkt::Name(id) => id,
-            other => self.throw(format!("Expected name, found {}", other))?,
-        };
-        
-        self.next()?;
-        self.expect(Tkt::Lparen)?;
+        self.expect(Tkt::Type)?;
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let name = self.var_decl()?;
         let mut params = Vec::new();
-        while(self.current.token != Tkt::Rparen) {
-           
-            match self.current.token {
-                Tkt::Name(id) => {
-                    params.push(id);
-                },
-                _ => {}
-            }
-            self.next();
+
+        self.expect(Tkt::Lparen)?;
+        while self.current.token != Tkt::Rparen {
+            params.push(self.var_decl()?);
+            self.expect_and_skip(Tkt::Comma)?;
+            self.next()?;
         }
 
-        let mut defs = vec![];
-    
+        self.next()?;
+
+        let mut methods = Vec::new();
         while self.current.token != Tkt::End {
-            self.next();
-            if self.current.token == Tkt::Def {
-                let line = self.current.line;
-                let column = self.current.column;
-                self.next();
-                let name = match take(&mut self.current.token) {
-                    Tkt::Name(id) => id,
-                    other => self.throw(format!("Expected name, found {}", other))?,
-                };
-                self.next();
-                let mut args = self.args()?;
-                args.splice(0..0, [VarDecl::new(Symbol::new("this"))]);
-                self.expect(Tkt::Assign)?;
-
-                let body = self.expr()?;
-                defs.push(StmtKind::Def { bind: VarDecl::new(name), value: Expr::new(ExprKind::Lambda { args: args, body: Box::new(body)}, line, column)});
-            }
-        
+            methods.push(self.def_bind()?);
         }
+        self.next()?;
 
-        self.next();
-
-        Ok(Stmt::new(StmtKind::Type { name: name, args: params, defs: defs }, self.current.line, self.current.column))
-    } 
+        Ok(Stmt::new(
+            StmtKind::Type {
+                name,
+                params,
+                methods,
+            },
+            line,
+            column,
+        ))
+    }
 
     fn def_bind(&mut self) -> ParseResult<Stmt> {
         self.expect(Tkt::Def)?;
@@ -147,7 +129,7 @@ impl Parser {
             Ok(())
         } else {
             self.throw(format!(
-                "Expected {}, found {}",
+                "Expected {}, found `{}`",
                 expected, self.current.token
             ))
         }
@@ -158,6 +140,11 @@ impl Parser {
             self.next()?;
         }
         Ok(())
+    }
+
+    fn expect_and_skip(&mut self, tokens: Tkt) -> ParseResult<()> {
+        self.expect(tokens.clone())?;
+        self.skip(tokens)
     }
 
     fn peek(&mut self) -> ParseResult<&Token> {
@@ -222,9 +209,6 @@ impl Parser {
         self.next()?;
         while self.current.token != Tkt::Rparen {
             let var = self.var_decl()?;
-            if var.name.to_str() == "this" {
-                self.throw("Cannot use \"this\" as an argument name")?;
-            }
             args.push(var);
 
             match &self.current.token {
@@ -269,7 +253,7 @@ impl Parser {
     fn var_decl(&mut self) -> ParseResult<VarDecl> {
         let name = match take(&mut self.current.token) {
             Tkt::Name(id) => id,
-            other => self.throw(format!("Expected name, found {}", other))?,
+            other => self.throw(format!("Expected name, found `{}`", other))?,
         };
 
         self.next()?;
@@ -283,7 +267,7 @@ impl Parser {
 
         let name = match take(&mut self.current.token) {
             Tkt::Name(id) => id,
-            other => self.throw(format!("Expected name, found {}", other))?,
+            other => self.throw(format!("Expected name, found `{}`", other))?,
         };
 
         self.next()?;
@@ -622,7 +606,7 @@ impl Parser {
                 expr
             }
             Tkt::Nil => Expr::new(ExprKind::Lit(Literal::Unit), line, column),
-            other => self.throw(format!("unexpected token {}", other))?,
+            other => self.throw(format!("unexpected token `{}`", other))?,
         };
         Ok(expr)
     }

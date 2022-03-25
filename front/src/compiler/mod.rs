@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use vm::{gc::GcRef, Bytecode, Either, Fun, List, OpCode, OpCodeMetadata, Symbol, Value, stackvec};
+use vm::{gc::GcRef, stackvec, Bytecode, Either, Fun, List, OpCode, OpCodeMetadata, Symbol, Value};
 
 use crate::parser::ast::{BinOp, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
 
@@ -135,7 +135,7 @@ impl Compiler {
         };
 
         // push the function onto the stack
-        self.emit_const(Value::Fun(GcRef::new(func)), &loc)
+        self.emit_const(Value::Fun(GcRef::new(func)), loc)
     }
 
     fn expr(&mut self, node: &Expr) {
@@ -146,7 +146,7 @@ impl Compiler {
             ExprKind::Lit(lit) => self.emit_lit(lit, loc),
 
             // compiles a lambda expression
-            ExprKind::Lambda { args, body } => self.lambda_expr(&args, body, loc),
+            ExprKind::Lambda { args, body } => self.lambda_expr(args, body, loc),
 
             ExprKind::App { callee, args } => {
                 // iterate over the arguments
@@ -273,9 +273,10 @@ impl Compiler {
             StmtKind::Def { bind, value } => {
                 self.expr(value);
                 self.emit_op(OpCode::Savg(bind.name), &node.location);
-            },
-            StmtKind::Type { name, args, defs } => {
-                
+            }
+            StmtKind::Type { .. } => {
+                println!("{:?}", &node.kind);
+                todo!()
             }
         }
     }

@@ -13,7 +13,6 @@ mod literal;
 mod opcode;
 mod prelude;
 mod stack;
-mod struct_type;
 
 use env::EnvTable;
 use gc::GcRef;

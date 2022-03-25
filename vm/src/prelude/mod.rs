@@ -60,7 +60,6 @@ fn r#type(args: &[Value]) -> InterpretResult<Value> {
         Value::Nil => "nil",
         Value::ExternalFunction(_) | Value::ExternalFunctionNoArg(_) => "extern fn",
         Value::Fun { .. } => "fn",
-        Value::Type(t) => t.get_name(),
     };
 
     Ok(Value::Sym(Symbol::new(type_name)))

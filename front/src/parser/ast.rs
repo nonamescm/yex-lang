@@ -1,15 +1,9 @@
 use vm::{gc::GcRef, OpCode, Symbol, Value};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Location {
     pub line: usize,
     pub column: usize,
-}
-
-impl Default for Location {
-    fn default() -> Self {
-        Self { line: 0, column: 0 }
-    }
 }
 
 use crate::tokens::TokenType;
@@ -250,5 +244,5 @@ impl Stmt {
 #[derive(Debug)]
 pub enum StmtKind {
     Def { bind: VarDecl, value: Expr },
-    Type { name: Symbol, args: Vec<Symbol>, defs: Vec<Self> }
+    Type { name: VarDecl, params: Vec<VarDecl>, methods: Vec<Stmt> }
 }

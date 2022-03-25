@@ -127,7 +127,6 @@ impl Lexer {
     }
 
     fn get(&mut self) -> Tk {
-        
         let tk = match self.current() {
             // comments
             '/' if self.peek_at(1) == '/' => {
@@ -178,7 +177,7 @@ impl Lexer {
             ':' if !self.peek_at(1).is_whitespace() => {
                 self.next();
                 let sym = self.take_while(|c| c.is_alphanumeric() || c == '_')?;
-               
+
                 match sym.as_str() {
                     "true" => TokenType::True,
                     "false" => TokenType::False,
@@ -206,13 +205,12 @@ impl Lexer {
                 }
             }
             c if c.is_alphabetic() || c == '_' => {
-                
                 let mut tk = self.take_while(|c| c.is_alphanumeric() || c == '_')?;
                 while matches!(self.peek_at(1), '?' | '!' | '\'') {
                     self.next();
                     tk.push(self.current());
                 }
-                
+
                 if let Some(tk) = fetch_keyword(&tk) {
                     tk
                 } else {
