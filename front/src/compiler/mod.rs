@@ -273,6 +273,9 @@ impl Compiler {
             StmtKind::Def { bind, value } => {
                 self.expr(value);
                 self.emit_op(OpCode::Savg(bind.name), &node.location);
+            },
+            StmtKind::Type { name, args, defs } => {
+                
             }
         }
     }

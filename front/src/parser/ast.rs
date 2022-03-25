@@ -250,4 +250,5 @@ impl Stmt {
 #[derive(Debug)]
 pub enum StmtKind {
     Def { bind: VarDecl, value: Expr },
+    Type { name: Symbol, args: Vec<Symbol>, defs: Vec<Self> }
 }
