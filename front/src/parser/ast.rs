@@ -139,6 +139,11 @@ pub enum ExprKind {
         args: Vec<Expr>,
     },
 
+    Field {
+        obj: Box<Expr>,
+        field: VarDecl,
+    },
+
     Var(Symbol),
     Lit(Literal),
     List(Vec<Expr>),

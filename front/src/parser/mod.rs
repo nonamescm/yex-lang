@@ -53,6 +53,11 @@ impl Parser {
         self.expect(Tkt::Lparen)?;
         while self.current.token != Tkt::Rparen {
             params.push(self.var_decl()?);
+
+            if self.current.token == Tkt::Rparen {
+                break;
+            }
+
             self.expect_and_skip(Tkt::Comma)?;
             self.next()?;
         }
@@ -511,7 +516,6 @@ impl Parser {
             ))
         } else {
             let expr = self.call()?;
-            self.next()?;
             Ok(expr)
         }
     }
@@ -532,21 +536,19 @@ impl Parser {
                 ))?,
             }
         }
+        self.next()?;
 
         Ok(args)
     }
 
     fn call(&mut self) -> ParseResult<Expr> {
         let callee = self.primary()?;
+        println!("EXPR {:?}", callee);
 
-        let args = if self.peek()?.token == Tkt::Lparen {
-            self.next()?;
-            Some(self.call_args()?)
-        } else {
-            None
-        };
+        if self.current.token == Tkt::Lparen {
+            println!("CALL");
+            let args = self.call_args()?;
 
-        if let Some(args) = args {
             let line = callee.line();
             let column = callee.column();
 
@@ -588,7 +590,7 @@ impl Parser {
         let line = self.current.line;
         let column = self.current.column;
 
-        let expr = match self.current.token.clone() {
+        let obj = match self.current.token.clone() {
             Tkt::Num(n) => Expr::new(ExprKind::Lit(Literal::Num(n)), line, column),
             Tkt::Str(s) => Expr::new(ExprKind::Lit(Literal::Str(s)), line, column),
             Tkt::True => Expr::new(ExprKind::Lit(Literal::Bool(true)), line, column),
@@ -608,6 +610,22 @@ impl Parser {
             Tkt::Nil => Expr::new(ExprKind::Lit(Literal::Unit), line, column),
             other => self.throw(format!("unexpected token `{}`", other))?,
         };
-        Ok(expr)
+
+        self.next()?;
+        if self.current.token == Tkt::Dot {
+            self.next()?;
+            let field = self.var_decl()?;
+
+            Ok(Expr::new(
+                ExprKind::Field {
+                    obj: Box::new(obj),
+                    field,
+                },
+                line,
+                column,
+            ))
+        } else {
+            Ok(obj)
+        }
     }
 }

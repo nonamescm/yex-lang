@@ -265,6 +265,11 @@ impl Compiler {
                 self.expr(left);
                 self.expr(right);
             }
+
+            // compiles field access
+            ExprKind::Field { .. } => {
+                todo!()
+            }
         }
     }
 
