@@ -136,10 +136,9 @@ impl Compiler {
             arity: args.len(),
             args: stackvec![],
         };
-        let func = GcRef::new(func);
 
         // push the function onto the stack
-        func
+        GcRef::new(func)
     }
 
     fn expr(&mut self, node: &Expr) {

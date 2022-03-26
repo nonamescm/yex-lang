@@ -111,12 +111,18 @@ impl<T, const S: usize> StackVec<T, S> {
 
     #[track_caller]
     /// Inserts an element at a given index
+    /// # Safety
+    /// This function is unsafe because it does not check if the index is out of bounds, it's up to
+    /// the caller to make sure that the index is valid or to manually resize the array if needed
     pub unsafe fn insert_at(&mut self, idx: usize, value: T) {
         self.array[idx].write(value);
     }
 
     #[track_caller]
     /// Manually updates the length of the StackVec
+    /// # Safety
+    /// This function doesn't check if the new length is valid, it's up to the caller to ensure
+    /// that the new length is valid and all the elements are initialized
     pub unsafe fn set_len(&mut self, len: usize) {
         self.len = len;
     }
