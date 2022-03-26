@@ -309,10 +309,18 @@ impl VirtualMachine {
             return stackvec![];
         }
 
-        let mut args = fun.args.clone();
+        let mut args = stackvec![];
 
+        let mut i = 1;
         for _ in 0..arity {
-            args.push(self.pop());
+            unsafe { args.insert_at(arity - i, self.pop()) };
+            i += 1;
+        }
+
+        unsafe { args.set_len(arity) };
+
+        for arg in fun.args.iter() {
+            args.push(arg.clone());
         }
 
         args
@@ -323,6 +331,15 @@ impl VirtualMachine {
             Value::Fun(f) => f,
             value => panic!("Expected a function to call, found {value}")?,
         };
+
+        if arity < fun.arity {
+            let mut args = stackvec![];
+            for _ in 0..arity {
+                args.push(self.pop());
+            }
+            self.push(Value::Fun(GcRef::new(fun.apply(args))));
+            return Ok(());
+        }
 
         let args = self.call_args(arity, &fun);
 

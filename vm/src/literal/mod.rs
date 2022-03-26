@@ -3,16 +3,16 @@ use std::{
     mem,
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub},
 };
+pub mod instance;
 pub mod symbol;
 pub mod yextype;
-pub mod instance;
 use crate::{
     error::InterpretResult, gc::GcRef, list::List, stack::StackVec, Bytecode, Either,
-    VirtualMachine,
+    VirtualMachine, stackvec,
 };
+use instance::Instance;
 use symbol::Symbol;
 use yextype::YexType;
-use instance::Instance;
 
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Value>) -> InterpretResult<Value>;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
@@ -31,7 +31,12 @@ pub struct Fun {
 
 impl Fun {
     /// Apply the function to the given arguments
-    pub fn apply(&self, args: FunArgs) -> Self {
+    pub fn apply(&self, app: FunArgs) -> Self {
+        let mut args = stackvec![];
+        for arg in app.iter().rev().chain(self.args.iter()) {
+            args.push(arg.clone());
+        }
+
         Fun {
             arity: self.arity + self.args.len() - args.len(),
             body: self.body.clone(),

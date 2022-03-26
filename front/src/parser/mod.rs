@@ -613,26 +613,26 @@ impl Parser {
     }
 
     fn call(&mut self) -> ParseResult<Expr> {
-        let callee = self.primary()?;
+        let mut callee = self.primary()?;
         self.next()?;
 
-        if self.current.token == Tkt::Lparen {
+        while self.current.token == Tkt::Lparen {
             let args = self.call_args()?;
 
             let line = callee.line();
             let column = callee.column();
 
-            Ok(Expr::new(
+            callee = Expr::new(
                 ExprKind::App {
                     callee: Box::new(callee),
                     args,
                 },
                 line,
                 column,
-            ))
-        } else {
-            Ok(callee)
+            )
         }
+
+        Ok(callee)
     }
 
     fn list(&mut self) -> ParseResult<Expr> {

@@ -1,4 +1,4 @@
-use std::mem::MaybeUninit;
+use std::{mem::MaybeUninit, ops::Deref, mem::transmute};
 
 /// A wrapper around an array armazenated on the stack
 pub struct StackVec<T, const S: usize> {
@@ -111,8 +111,14 @@ impl<T, const S: usize> StackVec<T, S> {
 
     #[track_caller]
     /// Inserts an element at a given index
-    pub fn insert_at(&mut self, idx: usize, value: T) {
+    pub unsafe fn insert_at(&mut self, idx: usize, value: T) {
         self.array[idx].write(value);
+    }
+
+    #[track_caller]
+    /// Manually updates the length of the StackVec
+    pub unsafe fn set_len(&mut self, len: usize) {
+        self.len = len;
     }
 }
 
@@ -226,5 +232,15 @@ impl<T, const S: usize> IntoIterator for StackVec<T, S> {
 impl<T, const S: usize> From<StackVec<T, S>> for Vec<T> {
     fn from(stackvec: StackVec<T, S>) -> Self {
         stackvec.into_iter().collect()
+    }
+}
+
+impl<T, const S: usize> Deref for StackVec<T, S> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        unsafe {
+            transmute(&self.array[0..self.len])
+        }
     }
 }
