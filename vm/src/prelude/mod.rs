@@ -50,7 +50,7 @@ fn str(args: &[Value]) -> InterpretResult<Value> {
     }
 }
 
-fn r#type(args: &[Value]) -> InterpretResult<Value> {
+fn r#typeof(args: &[Value]) -> InterpretResult<Value> {
     let type_name = match &args[0] {
         Value::List(_) => "list",
         Value::Str(_) => "str",
@@ -157,7 +157,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("tail", tail);
     insert_fn!("str", str);
     insert_fn!("list", list);
-    insert_fn!("type", r#type);
+    insert_fn!("typeof", r#typeof);
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
     insert_fn!("exit", exit);
