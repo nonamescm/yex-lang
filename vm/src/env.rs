@@ -1,7 +1,7 @@
-use core::slice;
 use std::{
     alloc::{alloc, dealloc, Layout},
     ptr::null_mut,
+    slice,
 };
 
 use crate::{
@@ -33,6 +33,7 @@ impl EnvTable {
         Self::with_capacity(Self::BASE_VALUE)
     }
 
+    /// Creates a new table with the given capacity
     pub fn with_capacity(capacity: usize) -> Self {
         let entries = unsafe {
             let entries = alloc(Layout::array::<Entry>(capacity).unwrap()) as *mut Entry;
@@ -156,7 +157,7 @@ impl EnvTable {
     /// Iterates over the table
     fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
         unsafe {
-            slice::from_raw_parts(self.entries, self.capacity)
+            slice::from_raw_parts(self.entries, self.count)
                 .iter()
                 .filter(|it| it.key.is_some())
                 .map(|it| (it.key.unwrap(), it.value.clone()))

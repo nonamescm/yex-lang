@@ -14,7 +14,6 @@ mod opcode;
 mod prelude;
 mod stack;
 
-use env::EnvTable;
 use gc::GcRef;
 use literal::{FunArgs, NativeFun};
 
@@ -23,9 +22,10 @@ use crate::error::InterpretResult;
 pub use crate::{
     either::Either,
     list::List,
-    literal::{symbol::Symbol, Fun, Value},
+    literal::{symbol::Symbol, yextype::YexType, Fun, Value},
     opcode::{OpCode, OpCodeMetadata},
     stack::StackVec,
+    env::EnvTable,
 };
 
 const STACK_SIZE: usize = 512;
@@ -228,6 +228,10 @@ impl VirtualMachine {
 
                     self.push(Value::List(list));
                 }
+
+                OpCode::New => todo!(),
+                OpCode::Get(..) => todo!(),
+                OpCode::Invk(..) => todo!(),
             }
 
             ip += 1;

@@ -6,7 +6,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
+use self::ast::{Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl, Def, BindType};
 
 pub mod ast;
 
@@ -66,7 +66,14 @@ impl Parser {
 
         let mut methods = Vec::new();
         while self.current.token != Tkt::End {
-            methods.push(self.def_bind()?);
+            let def = match self.def_bind()?.kind {
+                StmtKind::Def(def) => def,
+                _ => unreachable!(),
+            };
+            if def.bind_type != BindType::Fn {
+                self.throw("Expected method definition")?;
+            }
+            methods.push(def);
         }
         self.next()?;
 
@@ -96,7 +103,7 @@ impl Parser {
         self.expect(Tkt::Assign)?;
         let value = self.expr()?;
 
-        Ok(Stmt::new(StmtKind::Def { bind, value }, line, column))
+        Ok(Stmt::new(StmtKind::Def(Def { bind, value, bind_type: BindType::Value }), line, column))
     }
 
     fn def_fn(&mut self) -> ParseResult<Stmt> {
@@ -112,7 +119,7 @@ impl Parser {
         let value = self.function()?;
         let bind = VarDecl::new(name);
 
-        Ok(Stmt::new(StmtKind::Def { bind, value }, line, column))
+        Ok(Stmt::new(StmtKind::Def(Def { bind, value, bind_type: BindType::Fn }), line, column))
     }
 
     fn next(&mut self) -> ParseResult<()> {
@@ -543,10 +550,8 @@ impl Parser {
 
     fn call(&mut self) -> ParseResult<Expr> {
         let callee = self.primary()?;
-        println!("EXPR {:?}", callee);
 
         if self.current.token == Tkt::Lparen {
-            println!("CALL");
             let args = self.call_args()?;
 
             let line = callee.line();

@@ -246,8 +246,21 @@ impl Stmt {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum BindType {
+    Value,
+    Fn,
+}
+
+#[derive(Debug)]
+pub struct Def {
+    pub value: Expr,
+    pub bind: VarDecl,
+    pub bind_type: BindType,
+}
+
 #[derive(Debug)]
 pub enum StmtKind {
-    Def { bind: VarDecl, value: Expr },
-    Type { name: VarDecl, params: Vec<VarDecl>, methods: Vec<Stmt> }
+    Def(Def),
+    Type { name: VarDecl, params: Vec<VarDecl>, methods: Vec<Def> }
 }

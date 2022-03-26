@@ -60,7 +60,7 @@ pub enum OpCode {
     /// Calls the value on the top of the stack, pushing the return value
     /// The stack layout before running this opcode: [fun, ...args]
     /// The stack layout after running it: [return-value]
-    Call(usize /* number of arguments */),
+    Call(usize),
 
     /// same as call but with tail optimization
     /// The stack layout before running this opcode: [fun, ...args]
@@ -156,6 +156,21 @@ pub enum OpCode {
     /// The stack layout before running this opcode: [const1, const2]
     /// The stack layout after running it: [result]
     LessEq,
+
+    /// Instantiates a new object
+    /// The stack layout before running this opcode: [type, ...args]
+    /// The stack layout after running it: [object]
+    New,
+
+    /// Access a field of a type
+    /// The stack layout before running this opcode: [instance]
+    /// The stack layout after running it: [field-value]
+    Get(Symbol),
+
+    /// Calls a method of a type
+    /// The stack layout before running this opcode: [instance, ...args]
+    /// The stack layout after running it: [return-value]
+    Invk(Symbol, usize),
 }
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,

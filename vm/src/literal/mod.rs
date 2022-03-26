@@ -1,22 +1,20 @@
 use std::{
     cmp::Ordering,
-    ffi::c_void,
     mem,
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub},
 };
 pub mod symbol;
+pub mod yextype;
 use crate::{
     error::InterpretResult, gc::GcRef, list::List, stack::StackVec, Bytecode, Either,
     VirtualMachine,
 };
 use symbol::Symbol;
+use yextype::YexType;
 
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Value>) -> InterpretResult<Value>;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
 pub type FunArgs = StackVec<Value, 8>;
-
-pub type FFINoArgFunction = unsafe extern "C" fn() -> *mut c_void;
-pub type FFIFunction = unsafe extern "C" fn(usize, *mut u8) -> *mut c_void;
 
 #[derive(PartialEq, Clone)]
 /// Yex function struct
@@ -77,10 +75,8 @@ pub enum Value {
     Fun(GcRef<Fun>),
     /// Yex lists
     List(List),
-    /// External Function
-    ExternalFunctionNoArg(FFINoArgFunction),
-    /// External Function With Arguments
-    ExternalFunction(FFIFunction),
+    /// Yex user-defined types
+    Type(GcRef<YexType>),
     /// null
     Nil,
 }
@@ -96,8 +92,7 @@ impl Clone for Value {
             Bool(b) => Bool(*b),
             Num(n) => Num(*n),
             Sym(s) => Sym(*s),
-            ExternalFunction(f) => ExternalFunction(*f),
-            ExternalFunctionNoArg(f) => ExternalFunctionNoArg(*f),
+            Type(t) => Type(t.clone()),
             Nil => Nil,
         }
     }
@@ -118,9 +113,8 @@ impl Value {
             Value::Sym(_) => mem::size_of::<Symbol>(),
             Value::Str(s) => s.len(),
             Value::Fun(f) => mem::size_of_val(&f),
-            Value::ExternalFunction(f) => mem::size_of_val(f),
-            Value::ExternalFunctionNoArg(f) => mem::size_of_val(f),
             Value::Bool(_) => mem::size_of::<bool>(),
+            Value::Type(t) => mem::size_of_val(&t),
             Value::Nil => 4,
         }
     }
@@ -143,8 +137,7 @@ impl Value {
         use Value::*;
 
         match self {
-            Bool(true) => true,
-            Bool(false) => false,
+            Bool(b) => *b,
             Sym(_) => true,
             Str(s) if s.is_empty() => false,
             Str(_) => true,
@@ -153,8 +146,7 @@ impl Value {
             Nil => false,
             List(xs) => !xs.is_empty(),
             Fun(_) => true,
-            ExternalFunction(_) => true,
-            ExternalFunctionNoArg(_) => true,
+            Value::Type(_) => true,
         }
     }
 }
@@ -190,16 +182,13 @@ impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Value::*;
         let tk = match self {
-            Fun(f) => {
-                format!("<fun({})>", f.arity)
-            }
-            ExternalFunction(_) => "<extern fun<?>>".to_string(),
-            ExternalFunctionNoArg(_) => "<extern fun<0>".to_string(),
+            Fun(f) => format!("<fun({})>", f.arity),
             Nil => "nil".to_string(),
             List(xs) => format!("{}", *xs),
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
+            Type(t) => format!("<type({})>", t.name),
             Bool(b) => b.to_string(),
         };
         write!(f, "{}", tk)

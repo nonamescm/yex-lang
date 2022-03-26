@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
-use vm::{gc::GcRef, stackvec, Bytecode, Either, Fun, List, OpCode, OpCodeMetadata, Symbol, Value};
+use vm::{
+    gc::GcRef, stackvec, Bytecode, Either, EnvTable, Fun, List, OpCode, OpCodeMetadata, Symbol,
+    Value, YexType,
+};
 
-use crate::parser::ast::{BinOp, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
+use crate::parser::ast::{BinOp, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
 
 #[derive(Default)]
 struct Scope {
@@ -103,7 +106,7 @@ impl Compiler {
         self.scope_mut().opcodes[else_label].opcode = OpCode::Jmp(self.scope().opcodes.len());
     }
 
-    fn lambda_expr(&mut self, args: &[VarDecl], body: &Expr, loc: &Location) {
+    fn lambda_expr(&mut self, args: &[VarDecl], body: &Expr, loc: &Location) -> GcRef<Fun> {
         // creates the lambda scope
         let mut scope = Scope {
             opcodes: Vec::new(),
@@ -133,9 +136,10 @@ impl Compiler {
             arity: args.len(),
             args: stackvec![],
         };
+        let func = GcRef::new(func);
 
         // push the function onto the stack
-        self.emit_const(Value::Fun(GcRef::new(func)), loc)
+        func
     }
 
     fn expr(&mut self, node: &Expr) {
@@ -146,7 +150,10 @@ impl Compiler {
             ExprKind::Lit(lit) => self.emit_lit(lit, loc),
 
             // compiles a lambda expression
-            ExprKind::Lambda { args, body } => self.lambda_expr(args, body, loc),
+            ExprKind::Lambda { args, body } => {
+                let func = self.lambda_expr(args, body, loc);
+                self.emit_const(Value::Fun(func), loc);
+            }
 
             ExprKind::App { callee, args } => {
                 // iterate over the arguments
@@ -267,23 +274,46 @@ impl Compiler {
             }
 
             // compiles field access
-            ExprKind::Field { .. } => {
-                todo!()
+            ExprKind::Field { obj, field } => {
+                self.expr(obj);
+                self.emit_op(OpCode::Get(field.name), &node.location);
             }
         }
     }
 
     fn stmt(&mut self, node: &Stmt) {
         match &node.kind {
-            StmtKind::Def { bind, value } => {
+            StmtKind::Def(Def { bind, value, .. }) => {
                 self.expr(value);
                 self.emit_op(OpCode::Savg(bind.name), &node.location);
             }
-            StmtKind::Type { .. } => {
-                println!("{:?}", &node.kind);
-                todo!()
+            StmtKind::Type {
+                name,
+                methods,
+                params,
+            } => {
+                self.typedef(
+                    name,
+                    methods,
+                    &params.iter().map(|x| x.name).collect::<Vec<_>>(),
+                    &node.location,
+                );
             }
         }
+    }
+
+    fn typedef(&mut self, decl: &VarDecl, methods: &[Def], params: &[Symbol], loc: &Location) {
+        let mut table = EnvTable::new();
+        for m in methods {
+            let func = match &m.value.kind {
+                ExprKind::Lambda { args, body } => Value::Fun(self.lambda_expr(args, body, loc)),
+                _ => unreachable!(),
+            };
+
+            table.insert(m.bind.name, func);
+        }
+        self.emit_const(Value::Type(GcRef::new(YexType::new(decl.name, table, params.to_vec()))), loc);
+        self.emit_op(OpCode::Savg(decl.name), loc);
     }
 
     pub fn compile_stmts(mut self, stmts: &[Stmt]) -> (Vec<OpCodeMetadata>, Vec<Value>) {

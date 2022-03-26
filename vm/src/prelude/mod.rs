@@ -58,8 +58,8 @@ fn r#type(args: &[Value]) -> InterpretResult<Value> {
         Value::Bool(_) => "bool",
         Value::Sym(_) => "symbol",
         Value::Nil => "nil",
-        Value::ExternalFunction(_) | Value::ExternalFunctionNoArg(_) => "extern fn",
         Value::Fun { .. } => "fn",
+        Value::Type(ty) => ty.name.to_str(),
     };
 
     Ok(Value::Sym(Symbol::new(type_name)))
