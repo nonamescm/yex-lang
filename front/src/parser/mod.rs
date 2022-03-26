@@ -559,11 +559,16 @@ impl Parser {
     }
 
     fn dot(&mut self) -> ParseResult<Expr> {
-        let obj = self.call()?;
+        let mut obj = self.call()?;
 
-        if self.current.token != Tkt::Dot {
-            return Ok(obj);
+        while self.current.token == Tkt::Dot {
+            obj = self.dot_access(obj)?;
         }
+
+        Ok(obj)
+    }
+
+    fn dot_access(&mut self, obj: Expr) -> ParseResult<Expr> {
         let line = self.current.line;
         let column = self.current.column;
 
