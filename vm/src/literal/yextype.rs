@@ -52,6 +52,16 @@ impl YexType {
             Value::Fun(GcRef::new(Fun::new_native(2, prelude::list::fold))),
         );
 
+        methods.insert(
+            Symbol::from("rev"),
+            Value::Fun(GcRef::new(Fun::new_native(1, prelude::list::rev))),
+        );
+
+        methods.insert(
+            Symbol::from("get"),
+            Value::Fun(GcRef::new(Fun::new_native(1, prelude::list::get))),
+        );
+
         Self::new(Symbol::from("List"), methods, vec![])
     }
 

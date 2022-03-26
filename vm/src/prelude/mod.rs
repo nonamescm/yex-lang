@@ -112,8 +112,6 @@ fn exit(args: &[Value]) -> InterpretResult<Value> {
 }
 
 pub fn prelude() -> EnvTable {
-    use list::*;
-
     let mut prelude = EnvTable::with_capacity(64);
     macro_rules! insert_fn {
         ($name: expr, $fn: expr) => {
@@ -153,9 +151,6 @@ pub fn prelude() -> EnvTable {
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
     insert_fn!("exit", exit);
-
-    insert_fn!("rev", rev, 1);
-    insert_fn!("nth", nth, 2);
 
     insert_fn!("getos", get_os, 0);
 

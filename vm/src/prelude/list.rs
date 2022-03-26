@@ -5,7 +5,7 @@ use crate::{
     panic, VirtualMachine,
 };
 
-pub fn rev(args: &[Value]) -> InterpretResult<Value> {
+pub fn rev(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let xs = match &args[0] {
         Value::List(xs) => xs,
         other => return panic!("rev[0] expected a list, but found `{}`", other),
@@ -107,8 +107,8 @@ pub fn tail(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
     }
 }
 
-pub fn nth(args: &[Value]) -> InterpretResult<Value> {
-    let n = match &args[0] {
+pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
+    let n = match &args[1] {
         Value::Num(n) if n.fract() == 0.0 && *n >= 0.0 => *n as usize,
         other => panic!(
             "nth[1] expected a valid positive integer, but found {}",
@@ -116,7 +116,7 @@ pub fn nth(args: &[Value]) -> InterpretResult<Value> {
         )?,
     };
 
-    match &args[1] {
+    match &args[0] {
         Value::List(xs) => Ok(xs.index(n)),
         other => panic!("nth() expected a list, found {}", other),
     }
