@@ -270,6 +270,7 @@ impl VirtualMachine {
         let raw_obj = self.pop();
         let obj = match &raw_obj {
             Value::Instance(obj) => obj,
+            Value::Type(ty) => return self.invoke_static(&*ty, name, arity),
             value => panic!("Expected instance, got `{}`", value)?,
         };
 
@@ -290,6 +291,27 @@ impl VirtualMachine {
         match &*method.body {
             Either::Left(bt) => self.call_bytecode(bt, args),
             Either::Right(f) => self.call_native(*f, args),
+        }
+    }
+
+    fn invoke_static(&mut self, ty: &YexType, name: Symbol, arity: usize) -> InterpretResult<()> {
+        let mut args = stackvec![];
+        for _ in 0..arity {
+            args.push(self.pop());
+        }
+
+        let field = if let Some(field) = ty.fields.get(&name) {
+            field
+        } else {
+            panic!("Undefined method: {}", name)?
+        };
+
+        match field {
+            Value::Fun(f) => match &*f.body {
+                Either::Left(bt) => self.call_bytecode(bt, args),
+                Either::Right(f) => self.call_native(*f, args),
+            },
+            _ => unreachable!(),
         }
     }
 
@@ -370,7 +392,7 @@ impl VirtualMachine {
 
     #[inline]
     fn call_native(&mut self, fp: NativeFun, args: FunArgs) -> InterpretResult<()> {
-        let args = args.into();
+        let args = args.reverse().into();
         let result = fp(self, args);
         self.try_push(result)
     }
