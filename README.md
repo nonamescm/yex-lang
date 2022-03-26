@@ -1,4 +1,8 @@
-# Yex
+# Yex 
+
+![](https://github.com/yxqsnz/yex-lang/actions/workflows/rust_push.yml/badge.svg)
+![](https://tokei.rs/b1/github/nonamescm/yex-lang?category=lines)
+----
 
 ## Contents
 
@@ -6,7 +10,6 @@
   - [Contents](#contents)
   - [About](#about)
   - [Installation](#installation)
-    - [NOTE](#note)
   - [How to](#how-to)
   - [TODO](#todo)
   - [Contributing](#contributing)
