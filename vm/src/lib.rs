@@ -273,10 +273,11 @@ impl VirtualMachine {
             value => panic!("Expected instance, got `{}`", value)?,
         };
 
-        let mut args = stackvec![raw_obj.clone()];
+        let mut args = stackvec![];
         for _ in 0..arity {
             args.push(self.pop());
         }
+        args.push(raw_obj.clone());
 
         let method = match obj.ty.fields.get(&name) {
             Some(value) => match value {
@@ -330,7 +331,6 @@ impl VirtualMachine {
         }
 
         if arity < fun.arity {
-            panic!("")?;
             self.push(Value::Fun(GcRef::new(fun.apply(args))));
             return Ok(());
         }
