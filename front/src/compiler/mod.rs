@@ -278,6 +278,25 @@ impl Compiler {
                 self.expr(obj);
                 self.emit_op(OpCode::Get(field.name), &node.location);
             }
+
+            // compiles type instantiation
+            ExprKind::New { ty, args } => {
+                for arg in args.iter().rev() {
+                    self.expr(arg);
+                }
+
+                self.expr(ty);
+                self.emit_op(OpCode::New(args.len()), &node.location);
+            }
+
+            ExprKind::Invoke { obj, field, args } => {
+                for arg in args.iter().rev() {
+                    self.expr(arg);
+                }
+
+                self.expr(obj);
+                self.emit_op(OpCode::Invk(field.name, args.len()), &node.location);
+            }
         }
     }
 
@@ -312,7 +331,10 @@ impl Compiler {
 
             table.insert(m.bind.name, func);
         }
-        self.emit_const(Value::Type(GcRef::new(YexType::new(decl.name, table, params.to_vec()))), loc);
+        self.emit_const(
+            Value::Type(GcRef::new(YexType::new(decl.name, table, params.to_vec()))),
+            loc,
+        );
         self.emit_op(OpCode::Savg(decl.name), loc);
     }
 

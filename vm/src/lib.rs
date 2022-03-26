@@ -15,17 +15,17 @@ mod prelude;
 mod stack;
 
 use gc::GcRef;
-use literal::{FunArgs, NativeFun};
+use literal::{yextype::instantiate, FunArgs, NativeFun};
 
 use crate::error::InterpretResult;
 
 pub use crate::{
     either::Either,
+    env::EnvTable,
     list::List,
     literal::{symbol::Symbol, yextype::YexType, Fun, Value},
     opcode::{OpCode, OpCodeMetadata},
     stack::StackVec,
-    env::EnvTable,
 };
 
 const STACK_SIZE: usize = 512;
@@ -229,9 +229,33 @@ impl VirtualMachine {
                     self.push(Value::List(list));
                 }
 
-                OpCode::New => todo!(),
-                OpCode::Get(..) => todo!(),
-                OpCode::Invk(..) => todo!(),
+                OpCode::New(arity) => {
+                    let ty = match self.pop() {
+                        Value::Type(ty) => ty,
+                        value => panic!("Expected type, got `{}`", value)?,
+                    };
+
+                    let mut args = vec![];
+                    for _ in 0..arity {
+                        args.push(self.pop());
+                    }
+
+                    self.push(instantiate(ty, args));
+                }
+                OpCode::Get(field) => {
+                    let obj = match self.pop() {
+                        Value::Instance(obj) => obj,
+                        value => panic!("Expected instance, got `{}`", value)?,
+                    };
+
+                    let value = match obj.fields.get(&field) {
+                        Some(value) => value.clone(),
+                        None => panic!("Undefined field: {}", field)?,
+                    };
+
+                    self.push(value);
+                }
+                OpCode::Invk(name, arity) => self.invoke(name, arity)?,
             }
 
             ip += 1;
@@ -240,6 +264,32 @@ impl VirtualMachine {
         self.used_locals -= frame_locals;
 
         Ok(())
+    }
+
+    fn invoke(&mut self, name: Symbol, arity: usize) -> InterpretResult<()> {
+        let raw_obj = self.pop();
+        let obj = match &raw_obj {
+            Value::Instance(obj) => obj,
+            value => panic!("Expected instance, got `{}`", value)?,
+        };
+
+        let mut args = stackvec![raw_obj.clone()];
+        for _ in 0..arity {
+            args.push(self.pop());
+        }
+
+        let method = match obj.ty.fields.get(&name) {
+            Some(value) => match value {
+                Value::Fun(f) => f,
+                _ => unreachable!(),
+            },
+            None => panic!("Undefined method: {}", name)?,
+        };
+
+        match &*method.body {
+            Either::Left(bt) => self.call_bytecode(bt, args),
+            Either::Right(f) => self.call_native(*f, args),
+        }
     }
 
     #[cfg(debug_assertions)]
@@ -280,6 +330,7 @@ impl VirtualMachine {
         }
 
         if arity < fun.arity {
+            panic!("")?;
             self.push(Value::Fun(GcRef::new(fun.apply(args))));
             return Ok(());
         }

@@ -160,7 +160,7 @@ pub enum OpCode {
     /// Instantiates a new object
     /// The stack layout before running this opcode: [type, ...args]
     /// The stack layout after running it: [object]
-    New,
+    New(usize),
 
     /// Access a field of a type
     /// The stack layout before running this opcode: [instance]

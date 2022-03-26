@@ -60,6 +60,7 @@ fn r#type(args: &[Value]) -> InterpretResult<Value> {
         Value::Nil => "nil",
         Value::Fun { .. } => "fn",
         Value::Type(ty) => ty.name.to_str(),
+        Value::Instance(inst) => inst.ty.name.to_str(),
     };
 
     Ok(Value::Sym(Symbol::new(type_name)))

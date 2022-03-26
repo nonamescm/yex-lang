@@ -5,12 +5,14 @@ use std::{
 };
 pub mod symbol;
 pub mod yextype;
+pub mod instance;
 use crate::{
     error::InterpretResult, gc::GcRef, list::List, stack::StackVec, Bytecode, Either,
     VirtualMachine,
 };
 use symbol::Symbol;
 use yextype::YexType;
+use instance::Instance;
 
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Value>) -> InterpretResult<Value>;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
@@ -77,6 +79,8 @@ pub enum Value {
     List(List),
     /// Yex user-defined types
     Type(GcRef<YexType>),
+    /// Yex instances
+    Instance(GcRef<Instance>),
     /// null
     Nil,
 }
@@ -93,6 +97,7 @@ impl Clone for Value {
             Num(n) => Num(*n),
             Sym(s) => Sym(*s),
             Type(t) => Type(t.clone()),
+            Instance(i) => Instance(i.clone()),
             Nil => Nil,
         }
     }
@@ -115,6 +120,7 @@ impl Value {
             Value::Fun(f) => mem::size_of_val(&f),
             Value::Bool(_) => mem::size_of::<bool>(),
             Value::Type(t) => mem::size_of_val(&t),
+            Value::Instance(i) => mem::size_of_val(&i),
             Value::Nil => 4,
         }
     }
@@ -147,6 +153,7 @@ impl Value {
             List(xs) => !xs.is_empty(),
             Fun(_) => true,
             Value::Type(_) => true,
+            Value::Instance(_) => true,
         }
     }
 }
@@ -189,6 +196,7 @@ impl std::fmt::Display for Value {
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
             Type(t) => format!("<type({})>", t.name),
+            Instance(i) => format!("<instance({})>", i.ty.name),
             Bool(b) => b.to_string(),
         };
         write!(f, "{}", tk)

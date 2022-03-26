@@ -25,6 +25,7 @@ pub enum TokenType {
     Not,
     Type,
     End,
+    New,
 
     // logical operators
     Add,
@@ -99,6 +100,7 @@ impl std::fmt::Display for TokenType {
             Self::Not => "not".into(),
             Self::Type => "type".into(),
             Self::End => "end".into(),
+            Self::New => "new".into(),
 
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
@@ -163,6 +165,7 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "not" => Some(TokenType::Not),
         "type" => Some(TokenType::Type),
         "end" => Some(TokenType::End),
+        "new" => Some(TokenType::New),
         _ => None,
     }
 }

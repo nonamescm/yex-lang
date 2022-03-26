@@ -6,7 +6,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl, Def, BindType};
+use self::ast::{BindType, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
 
 pub mod ast;
 
@@ -59,7 +59,6 @@ impl Parser {
             }
 
             self.expect_and_skip(Tkt::Comma)?;
-            self.next()?;
         }
 
         self.next()?;
@@ -103,7 +102,15 @@ impl Parser {
         self.expect(Tkt::Assign)?;
         let value = self.expr()?;
 
-        Ok(Stmt::new(StmtKind::Def(Def { bind, value, bind_type: BindType::Value }), line, column))
+        Ok(Stmt::new(
+            StmtKind::Def(Def {
+                bind,
+                value,
+                bind_type: BindType::Value,
+            }),
+            line,
+            column,
+        ))
     }
 
     fn def_fn(&mut self) -> ParseResult<Stmt> {
@@ -119,7 +126,15 @@ impl Parser {
         let value = self.function()?;
         let bind = VarDecl::new(name);
 
-        Ok(Stmt::new(StmtKind::Def(Def { bind, value, bind_type: BindType::Fn }), line, column))
+        Ok(Stmt::new(
+            StmtKind::Def(Def {
+                bind,
+                value,
+                bind_type: BindType::Fn,
+            }),
+            line,
+            column,
+        ))
     }
 
     fn next(&mut self) -> ParseResult<()> {
@@ -522,10 +537,54 @@ impl Parser {
                 op.column,
             ))
         } else {
-            let expr = self.call()?;
-            Ok(expr)
+            self.instance()
         }
     }
+
+    fn instance(&mut self) -> ParseResult<Expr> {
+        if let Tkt::New = &self.current.token {
+            let op = take(&mut self.current);
+            self.next()?;
+
+            let ty = Box::new(self.primary()?);
+            self.next()?;
+
+            self.assert(Tkt::Lparen)?;
+            let args = self.call_args()?;
+
+            Ok(Expr::new(ExprKind::New { ty, args }, op.line, op.column))
+        } else {
+            self.dot()
+        }
+    }
+
+    fn dot(&mut self) -> ParseResult<Expr> {
+        let obj = self.call()?;
+
+        if self.current.token != Tkt::Dot {
+            return Ok(obj);
+        }
+        let line = self.current.line;
+        let column = self.current.column;
+
+        self.next()?;
+
+        let obj = Box::new(obj);
+
+        let field = self.var_decl()?;
+        if self.current.token == Tkt::Lparen {
+            let args = self.call_args()?;
+
+            Ok(Expr::new(
+                ExprKind::Invoke { obj, field, args },
+                line,
+                column,
+            ))
+        } else {
+            Ok(Expr::new(ExprKind::Field { obj, field }, line, column))
+        }
+    }
+
 
     fn call_args(&mut self) -> ParseResult<Vec<Expr>> {
         let mut args = vec![];
@@ -550,6 +609,7 @@ impl Parser {
 
     fn call(&mut self) -> ParseResult<Expr> {
         let callee = self.primary()?;
+        self.next()?;
 
         if self.current.token == Tkt::Lparen {
             let args = self.call_args()?;
@@ -616,21 +676,6 @@ impl Parser {
             other => self.throw(format!("unexpected token `{}`", other))?,
         };
 
-        self.next()?;
-        if self.current.token == Tkt::Dot {
-            self.next()?;
-            let field = self.var_decl()?;
-
-            Ok(Expr::new(
-                ExprKind::Field {
-                    obj: Box::new(obj),
-                    field,
-                },
-                line,
-                column,
-            ))
-        } else {
-            Ok(obj)
-        }
+        Ok(obj)
     }
 }

@@ -161,8 +161,15 @@ pub enum ExprKind {
         left: Box<Expr>,
         right: Box<Expr>,
     },
+    Invoke {
+        obj: Box<Expr>,
+        field: VarDecl,
+        args: Vec<Expr>,
+    },
 
     UnOp(UnOp, Box<Expr>),
+
+    New { ty: Box<Expr>, args: Vec<Expr> }, // types are just values, so I can't really do compile time checking
 }
 
 #[derive(Debug, Clone)]
