@@ -5,12 +5,13 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub},
 };
 pub mod symbol;
+use crate::error::InterpretError;
+use crate::struct_type::YexType;
 use crate::{
     error::InterpretResult, gc::GcRef, list::List, stack::StackVec, Bytecode, Either,
     VirtualMachine,
 };
 use symbol::Symbol;
-use crate::struct_type::YexType;
 
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Value>) -> InterpretResult<Value>;
 pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
@@ -354,3 +355,35 @@ impl Rem for Value {
         }
     }
 }
+pub trait Get<T> {
+    fn get(&self) -> Result<T, InterpretError>;
+}
+/// Implement `TryInto` for `Value`
+macro_rules! impl_get {
+    ($to:ty: $message:expr => $conv_block:block from $from:tt($id:ident)) => {
+        impl Get<$to> for Value {
+            fn get(&self) -> Result<$to, InterpretError> {
+                match self {
+                    Self::$from($id) => $conv_block,
+                    s => crate::panic!("{}, got {}", $message, s),
+                }
+            }
+        }
+    };
+}
+
+impl_get!(String: "Expected string" => {
+    Ok(s.to_string())
+} from Str(s));
+impl_get!(Symbol: "Expected symbol" => {
+    Ok(*s)
+} from Sym(s));
+impl_get!(f64: "Expected number" => {
+    Ok(*n)
+} from Num(n));
+impl_get!(bool: "Expected boolean" => {
+    Ok(*b)
+} from Bool(b));
+impl_get!(List: "Expected list" => {
+    Ok(v.clone())
+} from List(v));
