@@ -5,7 +5,7 @@ use crate::{
     panic, InterpretResult, List, Symbol,
 };
 use std::io::Write;
-mod list;
+pub mod list;
 
 fn println(args: &[Value]) -> InterpretResult<Value> {
     match &args[0] {
@@ -144,17 +144,9 @@ pub fn prelude() -> EnvTable {
         };
     }
 
-    macro_rules! insert_vm_fn {
-        ($($tt:tt)*) => {
-            insert_fn!(@vm $($tt)*)
-        }
-    }
-
     insert_fn!("println", println);
     insert_fn!("print", print);
     insert_fn!("input", input);
-    insert_fn!("head", head);
-    insert_fn!("tail", tail);
     insert_fn!("str", str);
     insert_fn!("list", list);
     insert_fn!("typeof", r#typeof);
@@ -162,9 +154,6 @@ pub fn prelude() -> EnvTable {
     insert_fn!("num", num);
     insert_fn!("exit", exit);
 
-    insert_vm_fn!("map", map, 2);
-    insert_vm_fn!("filter", filter, 2);
-    insert_vm_fn!("fold", fold, 3);
     insert_fn!("rev", rev, 1);
     insert_fn!("nth", nth, 2);
 

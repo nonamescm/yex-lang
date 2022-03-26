@@ -7,8 +7,8 @@ pub mod instance;
 pub mod symbol;
 pub mod yextype;
 use crate::{
-    error::InterpretResult, gc::GcRef, list::List, stack::StackVec, Bytecode, Either,
-    VirtualMachine, stackvec,
+    error::InterpretResult, gc::GcRef, list::List, stack::StackVec, stackvec, Bytecode, Either,
+    VirtualMachine,
 };
 use instance::Instance;
 use symbol::Symbol;
@@ -30,6 +30,24 @@ pub struct Fun {
 }
 
 impl Fun {
+    /// Create a new function
+    pub fn new_bt(arity: usize, body: Bytecode) -> Self {
+        Self {
+            arity,
+            body: GcRef::new(Either::Left(body)),
+            args: FunArgs::new(),
+        }
+    }
+
+    /// Create a new native function
+    pub fn new_native(arity: usize, native: NativeFun) -> Self {
+        Self {
+            arity,
+            body: GcRef::new(Either::Right(native)),
+            args: FunArgs::new(),
+        }
+    }
+
     /// Apply the function to the given arguments
     pub fn apply(&self, app: FunArgs) -> Self {
         let mut args = stackvec![];
@@ -160,6 +178,30 @@ impl Value {
             Value::Type(_) => true,
             Value::Instance(_) => true,
         }
+    }
+
+    /// returns the type of the value
+    pub fn type_of(&self) -> GcRef<YexType> {
+        use Value::*;
+
+        match self {
+            Type(t) => return t.clone(),
+            Instance(i) => return i.ty.clone(),
+            _ => {}
+        };
+
+        let ty = match self {
+            List(_) => YexType::list(),
+            Fun(_) => YexType::fun(),
+            Num(_) => YexType::num(),
+            Str(_) => YexType::str(),
+            Bool(_) => YexType::bool(),
+            Nil => YexType::nil(),
+            Sym(_) => YexType::sym(),
+            Type(_) | Instance(_) => unreachable!(),
+        };
+
+        GcRef::new(ty)
     }
 }
 

@@ -267,20 +267,23 @@ impl VirtualMachine {
     }
 
     fn invoke(&mut self, name: Symbol, arity: usize) -> InterpretResult<()> {
-        let raw_obj = self.pop();
-        let obj = match &raw_obj {
-            Value::Instance(obj) => obj,
-            Value::Type(ty) => return self.invoke_static(&*ty, name, arity),
-            value => panic!("Expected instance, got `{}`", value)?,
+        let value = self.pop();
+        let ty = match value {
+            Value::Type(ty) => return self.invoke_static(&ty, name, arity),
+            _ => value.type_of(),
         };
 
         let mut args = stackvec![];
+        let mut i = 1;
         for _ in 0..arity {
-            args.push(self.pop());
+            unsafe { args.insert_at(arity - i, self.pop()) };
+            i += 1;
         }
-        args.push(raw_obj.clone());
+        unsafe { args.set_len(arity) };
 
-        let method = match obj.ty.fields.get(&name) {
+        args.push(value.clone());
+
+        let method = match ty.fields.get(&name) {
             Some(value) => match value {
                 Value::Fun(f) => f,
                 _ => unreachable!(),
