@@ -168,7 +168,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("rev", rev, 1);
     insert_fn!("nth", nth, 2);
 
-    insert_fn!("getos", get_os, 0);
+    insert_fn!("getOs", get_os, 0);
 
     prelude
 }
