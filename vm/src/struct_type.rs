@@ -17,7 +17,7 @@ impl YexType {
     pub fn new(fields: EnvTable, name: Symbol) -> YexType {
         Self {
             fields,
-            name: name
+            name
         }
     }
     /// gets a field from it, including functions
@@ -32,7 +32,7 @@ impl YexType {
 
 impl std::fmt::Display for YexType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name);
+        write!(f, "{}", self.name)?;
         write!(f, "{}", self.fields)        
     }
 }
