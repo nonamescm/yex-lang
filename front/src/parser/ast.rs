@@ -45,8 +45,8 @@ impl<'a> From<BinOp> for &'a [OpCode] {
         match op {
             BinOp::Less => &[OpCode::Less],
             BinOp::LessEq => &[OpCode::LessEq],
-            BinOp::Greater => &[OpCode::Not, OpCode::Less],
-            BinOp::GreaterEq => &[OpCode::Not, OpCode::LessEq],
+            BinOp::Greater => &[OpCode::LessEq, OpCode::Not],
+            BinOp::GreaterEq => &[OpCode::Less, OpCode::Not],
             BinOp::Add => &[OpCode::Add],
             BinOp::Sub => &[OpCode::Sub],
             BinOp::Mul => &[OpCode::Mul],
