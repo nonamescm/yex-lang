@@ -5,7 +5,6 @@ use crate::{
     panic, InterpretResult, List, Symbol,
 };
 use std::io::Write;
-pub mod list;
 
 fn println(args: &[Value]) -> InterpretResult<Value> {
     match &args[0] {
@@ -120,7 +119,7 @@ pub fn prelude() -> EnvTable {
         ($name: expr, $fn: expr, $arity:expr) => {
             prelude.insert(
                 $crate::Symbol::new($name),
-                Value::Fun(GcRef::new(crate::literal::Fun {
+                Value::Fun(GcRef::new(crate::literal::fun::Fun {
                     arity: $arity,
                     body: GcRef::new($crate::Either::Right(|_, it| $fn(&*it))),
                     args: $crate::StackVec::new(),

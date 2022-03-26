@@ -8,22 +8,23 @@ mod env;
 mod error;
 #[doc(hidden)]
 pub mod gc;
-mod list;
 mod literal;
 mod opcode;
 mod prelude;
 mod stack;
 
 use gc::GcRef;
-use literal::{yextype::instantiate, FunArgs, NativeFun};
+use literal::{
+    fun::{FunArgs, NativeFun},
+    yextype::instantiate,
+};
 
 use crate::error::InterpretResult;
 
 pub use crate::{
     either::Either,
     env::EnvTable,
-    list::List,
-    literal::{symbol::Symbol, yextype::YexType, Fun, Value},
+    literal::{fun::Fun, list::List, symbol::Symbol, yextype::YexType, Value},
     opcode::{OpCode, OpCodeMetadata},
     stack::StackVec,
 };

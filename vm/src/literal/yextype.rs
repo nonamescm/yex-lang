@@ -1,6 +1,6 @@
-use crate::{env::EnvTable, gc::GcRef, prelude, Fun, Symbol, Value};
+use crate::{env::EnvTable, gc::GcRef, Symbol, Value};
 
-use super::instance::Instance;
+use super::{fun::Fun, instance::Instance, list};
 
 #[derive(Debug, PartialEq)]
 /// A Yex user-defined type.
@@ -29,37 +29,37 @@ impl YexType {
 
         methods.insert(
             Symbol::from("head"),
-            Value::Fun(GcRef::new(Fun::new_native(0, prelude::list::head))),
+            Value::Fun(GcRef::new(Fun::new_native(0, list::methods::head))),
         );
 
         methods.insert(
             Symbol::from("tail"),
-            Value::Fun(GcRef::new(Fun::new_native(0, prelude::list::tail))),
+            Value::Fun(GcRef::new(Fun::new_native(0, list::methods::tail))),
         );
 
         methods.insert(
             Symbol::from("map"),
-            Value::Fun(GcRef::new(Fun::new_native(1, prelude::list::map))),
+            Value::Fun(GcRef::new(Fun::new_native(1, list::methods::map))),
         );
 
         methods.insert(
             Symbol::from("filter"),
-            Value::Fun(GcRef::new(Fun::new_native(1, prelude::list::filter))),
+            Value::Fun(GcRef::new(Fun::new_native(1, list::methods::filter))),
         );
 
         methods.insert(
             Symbol::from("fold"),
-            Value::Fun(GcRef::new(Fun::new_native(2, prelude::list::fold))),
+            Value::Fun(GcRef::new(Fun::new_native(2, list::methods::fold))),
         );
 
         methods.insert(
             Symbol::from("rev"),
-            Value::Fun(GcRef::new(Fun::new_native(1, prelude::list::rev))),
+            Value::Fun(GcRef::new(Fun::new_native(1, list::methods::rev))),
         );
 
         methods.insert(
             Symbol::from("get"),
-            Value::Fun(GcRef::new(Fun::new_native(1, prelude::list::get))),
+            Value::Fun(GcRef::new(Fun::new_native(1, list::methods::get))),
         );
 
         Self::new(Symbol::from("List"), methods, vec![])

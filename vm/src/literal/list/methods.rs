@@ -1,9 +1,10 @@
 use crate::{
     error::InterpretResult,
-    list::List,
     literal::{nil, Value},
     panic, VirtualMachine,
 };
+
+use super::List;
 
 pub fn rev(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let xs = match &args[0] {
