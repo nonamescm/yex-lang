@@ -1,7 +1,7 @@
 use crate::{
     env::EnvTable,
     gc::GcRef,
-    literal::{nil, Value, TryGet},
+    literal::{nil, Value, TryGet, fun::FnKind},
     panic, InterpretResult, YexType,
 };
 use std::io::Write;
@@ -97,7 +97,7 @@ pub fn prelude() -> EnvTable {
                 $crate::Symbol::new($name),
                 Value::Fun(GcRef::new(crate::literal::fun::Fun {
                     arity: $arity,
-                    body: GcRef::new($crate::Either::Right(|_, it| $fn(&*it))),
+                    body: GcRef::new(FnKind::Native(|_, it| $fn(&*it))),
                     args: $crate::StackVec::new(),
                 })),
             )
@@ -108,7 +108,7 @@ pub fn prelude() -> EnvTable {
                 $crate::Symbol::new($name),
                 Value::Fun(GcRef::new(crate::literal::Fun {
                     arity: $arity,
-                    body: GcRef::new($crate::Either::Right(|vm, it| {
+                    body: GcRef::new(FnKind::Native(|vm, it| {
                         $fn(unsafe { vm.as_mut().unwrap() }, &*it)
                     })),
                     args: $crate::StackVec::new(),

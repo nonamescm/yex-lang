@@ -1,9 +1,18 @@
 use crate::{
-    error::InterpretResult, gc::GcRef, stackvec, Bytecode, Either, StackVec, Value, VirtualMachine,
+    error::InterpretResult, gc::GcRef, stackvec, Bytecode, StackVec, Value, VirtualMachine,
 };
 pub type NativeFun = fn(*mut VirtualMachine, Vec<Value>) -> InterpretResult<Value>;
-pub type FunBody = GcRef<Either<Bytecode, NativeFun>>;
+pub type FunBody = GcRef<FnKind>;
 pub type FunArgs = StackVec<Value, 8>;
+
+#[derive(Debug, Clone, PartialEq)]
+/// The kind of a function.
+pub enum FnKind {
+    /// A native function.
+    Native(NativeFun),
+    /// A function defined in the source code.
+    Bytecode(Bytecode),
+}
 
 #[derive(PartialEq, Clone)]
 /// Yex function struct
@@ -21,7 +30,7 @@ impl Fun {
     pub fn new_bt(arity: usize, body: Bytecode) -> Self {
         Self {
             arity,
-            body: GcRef::new(Either::Left(body)),
+            body: GcRef::new(FnKind::Bytecode(body)),
             args: FunArgs::new(),
         }
     }
@@ -30,7 +39,7 @@ impl Fun {
     pub fn new_native(arity: usize, native: NativeFun) -> Self {
         Self {
             arity,
-            body: GcRef::new(Either::Right(native)),
+            body: GcRef::new(FnKind::Native(native)),
             args: FunArgs::new(),
         }
     }
@@ -53,6 +62,16 @@ impl Fun {
             body: self.body.clone(),
             args,
         }
+    }
+
+    /// Checks if the function is a native function
+    pub fn is_native(&self) -> bool {
+        matches!(*self.body, FnKind::Native(_))
+    }
+
+    /// Checks if the function is a bytecode function
+    pub fn is_bytecode(&self) -> bool {
+        matches!(*self.body, FnKind::Bytecode(_))
     }
 }
 

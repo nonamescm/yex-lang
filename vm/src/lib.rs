@@ -3,7 +3,6 @@
 #![deny(clippy::all)]
 #![allow(clippy::unit_arg)]
 //! Virtual Machine implementation for the yex programming language
-mod either;
 mod env;
 mod error;
 #[doc(hidden)]
@@ -22,9 +21,8 @@ use literal::{
 use crate::error::InterpretResult;
 
 pub use crate::{
-    either::Either,
     env::EnvTable,
-    literal::{fun::Fun, list::List, symbol::Symbol, yextype::YexType, Value},
+    literal::{fun::{Fun, FnKind}, list::List, symbol::Symbol, yextype::YexType, Value},
     opcode::{OpCode, OpCodeMetadata},
     stack::StackVec,
 };
@@ -297,8 +295,8 @@ impl VirtualMachine {
         }
 
         match &*method.body {
-            Either::Left(bt) => self.call_bytecode(bt, args),
-            Either::Right(f) => self.call_native(*f, args),
+            FnKind::Bytecode(bt) => self.call_bytecode(bt, args),
+            FnKind::Native(f) => self.call_native(*f, args),
         }
     }
 
@@ -316,8 +314,8 @@ impl VirtualMachine {
 
         match field {
             Value::Fun(f) => match &*f.body {
-                Either::Left(bt) => self.call_bytecode(bt, args),
-                Either::Right(f) => self.call_native(*f, args),
+                FnKind::Bytecode(bt) => self.call_bytecode(bt, args),
+                FnKind::Native(f) => self.call_native(*f, args),
             },
             _ => unreachable!(),
         }
@@ -335,7 +333,7 @@ impl VirtualMachine {
 
     #[inline]
     fn call_args(&mut self, arity: usize, fun: &Fun) -> FunArgs {
-        if fun.arity == arity && fun.body.is_left() && fun.args.is_empty() {
+        if fun.arity == arity && fun.is_bytecode() && fun.args.is_empty() {
             return stackvec![];
         }
 
@@ -383,8 +381,8 @@ impl VirtualMachine {
         }
 
         match &*fun.body {
-            Either::Left(bytecode) => self.call_bytecode(bytecode, args),
-            Either::Right(ptr) => self.call_native(*ptr, args),
+            FnKind::Bytecode(bytecode) => self.call_bytecode(bytecode, args),
+            FnKind::Native(ptr) => self.call_native(*ptr, args),
         }
     }
 
@@ -412,19 +410,19 @@ impl VirtualMachine {
             value => panic!("Expected a function, found {value}")?,
         };
         match &*fun.body {
-            Either::Left(_) if fun.arity != arity => {
+            FnKind::Bytecode(_) if fun.arity != arity => {
                 panic!(
                     "Expected function with arity {}, found {}",
                     arity, fun.arity
                 )
             }
-            Either::Left(bytecode) if bytecode != frame => {
+            FnKind::Bytecode(bytecode) if bytecode != frame => {
                 panic!("Tried to tail call a function with a different bytecode")
             }
-            Either::Right(_) => {
+            FnKind::Native(_) => {
                 panic!("Tried to use a tail call on a non-tail callable function")
             }
-            Either::Left(_) => Ok(()),
+            FnKind::Bytecode(_) => Ok(()),
         }
     }
 

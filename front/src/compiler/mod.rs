@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use vm::{
-    gc::GcRef, stackvec, Bytecode, Either, EnvTable, Fun, List, OpCode, OpCodeMetadata, Symbol,
-    Value, YexType,
+    gc::GcRef, stackvec, Bytecode, EnvTable, Fun, List, OpCode, OpCodeMetadata, Symbol,
+    Value, YexType, FnKind,
 };
 
 use crate::parser::ast::{BinOp, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
@@ -132,7 +132,7 @@ impl Compiler {
 
         // convert it to a `Fun` struct
         let func = Fun {
-            body: GcRef::new(Either::Left(opcodes)),
+            body: GcRef::new(FnKind::Bytecode(opcodes)),
             arity: args.len(),
             args: stackvec![],
         };
