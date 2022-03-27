@@ -334,3 +334,38 @@ impl Rem for Value {
         }
     }
 }
+
+pub trait TryGet<T> {
+    fn get(&self) -> InterpretResult<T>;
+}
+macro_rules! impl_get {
+    ($to:ty: $pattern:tt) => {
+        impl TryGet<$to> for Value {
+            fn get(&self) -> InterpretResult<$to> {
+                match self {
+                    Self::$pattern(x) => Ok(x.clone()),
+                    e => crate::panic!("expected {}, found {}", stringify!($to), e),
+                }
+            }
+        }
+    };
+    ($to:ty: $pattern:pat => $parse_expr:expr) => {
+        impl TryGet<$to> for Value {
+            fn get(&self) -> InterpretResult<$to> {
+                use Value::*;
+                match self {
+                    $pattern => Ok($parse_expr),
+                    e => crate::panic!("expected {}, found {}", stringify!($to), e),
+                }
+            }
+        }
+    };
+}
+impl_get!(String: Str(s) => s.to_string());
+impl_get!(f64: Num);
+impl_get!(bool: Bool);
+impl_get!(GcRef<YexType>: Type);
+impl_get!(GcRef<Fun>: Fun);
+impl_get!(GcRef<Instance>: Instance);
+impl_get!(Symbol: Sym);
+impl_get!(List: List);
