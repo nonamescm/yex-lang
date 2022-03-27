@@ -5,9 +5,7 @@ use vm::{
     Value, YexType,
 };
 
-use crate::parser::ast::{
-    BinOp, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl,
-};
+use crate::parser::ast::{BinOp, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
 
 #[derive(Default)]
 struct Scope {

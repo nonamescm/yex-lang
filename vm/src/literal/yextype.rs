@@ -1,6 +1,6 @@
 use crate::{env::EnvTable, error::InterpretResult, gc::GcRef, Symbol, Value, VirtualMachine};
 
-use super::{fun::Fun, instance::Instance, list};
+use super::{fun::Fun, instance::Instance, list, table};
 
 #[derive(Debug, PartialEq)]
 /// A Yex user-defined type.
@@ -75,7 +75,21 @@ impl YexType {
         Self::new(Symbol::from("List"), methods, vec![])
             .with_initializer(GcRef::new(Fun::new_native(1, list::methods::init)))
     }
+    /// Creates a new Table type.
+    pub fn table() -> Self {
+        let mut methods = EnvTable::new();
 
+        methods.insert(
+            Symbol::from("get"),
+            Value::Fun(GcRef::new(Fun::new_native(1, table::methods::get))),
+        );
+        methods.insert(
+            Symbol::from("insert"),
+            Value::Fun(GcRef::new(Fun::new_native(2, table::methods::insert))),
+        );
+        Self::new(Symbol::from("Table"), methods, vec![])
+            .with_initializer(GcRef::new(Fun::new_native(1, table::methods::init)))
+    }
     /// Creates a new Num type.
     pub fn num() -> Self {
         let methods = EnvTable::new();
@@ -117,7 +131,6 @@ impl YexType {
             }),
         ))
     }
-
     /// Creates a new Nil type.
     pub fn nil() -> Self {
         let methods = EnvTable::new();

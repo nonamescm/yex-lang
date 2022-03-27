@@ -599,7 +599,6 @@ impl Parser {
         }
     }
 
-
     fn call_args(&mut self) -> ParseResult<Vec<Expr>> {
         let mut args = vec![];
 

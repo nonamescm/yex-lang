@@ -1,4 +1,4 @@
-use std::{mem::MaybeUninit, ops::Deref, mem::transmute};
+use std::{mem::transmute, mem::MaybeUninit, ops::Deref};
 
 /// A wrapper around an array armazenated on the stack
 pub struct StackVec<T, const S: usize> {
@@ -245,8 +245,6 @@ impl<T, const S: usize> Deref for StackVec<T, S> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        unsafe {
-            transmute(&self.array[0..self.len])
-        }
+        unsafe { transmute(&self.array[0..self.len]) }
     }
 }

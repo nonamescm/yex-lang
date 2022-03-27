@@ -8,8 +8,8 @@ pub mod fun;
 pub mod instance;
 pub mod list;
 pub mod symbol;
+pub mod table;
 pub mod yextype;
-
 use crate::{error::InterpretResult, gc::GcRef};
 
 use fun::Fun;
@@ -17,6 +17,8 @@ use instance::Instance;
 use list::List;
 use symbol::Symbol;
 use yextype::YexType;
+
+use self::table::Table;
 
 pub fn nil() -> Value {
     Value::Nil
@@ -41,6 +43,8 @@ pub enum Value {
     Bool(bool),
     /// Functions
     Fun(GcRef<Fun>),
+    /// Tables
+    Table(Table),
     /// Yex lists
     List(List),
     /// Yex user-defined types
@@ -64,6 +68,7 @@ impl Clone for Value {
             Sym(s) => Sym(*s),
             Type(t) => Type(t.clone()),
             Instance(i) => Instance(i.clone()),
+            Table(t) => Table(t.clone()),
             Nil => Nil,
         }
     }
@@ -87,6 +92,7 @@ impl Value {
             Value::Bool(_) => mem::size_of::<bool>(),
             Value::Type(t) => mem::size_of_val(&t),
             Value::Instance(i) => mem::size_of_val(&i),
+            Value::Table(t) => mem::size_of_val(&t),
             Value::Nil => 4,
         }
     }
@@ -119,6 +125,7 @@ impl Value {
             List(xs) => !xs.is_empty(),
             Fun(_) => true,
             Value::Type(_) => true,
+            Table(_) => true,
             Value::Instance(_) => true,
         }
     }
@@ -141,6 +148,7 @@ impl Value {
             Bool(_) => YexType::bool(),
             Nil => YexType::nil(),
             Sym(_) => YexType::sym(),
+            Table(_) => YexType::table(),
             Type(_) | Instance(_) => unreachable!(),
         };
 
@@ -187,6 +195,7 @@ impl std::fmt::Display for Value {
             Num(n) => n.to_string(),
             Type(t) => format!("<type({})>", t.name),
             Instance(i) => format!("<instance({})>", i.ty.name),
+            Table(t) => format!("{t}"),
             Bool(b) => b.to_string(),
         };
         write!(f, "{}", tk)
@@ -367,5 +376,6 @@ impl_get!(bool: Bool);
 impl_get!(GcRef<YexType>: Type);
 impl_get!(GcRef<Fun>: Fun);
 impl_get!(GcRef<Instance>: Instance);
+impl_get!(Table: Table);
 impl_get!(Symbol: Sym);
 impl_get!(List: List);

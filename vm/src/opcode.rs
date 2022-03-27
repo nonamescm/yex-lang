@@ -188,7 +188,11 @@ pub struct OpCodeMetadata {
 impl OpCodeMetadata {
     /// Creates a new [`OpCodeMetadata`]
     pub fn new(line: usize, column: usize, opcode: OpCode) -> Self {
-        Self { line, column, opcode }
+        Self {
+            line,
+            column,
+            opcode,
+        }
     }
 }
 
