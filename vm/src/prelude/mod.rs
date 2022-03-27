@@ -2,7 +2,7 @@ use crate::{
     env::EnvTable,
     gc::GcRef,
     literal::{nil, Value},
-    panic, InterpretResult, List, Symbol,
+    panic, InterpretResult, List, Symbol, YexType,
 };
 use std::io::Write;
 
@@ -141,6 +141,12 @@ pub fn prelude() -> EnvTable {
         };
     }
 
+    macro_rules! insert {
+        ($name: expr, $value: expr) => {
+            prelude.insert($crate::Symbol::new($name), $value)
+        };
+    }
+
     insert_fn!("println", println);
     insert_fn!("print", print);
     insert_fn!("input", input);
@@ -150,8 +156,15 @@ pub fn prelude() -> EnvTable {
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
     insert_fn!("exit", exit);
-
     insert_fn!("getos", get_os, 0);
+
+    insert!("Nil", Value::Type(GcRef::new(YexType::nil())));
+    insert!("Bool", Value::Type(GcRef::new(YexType::bool())));
+    insert!("Num", Value::Type(GcRef::new(YexType::num())));
+    insert!("Str", Value::Type(GcRef::new(YexType::str())));
+    insert!("List", Value::Type(GcRef::new(YexType::list())));
+    insert!("Sym", Value::Type(GcRef::new(YexType::sym())));
+    insert!("Fun", Value::Type(GcRef::new(YexType::fun())));
 
     prelude
 }

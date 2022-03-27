@@ -35,6 +35,12 @@ impl Fun {
         }
     }
 
+    /// Converts the Fun to a GcRef<Fun>
+    #[must_use]
+    pub fn to_gcref(self) -> GcRef<Fun> {
+        GcRef::new(self)
+    }
+
     /// Apply the function to the given arguments
     pub fn apply(&self, app: FunArgs) -> Self {
         let mut args = stackvec![];

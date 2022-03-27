@@ -5,7 +5,9 @@ use vm::{
     Value, YexType,
 };
 
-use crate::parser::ast::{BinOp, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
+use crate::parser::ast::{
+    BinOp, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl,
+};
 
 #[derive(Default)]
 struct Scope {
@@ -309,10 +311,12 @@ impl Compiler {
                 name,
                 methods,
                 params,
+                init,
             } => {
                 self.typedef(
                     name,
                     methods,
+                    init,
                     &params.iter().map(|x| x.name).collect::<Vec<_>>(),
                     &node.location,
                 );
@@ -320,7 +324,14 @@ impl Compiler {
         }
     }
 
-    fn typedef(&mut self, decl: &VarDecl, methods: &[Def], params: &[Symbol], loc: &Location) {
+    fn typedef(
+        &mut self,
+        decl: &VarDecl,
+        methods: &[Def],
+        init: &Option<Def>,
+        params: &[Symbol],
+        loc: &Location,
+    ) {
         let mut table = EnvTable::new();
         for m in methods {
             let func = match &m.value.kind {
@@ -330,10 +341,19 @@ impl Compiler {
 
             table.insert(m.bind.name, func);
         }
-        self.emit_const(
-            Value::Type(GcRef::new(YexType::new(decl.name, table, params.to_vec()))),
-            loc,
-        );
+
+        let mut ty = YexType::new(decl.name, table, params.to_vec());
+
+        if let Some(init) = init {
+            let func = match &init.value.kind {
+                ExprKind::Lambda { args, body } => self.lambda_expr(args, body, loc),
+                _ => unreachable!(),
+            };
+
+            ty = ty.with_initializer(func);
+        }
+
+        self.emit_const(Value::Type(GcRef::new(ty)), loc);
         self.emit_op(OpCode::Savg(decl.name), loc);
     }
 

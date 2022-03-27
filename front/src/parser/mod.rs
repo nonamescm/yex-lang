@@ -64,6 +64,8 @@ impl Parser {
         self.next()?;
 
         let mut methods = Vec::new();
+        let mut init = None;
+
         while self.current.token != Tkt::End {
             let def = match self.def_bind()?.kind {
                 StmtKind::Def(def) => def,
@@ -72,6 +74,12 @@ impl Parser {
             if def.bind_type != BindType::Fn {
                 self.throw("Expected method definition")?;
             }
+
+            if def.bind.name.to_str() == "init" {
+                init = Some(def);
+                continue;
+            }
+
             methods.push(def);
         }
         self.next()?;
@@ -81,6 +89,7 @@ impl Parser {
                 name,
                 params,
                 methods,
+                init,
             },
             line,
             column,

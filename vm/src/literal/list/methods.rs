@@ -122,3 +122,7 @@ pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
         other => panic!("nth() expected a list, found {}", other),
     }
 }
+
+pub fn init(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
+    Ok(Value::List(List::new()))
+}
