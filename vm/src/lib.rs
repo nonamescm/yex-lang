@@ -292,6 +292,10 @@ impl VirtualMachine {
             None => panic!("Undefined method: {}", name)?,
         };
 
+        if method.arity != arity {
+            panic!("Expected {} arguments, found {}", method.arity, arity)?;
+        }
+
         match &*method.body {
             Either::Left(bt) => self.call_bytecode(bt, args),
             Either::Right(f) => self.call_native(*f, args),
