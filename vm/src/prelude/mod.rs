@@ -69,10 +69,6 @@ fn inspect(args: &[Value]) -> InterpretResult<Value> {
     Ok(Value::Str(GcRef::new(format!("{:#?}", &args[0]))))
 }
 
-fn get_os(_args: &[Value]) -> InterpretResult<Value> {
-    Ok(Value::Str(GcRef::new(std::env::consts::OS.to_string())))
-}
-
 fn num(args: &[Value]) -> InterpretResult<Value> {
     let str = match &args[0] {
         Value::Sym(symbol) => symbol.to_str(),
@@ -108,6 +104,10 @@ fn exit(args: &[Value]) -> InterpretResult<Value> {
     };
 
     std::process::exit(code);
+}
+
+fn panic(args: &[Value]) -> InterpretResult<Value> {
+    panic!("{}", &args[0])
 }
 
 pub fn prelude() -> EnvTable {
@@ -156,7 +156,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
     insert_fn!("exit", exit);
-    insert_fn!("getos", get_os, 0);
+    insert_fn!("panic", panic);
 
     insert!("Nil", Value::Type(GcRef::new(YexType::nil())));
     insert!("Bool", Value::Type(GcRef::new(YexType::bool())));
