@@ -241,7 +241,7 @@ impl VirtualMachine {
                         args.push(self.pop());
                     }
 
-                    self.push(instantiate(ty, args));
+                    instantiate(self, ty, args)?;
                 }
                 OpCode::Get(field) => {
                     let obj = match self.pop() {

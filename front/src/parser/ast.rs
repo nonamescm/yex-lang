@@ -169,7 +169,10 @@ pub enum ExprKind {
 
     UnOp(UnOp, Box<Expr>),
 
-    New { ty: Box<Expr>, args: Vec<Expr> }, // types are just values, so I can't really do compile time checking
+    New {
+        ty: Box<Expr>,
+        args: Vec<Expr>,
+    }, // types are just values, so I can't really do compile time checking
 }
 
 #[derive(Debug, Clone)]
@@ -269,5 +272,10 @@ pub struct Def {
 #[derive(Debug)]
 pub enum StmtKind {
     Def(Def),
-    Type { name: VarDecl, params: Vec<VarDecl>, methods: Vec<Def> }
+    Type {
+        name: VarDecl,
+        params: Vec<VarDecl>,
+        methods: Vec<Def>,
+        init: Option<Def>,
+    },
 }

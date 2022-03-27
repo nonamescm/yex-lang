@@ -2,7 +2,7 @@ use crate::{
     env::EnvTable,
     gc::GcRef,
     literal::{nil, Value},
-    panic, InterpretResult, List, Symbol,
+    panic, InterpretResult, List, Symbol, YexType,
 };
 use std::io::Write;
 
@@ -69,10 +69,6 @@ fn inspect(args: &[Value]) -> InterpretResult<Value> {
     Ok(Value::Str(GcRef::new(format!("{:#?}", &args[0]))))
 }
 
-fn get_os(_args: &[Value]) -> InterpretResult<Value> {
-    Ok(Value::Str(GcRef::new(std::env::consts::OS.to_string())))
-}
-
 fn num(args: &[Value]) -> InterpretResult<Value> {
     let str = match &args[0] {
         Value::Sym(symbol) => symbol.to_str(),
@@ -110,6 +106,10 @@ fn exit(args: &[Value]) -> InterpretResult<Value> {
     std::process::exit(code);
 }
 
+fn panic(args: &[Value]) -> InterpretResult<Value> {
+    panic!("{}", &args[0])
+}
+
 pub fn prelude() -> EnvTable {
     let mut prelude = EnvTable::with_capacity(64);
     macro_rules! insert_fn {
@@ -141,6 +141,12 @@ pub fn prelude() -> EnvTable {
         };
     }
 
+    macro_rules! insert {
+        ($name: expr, $value: expr) => {
+            prelude.insert($crate::Symbol::new($name), $value)
+        };
+    }
+
     insert_fn!("println", println);
     insert_fn!("print", print);
     insert_fn!("input", input);
@@ -150,8 +156,15 @@ pub fn prelude() -> EnvTable {
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
     insert_fn!("exit", exit);
+    insert_fn!("panic", panic);
 
-    insert_fn!("getos", get_os, 0);
+    insert!("Nil", Value::Type(GcRef::new(YexType::nil())));
+    insert!("Bool", Value::Type(GcRef::new(YexType::bool())));
+    insert!("Num", Value::Type(GcRef::new(YexType::num())));
+    insert!("Str", Value::Type(GcRef::new(YexType::str())));
+    insert!("List", Value::Type(GcRef::new(YexType::list())));
+    insert!("Sym", Value::Type(GcRef::new(YexType::sym())));
+    insert!("Fun", Value::Type(GcRef::new(YexType::fun())));
 
     prelude
 }
