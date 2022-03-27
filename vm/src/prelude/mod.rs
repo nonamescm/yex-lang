@@ -1,7 +1,7 @@
 use crate::{
     env::EnvTable,
     gc::GcRef,
-    literal::{nil, Value},
+    literal::{nil, Value, TryGet},
     panic, InterpretResult, YexType,
 };
 use std::io::Write;
@@ -72,16 +72,18 @@ fn num(args: &[Value]) -> InterpretResult<Value> {
 }
 
 fn exit(args: &[Value]) -> InterpretResult<Value> {
-    let code = match &args[0] {
-        Value::Num(n) if n.fract() == 0.0 => *n as i32,
-        other => panic!("Expected a valid int number, found {}", other)?,
-    };
-
-    std::process::exit(code);
+    let code: f64 = args[0].get()?;
+    if code.fract() != 0.0 {
+        panic!("Expected an integer, found {}", code)?;
+    }
+    std::process::exit(code as i32);
 }
 
 fn panic(args: &[Value]) -> InterpretResult<Value> {
-    panic!("{}", &args[0])
+    match &args[0] {
+        Value::Str(s) => panic!("{}", &**s),
+        other => panic!("{}", other),
+    }
 }
 
 pub fn prelude() -> EnvTable {
