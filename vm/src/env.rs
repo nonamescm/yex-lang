@@ -11,13 +11,13 @@ use crate::{
 
 type Key = Symbol;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 struct Entry {
     pub key: Option<Key>,
     pub value: Value,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 /// A table of key-value pairs
 pub struct EnvTable {
     capacity: usize,
@@ -193,5 +193,16 @@ impl Drop for EnvTable {
                 Layout::array::<Entry>(self.capacity).unwrap(),
             );
         }
+    }
+}
+
+impl PartialEq for EnvTable {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+
+        self.iter()
+            .all(|(key, value)| other.get(&key).map_or(false, |v| value == v))
     }
 }

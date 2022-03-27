@@ -179,9 +179,6 @@ impl Lexer {
                 let sym = self.take_while(|c| c.is_alphanumeric() || c == '_')?;
 
                 match sym.as_str() {
-                    "true" => TokenType::True,
-                    "false" => TokenType::False,
-                    "nil" => TokenType::Nil,
                     "\0" => self.throw("expected symbol string after `:`, found <eof>")?,
                     _ => TokenType::Sym(Symbol::new(sym)),
                 }

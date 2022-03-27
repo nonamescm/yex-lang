@@ -2,7 +2,7 @@ use crate::{
     env::EnvTable,
     gc::GcRef,
     literal::{nil, Value},
-    panic, InterpretResult, List, Symbol, YexType,
+    panic, InterpretResult, YexType,
 };
 use std::io::Write;
 
@@ -50,19 +50,7 @@ fn str(args: &[Value]) -> InterpretResult<Value> {
 }
 
 fn r#typeof(args: &[Value]) -> InterpretResult<Value> {
-    let type_name = match &args[0] {
-        Value::List(_) => "list",
-        Value::Str(_) => "str",
-        Value::Num(_) => "num",
-        Value::Bool(_) => "bool",
-        Value::Sym(_) => "symbol",
-        Value::Nil => "nil",
-        Value::Fun { .. } => "fn",
-        Value::Type(ty) => ty.name.to_str(),
-        Value::Instance(inst) => inst.ty.name.to_str(),
-    };
-
-    Ok(Value::Sym(Symbol::new(type_name)))
+    Ok(Value::Type(args[0].type_of()))
 }
 
 fn inspect(args: &[Value]) -> InterpretResult<Value> {
@@ -80,20 +68,6 @@ fn num(args: &[Value]) -> InterpretResult<Value> {
     match str.parse::<f64>() {
         Ok(n) => Ok(Value::Num(n)),
         Err(e) => panic!("{:?}", e),
-    }
-}
-
-fn list(args: &[Value]) -> InterpretResult<Value> {
-    match &args[0] {
-        xs @ Value::List(_) => Ok(xs.clone()),
-        Value::Str(s) => {
-            let mut xs = List::new();
-            for c in s.chars() {
-                xs = xs.prepend(Value::Str(GcRef::new(c.to_string())));
-            }
-            Ok(Value::List(xs.rev()))
-        }
-        _ => panic!("Expected a string or a list, found {}", &args[0]),
     }
 }
 
@@ -151,7 +125,6 @@ pub fn prelude() -> EnvTable {
     insert_fn!("print", print);
     insert_fn!("input", input);
     insert_fn!("str", str);
-    insert_fn!("list", list);
     insert_fn!("typeof", r#typeof);
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
@@ -164,7 +137,7 @@ pub fn prelude() -> EnvTable {
     insert!("Str", Value::Type(GcRef::new(YexType::str())));
     insert!("List", Value::Type(GcRef::new(YexType::list())));
     insert!("Sym", Value::Type(GcRef::new(YexType::sym())));
-    insert!("Fun", Value::Type(GcRef::new(YexType::fun())));
+    insert!("Fn", Value::Type(GcRef::new(YexType::fun())));
 
     prelude
 }

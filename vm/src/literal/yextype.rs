@@ -1,4 +1,4 @@
-use crate::{env::EnvTable, gc::GcRef, Symbol, Value, VirtualMachine, error::InterpretResult};
+use crate::{env::EnvTable, error::InterpretResult, gc::GcRef, Symbol, Value, VirtualMachine};
 
 use super::{fun::Fun, instance::Instance, list};
 
@@ -128,7 +128,11 @@ impl YexType {
 
 /// Instantiates a type with the given parameters.
 /// Push the new instance to the stack.
-pub fn instantiate(vm: &mut VirtualMachine, ty: GcRef<YexType>, args: Vec<Value>) -> InterpretResult<()> {
+pub fn instantiate(
+    vm: &mut VirtualMachine,
+    ty: GcRef<YexType>,
+    args: Vec<Value>,
+) -> InterpretResult<()> {
     if args.len() != ty.params.len() {
         panic!("Wrong number of arguments for type instantiation");
     }
