@@ -21,8 +21,8 @@ impl Table {
         Self::default()
     }
     #[inline(always)]
-    fn from_list(list: List) -> Table {
-        Table { items: list }
+    fn from_list(items: List) -> Table {
+        Table { items }
     }
     #[inline]
     #[must_use]
