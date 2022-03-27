@@ -95,7 +95,7 @@ pub fn prelude() -> EnvTable {
         ($name: expr, $fn: expr, $arity:expr) => {
             prelude.insert(
                 $crate::Symbol::new($name),
-                Value::Fun(GcRef::new(crate::literal::fun::Fun {
+                Value::Fn(GcRef::new(crate::literal::fun::Fn {
                     arity: $arity,
                     body: GcRef::new(FnKind::Native(|_, it| $fn(&*it))),
                     args: $crate::StackVec::new(),
@@ -106,7 +106,7 @@ pub fn prelude() -> EnvTable {
         (@vm $name: expr, $fn: expr, $arity:expr) => {
             prelude.insert(
                 $crate::Symbol::new($name),
-                Value::Fun(GcRef::new(crate::literal::Fun {
+                Value::Fn(GcRef::new(crate::literal::Fn {
                     arity: $arity,
                     body: GcRef::new(FnKind::Native(|vm, it| {
                         $fn(unsafe { vm.as_mut().unwrap() }, &*it)

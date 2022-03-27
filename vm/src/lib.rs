@@ -14,7 +14,7 @@ mod stack;
 
 use gc::GcRef;
 use literal::{
-    fun::{FunArgs, NativeFun},
+    fun::{FnArgs, NativeFn},
     yextype::instantiate,
 };
 
@@ -22,7 +22,13 @@ use crate::error::InterpretResult;
 
 pub use crate::{
     env::EnvTable,
-    literal::{fun::{Fun, FnKind}, list::List, symbol::Symbol, yextype::YexType, Value},
+    literal::{
+        fun::{Fn, FnKind},
+        list::List,
+        symbol::Symbol,
+        yextype::YexType,
+        Value,
+    },
     opcode::{OpCode, OpCodeMetadata},
     stack::StackVec,
 };
@@ -51,7 +57,7 @@ type Stack = StackVec<Value, STACK_SIZE>;
 pub type Bytecode = Vec<OpCodeMetadata>;
 
 type BytecodeRef<'a> = &'a Bytecode;
-use std::mem::swap;
+use std::{mem::swap, ops};
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
 pub struct VirtualMachine {
@@ -284,7 +290,7 @@ impl VirtualMachine {
 
         let method = match ty.fields.get(&name) {
             Some(value) => match value {
-                Value::Fun(f) => f,
+                Value::Fn(f) => f,
                 _ => unreachable!(),
             },
             None => panic!("Undefined method: {}", name)?,
@@ -313,7 +319,7 @@ impl VirtualMachine {
         };
 
         match field {
-            Value::Fun(f) => match &*f.body {
+            Value::Fn(f) => match &*f.body {
                 FnKind::Bytecode(bt) => self.call_bytecode(bt, args),
                 FnKind::Native(f) => self.call_native(*f, args),
             },
@@ -332,7 +338,7 @@ impl VirtualMachine {
     pub fn debug_stack(&self, _: &OpCode) {}
 
     #[inline]
-    fn call_args(&mut self, arity: usize, fun: &Fun) -> FunArgs {
+    fn call_args(&mut self, arity: usize, fun: &Fn) -> FnArgs {
         if fun.arity == arity && fun.is_bytecode() && fun.args.is_empty() {
             return stackvec![];
         }
@@ -356,7 +362,7 @@ impl VirtualMachine {
 
     pub(crate) fn call(&mut self, arity: usize) -> InterpretResult<()> {
         let fun = match self.pop() {
-            Value::Fun(f) => f,
+            Value::Fn(f) => f,
             value => panic!("Expected a function to call, found {value}")?,
         };
 
@@ -365,7 +371,7 @@ impl VirtualMachine {
             for _ in 0..arity {
                 args.push(self.pop());
             }
-            self.push(Value::Fun(GcRef::new(fun.apply(args))));
+            self.push(Value::Fn(GcRef::new(fun.apply(args))));
             return Ok(());
         }
 
@@ -376,7 +382,7 @@ impl VirtualMachine {
         }
 
         if arity < fun.arity {
-            self.push(Value::Fun(GcRef::new(fun.apply(args))));
+            self.push(Value::Fn(GcRef::new(fun.apply(args))));
             return Ok(());
         }
 
@@ -387,7 +393,7 @@ impl VirtualMachine {
     }
 
     #[inline]
-    fn call_bytecode(&mut self, bytecode: BytecodeRef, args: FunArgs) -> InterpretResult<()> {
+    fn call_bytecode(&mut self, bytecode: BytecodeRef, args: FnArgs) -> InterpretResult<()> {
         for arg in args {
             self.push(arg);
         }
@@ -397,7 +403,7 @@ impl VirtualMachine {
     }
 
     #[inline]
-    fn call_native(&mut self, fp: NativeFun, args: FunArgs) -> InterpretResult<()> {
+    fn call_native(&mut self, fp: NativeFn, args: FnArgs) -> InterpretResult<()> {
         let args = args.reverse().into();
         let result = fp(self, args);
         self.try_push(result)
@@ -406,7 +412,7 @@ impl VirtualMachine {
     #[inline]
     fn valid_tail_call(&mut self, arity: usize, frame: BytecodeRef) -> InterpretResult<()> {
         let fun = match self.pop() {
-            Value::Fun(fun) => fun,
+            Value::Fn(fun) => fun,
             value => panic!("Expected a function, found {value}")?,
         };
         match &*fun.body {
@@ -439,7 +445,7 @@ impl VirtualMachine {
     fn binop<T, F>(&mut self, f: F) -> InterpretResult<()>
     where
         T: Into<Value>,
-        F: Fn(Value, Value) -> InterpretResult<T>,
+        F: ops::Fn(Value, Value) -> InterpretResult<T>,
     {
         let a = self.pop();
         let b = self.pop();

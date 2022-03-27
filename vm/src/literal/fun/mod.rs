@@ -1,63 +1,63 @@
 use crate::{
     error::InterpretResult, gc::GcRef, stackvec, Bytecode, StackVec, Value, VirtualMachine,
 };
-pub type NativeFun = fn(*mut VirtualMachine, Vec<Value>) -> InterpretResult<Value>;
-pub type FunBody = GcRef<FnKind>;
-pub type FunArgs = StackVec<Value, 8>;
+pub type NativeFn = fn(*mut VirtualMachine, Vec<Value>) -> InterpretResult<Value>;
+pub type FnBody = GcRef<FnKind>;
+pub type FnArgs = StackVec<Value, 8>;
 
 #[derive(Debug, Clone, PartialEq)]
 /// The kind of a function.
 pub enum FnKind {
     /// A native function.
-    Native(NativeFun),
+    Native(NativeFn),
     /// A function defined in the source code.
     Bytecode(Bytecode),
 }
 
 #[derive(PartialEq, Clone)]
 /// Yex function struct
-pub struct Fun {
+pub struct Fn {
     /// The number of argument the function receives
     pub arity: usize,
     /// The function body
-    pub body: FunBody,
+    pub body: FnBody,
     /// The function Arguments
-    pub args: FunArgs,
+    pub args: FnArgs,
 }
 
-impl Fun {
+impl Fn {
     /// Create a new function
     pub fn new_bt(arity: usize, body: Bytecode) -> Self {
         Self {
             arity,
             body: GcRef::new(FnKind::Bytecode(body)),
-            args: FunArgs::new(),
+            args: FnArgs::new(),
         }
     }
 
     /// Create a new native function
-    pub fn new_native(arity: usize, native: NativeFun) -> Self {
+    pub fn new_native(arity: usize, native: NativeFn) -> Self {
         Self {
             arity,
             body: GcRef::new(FnKind::Native(native)),
-            args: FunArgs::new(),
+            args: FnArgs::new(),
         }
     }
 
-    /// Converts the Fun to a GcRef<Fun>
+    /// Converts the Fn to a GcRef<Fn>
     #[must_use]
-    pub fn to_gcref(self) -> GcRef<Fun> {
+    pub fn to_gcref(self) -> GcRef<Fn> {
         GcRef::new(self)
     }
 
     /// Apply the function to the given arguments
-    pub fn apply(&self, app: FunArgs) -> Self {
+    pub fn apply(&self, app: FnArgs) -> Self {
         let mut args = stackvec![];
         for arg in app.iter().rev().chain(self.args.iter()) {
             args.push(arg.clone());
         }
 
-        Fun {
+        Fn {
             arity: self.arity + self.args.len() - args.len(),
             body: self.body.clone(),
             args,
@@ -75,13 +75,13 @@ impl Fun {
     }
 }
 
-impl std::fmt::Debug for Fun {
+impl std::fmt::Debug for Fn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Fun {{ arity: {}, body: {:?} }}", self.arity, self.body)
+        write!(f, "Fn {{ arity: {}, body: {:?} }}", self.arity, self.body)
     }
 }
 
-impl std::fmt::Display for Fun {
+impl std::fmt::Display for Fn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "<fun({})>", self.arity)
     }

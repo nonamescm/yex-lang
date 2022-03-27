@@ -12,7 +12,7 @@ pub mod table;
 pub mod yextype;
 use crate::{error::InterpretResult, gc::GcRef};
 
-use fun::Fun;
+use fun::Fn;
 use instance::Instance;
 use list::List;
 use symbol::Symbol;
@@ -41,8 +41,8 @@ pub enum Value {
     Sym(Symbol),
     /// Booleans
     Bool(bool),
-    /// Functions
-    Fun(GcRef<Fun>),
+    /// Fnctions
+    Fn(GcRef<Fn>),
     /// Tables
     Table(Table),
     /// Yex lists
@@ -62,7 +62,7 @@ impl Clone for Value {
         match self {
             List(xs) => List(xs.clone()),
             Str(str) => Str(GcRef::clone(str)),
-            Fun(f) => Fun(GcRef::clone(f)),
+            Fn(f) => Fn(GcRef::clone(f)),
             Bool(b) => Bool(*b),
             Num(n) => Num(*n),
             Sym(s) => Sym(*s),
@@ -88,7 +88,7 @@ impl Value {
             Value::Num(_) => mem::size_of::<f64>(),
             Value::Sym(_) => mem::size_of::<Symbol>(),
             Value::Str(s) => s.len(),
-            Value::Fun(f) => mem::size_of_val(&f),
+            Value::Fn(f) => mem::size_of_val(&f),
             Value::Bool(_) => mem::size_of::<bool>(),
             Value::Type(t) => mem::size_of_val(&t),
             Value::Instance(i) => mem::size_of_val(&i),
@@ -123,7 +123,7 @@ impl Value {
             Num(_) => true,
             Nil => false,
             List(xs) => !xs.is_empty(),
-            Fun(_) => true,
+            Fn(_) => true,
             Value::Type(_) => true,
             Table(_) => true,
             Value::Instance(_) => true,
@@ -142,7 +142,7 @@ impl Value {
 
         let ty = match self {
             List(_) => YexType::list(),
-            Fun(_) => YexType::fun(),
+            Fn(_) => YexType::fun(),
             Num(_) => YexType::num(),
             Str(_) => YexType::str(),
             Bool(_) => YexType::bool(),
@@ -187,7 +187,7 @@ impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Value::*;
         let tk = match self {
-            Fun(f) => format!("<fun({})>", f.arity),
+            Fn(f) => format!("<fun({})>", f.arity),
             Nil => "nil".to_string(),
             List(xs) => format!("{}", *xs),
             Str(s) => "\"".to_owned() + s + "\"",
@@ -374,7 +374,7 @@ impl_get!(String: Str(s) => s.to_string());
 impl_get!(f64: Num);
 impl_get!(bool: Bool);
 impl_get!(GcRef<YexType>: Type);
-impl_get!(GcRef<Fun>: Fun);
+impl_get!(GcRef<Fn>: Fn);
 impl_get!(GcRef<Instance>: Instance);
 impl_get!(Table: Table);
 impl_get!(Symbol: Sym);
