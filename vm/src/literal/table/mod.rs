@@ -8,9 +8,17 @@ pub mod methods;
 pub struct Table {
     pub items: List,
 }
+impl Default for Table {
+    fn default() -> Self {
+        Self {
+            items: List::new(),
+        }
+    }
+}
 impl Table {
+    #[inline]
     pub fn new() -> Table {
-        Table { items: List::new() }
+        Self::default()
     }
     #[inline(always)]
     fn from_list(list: List) -> Table {
