@@ -343,8 +343,6 @@ impl Parser {
         let mut binds = vec![];
 
         while self.current.token != Tkt::In {
-            println!("{:?}", self.current.token);
-
             let bind = match self.peek()?.token {
                 Tkt::Lparen => self.bind_fn()?,
                 _ => self.bind()?,
@@ -358,8 +356,6 @@ impl Parser {
         let column = self.current.column;
 
         let body = Box::new(self.expr()?);
-
-        println!("{:#?}", body);
 
         Ok(Expr::new(ExprKind::Let { binds, body }, line, column))
     }

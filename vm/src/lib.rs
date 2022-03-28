@@ -201,14 +201,6 @@ impl VirtualMachine {
                 OpCode::Save(offset) => {
                     let value = self.pop();
 
-                    println!("{:?}", value);
-
-                    println!("{}", offset);
-                    println!("{}", self.used_locals);
-                    println!("{}", frame_locals);
-                    println!("{}", offset + (self.used_locals - frame_locals));
-                    println!();
-
                     self.used_locals += 1;
                     frame_locals += 1;
                     self.locals[offset + (self.used_locals - frame_locals)] = value;
