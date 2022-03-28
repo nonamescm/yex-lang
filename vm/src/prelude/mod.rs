@@ -59,7 +59,7 @@ fn inspect(args: &[Value]) -> InterpretResult<Value> {
 
 fn num(args: &[Value]) -> InterpretResult<Value> {
     let str = match &args[0] {
-        Value::Sym(symbol) => symbol.to_str(),
+        Value::Sym(symbol) => symbol.as_str(),
         Value::Str(str) => &*str,
         n @ Value::Num(..) => return Ok(n.clone()),
         other => panic!("Expected a string or a symbol, found {}", other)?,

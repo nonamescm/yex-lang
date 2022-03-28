@@ -75,12 +75,19 @@ impl Parser {
                 self.throw("Expected method definition")?;
             }
 
-            if def.bind.name.to_str() == "init" {
+            if def.bind.name.as_str() == "init" {
                 init = Some(def);
                 continue;
             }
 
-            methods.push(def);
+            match def.value.kind {
+                ExprKind::Lambda { ref args, .. }
+                    if args.len() >= 1 && args[0].name.as_str() == "this" =>
+                {
+                    methods.push(def)
+                }
+                _ => self.throw("Expected a method receiving `this` as a parameter")?,
+            }
         }
         self.next()?;
 

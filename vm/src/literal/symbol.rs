@@ -56,7 +56,7 @@ impl Symbol {
     }
 
     /// Returns the intern symbol str
-    pub fn to_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         self.string
     }
 }
