@@ -283,7 +283,7 @@ impl VirtualMachine {
         }
         unsafe { args.set_len(arity) };
 
-        args.push(value.clone());
+        args.push(value);
 
         let method = match ty.fields.get(&name) {
             Some(value) => match value {
