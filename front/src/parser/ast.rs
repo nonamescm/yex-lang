@@ -57,7 +57,7 @@ impl<'a> From<BinOp> for &'a [OpCode] {
             BinOp::Shr => &[OpCode::Shr],
             BinOp::Shl => &[OpCode::Shl],
             BinOp::Eq => &[OpCode::Eq],
-            BinOp::Ne => &[OpCode::Not, OpCode::Eq],
+            BinOp::Ne => &[OpCode::Eq, OpCode::Not],
             BinOp::And => unreachable!(),
             BinOp::Or => unreachable!(),
         }
