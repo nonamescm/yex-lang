@@ -10,7 +10,7 @@ pub mod list;
 pub mod symbol;
 pub mod table;
 pub mod yextype;
-use crate::{error::InterpretResult, gc::GcRef};
+use crate::{error::InterpretResult, gc::GcRef, raise};
 
 use fun::Fn;
 use instance::Instance;
@@ -101,12 +101,12 @@ impl Value {
     pub fn ord_cmp(&self, rhs: &Self) -> InterpretResult<Ordering> {
         let (left, right) = match (self, rhs) {
             (Self::Num(left), Self::Num(right)) => (left, right),
-            (left, right) => return crate::panic!("Can't compare `{}` and `{}`", left, right),
+            (left, right) => return crate::raise!("Can't compare `{}` and `{}`", left, right),
         };
 
         match left.partial_cmp(right) {
             Some(ord) => Ok(ord),
-            None => panic!("Error applying cmp"),
+            None => raise!("Error applying cmp"),
         }
     }
 
@@ -164,19 +164,6 @@ impl Default for Value {
 
 type ConstantErr = InterpretResult<Value>;
 
-macro_rules! panic {
-    ($($tt:tt)+) => {
-        unsafe {
-            let msg = format!($($tt)+);
-            Err($crate::error::InterpretError {
-                line: $crate::LINE,
-                column: $crate::COLUMN,
-                err: msg
-            })
-        }
-    }
-}
-
 impl From<Value> for bool {
     fn from(o: Value) -> Self {
         o.to_bool()
@@ -209,7 +196,7 @@ impl Add for Value {
         match (self, rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x + y)),
             (Self::Str(x), Self::Str(y)) => Ok(Self::Str(GcRef::new(x.to_string() + &y))),
-            (s, r) => panic!("Can't apply `+` operator between {} and {}", s, r),
+            (s, r) => raise!("Can't apply `+` operator between {} and {}", s, r),
         }
     }
 }
@@ -220,7 +207,7 @@ impl Sub for Value {
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x - y)),
-            (s, r) => panic!("Can't apply `-` operator between {} and {}", s, r),
+            (s, r) => raise!("Can't apply `-` operator between {} and {}", s, r),
         }
     }
 }
@@ -231,7 +218,7 @@ impl Mul for Value {
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x * y)),
-            (s, r) => panic!("Can't apply `*` operator between {} and {}", s, r),
+            (s, r) => raise!("Can't apply `*` operator between {} and {}", s, r),
         }
     }
 }
@@ -242,7 +229,7 @@ impl Div for Value {
     fn div(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x / y)),
-            (s, r) => panic!("Can't apply `/` operator between {} and {}", s, r),
+            (s, r) => raise!("Can't apply `/` operator between {} and {}", s, r),
         }
     }
 }
@@ -253,7 +240,7 @@ impl Neg for Value {
     fn neg(self) -> Self::Output {
         match self {
             Self::Num(n) => Ok(Self::Num(-n)),
-            s => panic!("Can't apply unary `-` operator on {}", s),
+            s => raise!("Can't apply unary `-` operator on {}", s),
         }
     }
 }
@@ -274,7 +261,7 @@ impl BitXor for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
-            (x, y) => panic!("Can't apply bitwise `^` between {} and {}", x, y),
+            (x, y) => raise!("Can't apply bitwise `^` between {} and {}", x, y),
         }
     }
 }
@@ -287,7 +274,7 @@ impl BitAnd for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
-            (x, y) => panic!("Can't apply bitwise `&` between {} and {}", x, y),
+            (x, y) => raise!("Can't apply bitwise `&` between {} and {}", x, y),
         }
     }
 }
@@ -300,7 +287,7 @@ impl BitOr for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
-            (x, y) => panic!("Can't apply bitwise `|` between {} and {}", x, y),
+            (x, y) => raise!("Can't apply bitwise `|` between {} and {}", x, y),
         }
     }
 }
@@ -313,7 +300,7 @@ impl Shr for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
-            (x, y) => panic!("Can't apply bitwise `>>` between {} and {}", x, y),
+            (x, y) => raise!("Can't apply bitwise `>>` between {} and {}", x, y),
         }
     }
 }
@@ -326,7 +313,7 @@ impl Shl for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
-            (x, y) => panic!("Can't apply bitwise `<<` between {} and {}", x, y),
+            (x, y) => raise!("Can't apply bitwise `<<` between {} and {}", x, y),
         }
     }
 }
@@ -339,7 +326,7 @@ impl Rem for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x % y)),
-            (x, y) => panic!("Can't apply `%` between {} and {}", x, y),
+            (x, y) => raise!("Can't apply `%` between {} and {}", x, y),
         }
     }
 }
@@ -353,7 +340,7 @@ macro_rules! impl_get {
             fn get(&self) -> InterpretResult<$to> {
                 match self {
                     Self::$pattern(x) => Ok(x.clone()),
-                    e => crate::panic!("expected {}, found {}", stringify!($to), e),
+                    e => crate::raise!("expected {}, found {}", stringify!($to), e),
                 }
             }
         }
@@ -364,7 +351,7 @@ macro_rules! impl_get {
                 use Value::*;
                 match self {
                     $pattern => Ok($parse_expr),
-                    e => crate::panic!("expected {}, found {}", stringify!($to), e),
+                    e => crate::raise!("expected {}, found {}", stringify!($to), e),
                 }
             }
         }

@@ -1,4 +1,4 @@
-use crate::{env::EnvTable, error::InterpretResult, gc::GcRef, Symbol, Value, VirtualMachine};
+use crate::{env::EnvTable, error::InterpretResult, gc::GcRef, Symbol, Value, VirtualMachine, raise};
 
 use super::{fun::Fn, instance::Instance, list, table};
 
@@ -147,7 +147,7 @@ pub fn instantiate(
     args: Vec<Value>,
 ) -> InterpretResult<()> {
     if args.len() != ty.params.len() {
-        panic!("Wrong number of arguments for type instantiation");
+        raise!("Wrong number of arguments for type instantiation")?;
     }
 
     let mut fields = EnvTable::new();

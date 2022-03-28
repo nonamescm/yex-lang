@@ -2,7 +2,7 @@ use crate::{
     env::EnvTable,
     gc::GcRef,
     literal::{nil, Value, TryGet, fun::FnKind},
-    panic, InterpretResult, YexType,
+    raise, InterpretResult, YexType,
 };
 use std::io::Write;
 
@@ -29,12 +29,12 @@ fn input(args: &[Value]) -> InterpretResult<Value> {
     };
 
     if std::io::stdout().flush().is_err() {
-        panic!("Error flushing stdout")?;
+        raise!("Error flushing stdout")?;
     }
 
     let mut input = String::new();
     if std::io::stdin().read_line(&mut input).is_err() {
-        panic!("Error reading line")?;
+        raise!("Error reading line")?;
     }
 
     input.pop();
@@ -62,27 +62,27 @@ fn num(args: &[Value]) -> InterpretResult<Value> {
         Value::Sym(symbol) => symbol.as_str(),
         Value::Str(str) => &*str,
         n @ Value::Num(..) => return Ok(n.clone()),
-        other => panic!("Expected a string or a symbol, found {}", other)?,
+        other => raise!("Expected a string or a symbol, found {}", other)?,
     };
 
     match str.parse::<f64>() {
         Ok(n) => Ok(Value::Num(n)),
-        Err(e) => panic!("{:?}", e),
+        Err(e) => raise!("{:?}", e),
     }
 }
 
 fn exit(args: &[Value]) -> InterpretResult<Value> {
     let code: f64 = args[0].get()?;
     if code.fract() != 0.0 {
-        panic!("Expected an integer, found {}", code)?;
+        raise!("Expected an integer, found {}", code)?;
     }
     std::process::exit(code as i32);
 }
 
-fn panic(args: &[Value]) -> InterpretResult<Value> {
+fn raise(args: &[Value]) -> InterpretResult<Value> {
     match &args[0] {
-        Value::Str(s) => panic!("{}", &**s),
-        other => panic!("{}", other),
+        Value::Str(s) => raise!("{}", &**s),
+        other => raise!("{}", other),
     }
 }
 
@@ -131,7 +131,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
     insert_fn!("exit", exit);
-    insert_fn!("panic", panic);
+    insert_fn!("raise", raise);
 
     insert!("Nil", Value::Type(GcRef::new(YexType::nil())));
     insert!("Bool", Value::Type(GcRef::new(YexType::bool())));

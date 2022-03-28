@@ -41,7 +41,7 @@ static mut COLUMN: usize = 1;
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! panic {
+macro_rules! raise {
     ($($tt:tt)+) => {
         unsafe {
             let msg = format!($($tt)+);
@@ -214,7 +214,7 @@ impl VirtualMachine {
                 OpCode::Loag(name) => {
                     let value = match self.get_global(name) {
                         Some(value) => value,
-                        None => panic!("Undefined global variable: {}", name)?,
+                        None => raise!("Undefined global variable: {}", name)?,
                     };
                     self.push(value);
                 }
@@ -228,7 +228,7 @@ impl VirtualMachine {
                     let value = self.pop();
                     let list = match self.pop() {
                         Value::List(list) => list.prepend(value),
-                        value => panic!("Expected list, got {}", value)?,
+                        value => raise!("Expected list, got {}", value)?,
                     };
 
                     self.push(Value::List(list));
@@ -237,7 +237,7 @@ impl VirtualMachine {
                 OpCode::New(arity) => {
                     let ty = match self.pop() {
                         Value::Type(ty) => ty,
-                        value => panic!("Expected type, got `{}`", value)?,
+                        value => raise!("Expected type, got `{}`", value)?,
                     };
 
                     let mut args = vec![];
@@ -250,12 +250,12 @@ impl VirtualMachine {
                 OpCode::Get(field) => {
                     let obj = match self.pop() {
                         Value::Instance(obj) => obj,
-                        value => panic!("Expected instance, got `{}`", value)?,
+                        value => raise!("Expected instance, got `{}`", value)?,
                     };
 
                     let value = match obj.fields.get(&field) {
                         Some(value) => value.clone(),
-                        None => panic!("Undefined field: {}", field)?,
+                        None => raise!("Undefined field: {}", field)?,
                     };
 
                     self.push(value);
@@ -290,12 +290,12 @@ impl VirtualMachine {
                 Value::Fn(f) => f,
                 _ => unreachable!(),
             },
-            None => panic!("Undefined method: {}", name)?,
+            None => raise!("Undefined method: {}", name)?,
         };
 
         // arity + 1 because we push the receiver
         if method.arity != arity + 1 {
-            panic!("Expected {} arguments, found {}", method.arity - 1, arity)?;
+            raise!("Expected {} arguments, found {}", method.arity - 1, arity)?;
         }
 
         match &*method.body {
@@ -340,7 +340,7 @@ impl VirtualMachine {
     pub(crate) fn call(&mut self, arity: usize) -> InterpretResult<()> {
         let fun = match self.pop() {
             Value::Fn(f) => f,
-            value => panic!("Expected a function to call, found {value}")?,
+            value => raise!("Expected a function to call, found {value}")?,
         };
 
         if arity < fun.arity {
@@ -355,7 +355,7 @@ impl VirtualMachine {
         let args = self.call_args(arity, &fun);
 
         if arity > fun.arity {
-            panic!("Too many arguments for function {}", *fun)?;
+            raise!("Too many arguments for function {}", *fun)?;
         }
 
         if arity < fun.arity {
@@ -392,20 +392,20 @@ impl VirtualMachine {
     fn valid_tail_call(&mut self, arity: usize, frame: BytecodeRef) -> InterpretResult<()> {
         let fun = match self.pop() {
             Value::Fn(fun) => fun,
-            value => panic!("Expected a function, found {value}")?,
+            value => raise!("Expected a function, found {value}")?,
         };
         match &*fun.body {
             FnKind::Bytecode(_) if fun.arity != arity => {
-                panic!(
+                raise!(
                     "Expected function with arity {}, found {}",
                     arity, fun.arity
                 )
             }
             FnKind::Bytecode(bytecode) if bytecode != frame => {
-                panic!("Tried to tail call a function with a different bytecode")
+                raise!("Tried to tail call a function with a different bytecode")
             }
             FnKind::Native(_) => {
-                panic!("Tried to use a tail call on a non-tail callable function")
+                raise!("Tried to use a tail call on a non-tail callable function")
             }
             FnKind::Bytecode(_) => Ok(()),
         }

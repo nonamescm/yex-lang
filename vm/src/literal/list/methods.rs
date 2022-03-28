@@ -1,7 +1,7 @@
 use crate::{
     error::InterpretResult,
     literal::{nil, Value},
-    panic, VirtualMachine,
+    raise, VirtualMachine,
 };
 
 use super::List;
@@ -9,7 +9,7 @@ use super::List;
 pub fn rev(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let xs = match &args[0] {
         Value::List(xs) => xs,
-        other => return panic!("rev[0] expected a list, but found `{}`", other),
+        other => return raise!("rev[0] expected a list, but found `{}`", other),
     };
     Ok(Value::List(xs.rev()))
 }
@@ -18,7 +18,7 @@ pub fn map(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
     let vm = unsafe { &mut *vm };
     let xs = match &args[0] {
         Value::List(xs) => xs,
-        other => return panic!("map[1] expected a list, but found `{}`", other),
+        other => return raise!("map[1] expected a list, but found `{}`", other),
     };
     let fun = &args[1];
 
@@ -28,7 +28,7 @@ pub fn map(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
             vm.push(it);
             vm.push(fun.clone());
             if let Err(e) = vm.call(1) {
-                panic!("{}", e)?
+                raise!("{}", e)?
             }
             Ok(vm.pop())
         })
@@ -45,7 +45,7 @@ pub fn fold(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
 
     let xs = match &args[0] {
         Value::List(xs) => xs,
-        other => panic!("fold[2] expected a list, but found `{}`", other)?,
+        other => raise!("fold[2] expected a list, but found `{}`", other)?,
     };
     let mut acc = args[1].clone();
     let fun = args[2].clone();
@@ -55,7 +55,7 @@ pub fn fold(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
         vm.push(it);
         vm.push(fun.clone());
         if let Err(e) = vm.call(2) {
-            return panic!("{}", e);
+            return raise!("{}", e);
         }
         acc = vm.pop();
     }
@@ -68,7 +68,7 @@ pub fn filter(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Valu
 
     let xs = match &args[0] {
         Value::List(xs) => xs,
-        other => panic!("filter[1] expected a list, but found `{}`", other)?,
+        other => raise!("filter[1] expected a list, but found `{}`", other)?,
     };
     let fun = &args[1];
 
@@ -79,7 +79,7 @@ pub fn filter(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Valu
         vm.push(fun.clone());
 
         if let Err(e) = vm.call(1) {
-            return panic!("{}", e);
+            return raise!("{}", e);
         }
 
         let res = vm.pop();
@@ -97,21 +97,21 @@ pub fn head(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
             Some(x) => x,
             None => nil(),
         }),
-        other => panic!("head() expected a list, found {}", other),
+        other => raise!("head() expected a list, found {}", other),
     }
 }
 
 pub fn tail(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     match &args[0] {
         Value::List(xs) => Ok(Value::List(xs.tail())),
-        other => panic!("tail() expected a list, found {}", other),
+        other => raise!("tail() expected a list, found {}", other),
     }
 }
 
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let n = match &args[1] {
         Value::Num(n) if n.fract() == 0.0 && *n >= 0.0 => *n as usize,
-        other => panic!(
+        other => raise!(
             "nth[1] expected a valid positive integer, but found {}",
             other
         )?,
@@ -119,7 +119,7 @@ pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
 
     match &args[0] {
         Value::List(xs) => Ok(xs.index(n)),
-        other => panic!("nth() expected a list, found {}", other),
+        other => raise!("nth() expected a list, found {}", other),
     }
 }
 
