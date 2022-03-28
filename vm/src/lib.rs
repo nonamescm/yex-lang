@@ -273,10 +273,7 @@ impl VirtualMachine {
 
     fn invoke(&mut self, name: Symbol, arity: usize) -> InterpretResult<()> {
         let value = self.pop();
-        let ty = match value {
-            Value::Type(ty) => return self.invoke_static(&ty, name, arity),
-            _ => value.type_of(),
-        };
+        let ty = value.type_of();
 
         let mut args = stackvec![];
         let mut i = 1;
@@ -303,27 +300,6 @@ impl VirtualMachine {
         match &*method.body {
             FnKind::Bytecode(bt) => self.call_bytecode(bt, args),
             FnKind::Native(f) => self.call_native(*f, args),
-        }
-    }
-
-    fn invoke_static(&mut self, ty: &YexType, name: Symbol, arity: usize) -> InterpretResult<()> {
-        let mut args = stackvec![];
-        for _ in 0..arity {
-            args.push(self.pop());
-        }
-
-        let field = if let Some(field) = ty.fields.get(&name) {
-            field
-        } else {
-            panic!("Undefined method: {}", name)?
-        };
-
-        match field {
-            Value::Fn(f) => match &*f.body {
-                FnKind::Bytecode(bt) => self.call_bytecode(bt, args),
-                FnKind::Native(f) => self.call_native(*f, args),
-            },
-            _ => unreachable!(),
         }
     }
 
