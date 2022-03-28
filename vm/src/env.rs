@@ -155,7 +155,7 @@ impl EnvTable {
     }
 
     /// Iterates over the table
-    pub fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
+    fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
         unsafe {
             slice::from_raw_parts(self.entries, self.count)
                 .iter()

@@ -152,7 +152,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("num", num);
     insert_fn!("exit", exit);
     insert_fn!("raise", raise);
-    insert_fn!("format", format);
+    insert_fn!("format", format, 2);
 
     insert!("Nil", Value::Type(GcRef::new(YexType::nil())));
     insert!("Bool", Value::Type(GcRef::new(YexType::bool())));

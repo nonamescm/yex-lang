@@ -181,7 +181,7 @@ impl std::fmt::Display for Value {
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
             Type(t) => format!("<type({})>", t.name),
-            Instance(i) => format!("{}", **i),
+            Instance(i) => format!("<instance({})>", i.ty.name),
             Table(t) => format!("{t}"),
             Bool(b) => b.to_string(),
         };
