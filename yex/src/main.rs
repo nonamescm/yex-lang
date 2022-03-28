@@ -21,13 +21,11 @@ fn eval_file(file: &str) {
 
     let mut vm = VirtualMachine::default();
 
-
     vm.set_consts(ct);
     if let Err(e) = vm.run(&bt) {
         eprintln!("{}", e);
         exit(1);
     }
-
 }
 
 fn start(args: Vec<String>) -> i32 {

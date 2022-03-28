@@ -138,7 +138,6 @@ impl std::fmt::Display for TokenType {
             Self::Dot => ".".into(),
 
             Self::Eof => "<eof>".into(),
-            
         };
 
         write!(f, "{}", res)
