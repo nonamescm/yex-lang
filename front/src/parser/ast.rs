@@ -294,4 +294,14 @@ pub enum StmtKind {
         methods: Vec<Def>,
         init: Option<Def>,
     },
+    Expr(Expr),
+}
+
+impl From<Expr> for Stmt {
+    fn from(expr: Expr) -> Self {
+        Stmt {
+            location: expr.location,
+            kind: StmtKind::Expr(expr),
+        }
+    }
 }

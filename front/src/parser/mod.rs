@@ -28,10 +28,12 @@ impl Parser {
     pub fn parse(mut self) -> ParseResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
         while self.current.token != Tkt::Eof {
-            if self.current.token == Tkt::Type {
-                stmts.push(self.type_bind()?);
-            } else {
-                stmts.push(self.def_bind()?);
+            match self.current.token {
+                Tkt::Type => {
+                    stmts.push(self.type_bind()?);
+                }
+                Tkt::Def => stmts.push(self.def_bind()?),
+                _ => stmts.push(self.expr()?.into()),
             }
         }
 

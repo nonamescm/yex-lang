@@ -187,7 +187,12 @@ impl Compiler {
             ExprKind::If { cond, then, else_ } => self.if_expr(cond, then, else_, loc),
 
             ExprKind::Let { binds, body } => {
-                for Bind { value, bind, location: loc } in binds {
+                for Bind {
+                    value,
+                    bind,
+                    location: loc,
+                } in binds
+                {
                     // compiles the value
                     self.expr(value);
 
@@ -304,10 +309,12 @@ impl Compiler {
 
     fn stmt(&mut self, node: &Stmt) {
         match &node.kind {
+            // compiles a `def` statement into a `Savg` instruction
             StmtKind::Def(Def { bind, value, .. }) => {
                 self.expr(value);
                 self.emit_op(OpCode::Savg(bind.name), &node.location);
             }
+            // compiles a `type` declaration into YexType and save the type to a global name
             StmtKind::Type {
                 name,
                 methods,
@@ -322,6 +329,8 @@ impl Compiler {
                     &node.location,
                 );
             }
+            // compiles a expression statement
+            StmtKind::Expr(expr) => self.expr(expr),
         }
     }
 
