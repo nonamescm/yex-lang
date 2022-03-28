@@ -1,8 +1,8 @@
 use crate::{
     env::EnvTable,
     gc::GcRef,
-    literal::{nil, Value, TryGet, fun::FnKind},
-    raise, InterpretResult, YexType,
+    literal::{fun::FnKind, nil, TryGet, Value},
+    raise, InterpretResult, List, YexType,
 };
 use std::io::Write;
 
@@ -86,6 +86,26 @@ fn raise(args: &[Value]) -> InterpretResult<Value> {
     }
 }
 
+fn format(args: &[Value]) -> InterpretResult<Value> {
+    let format: String = args[0].get()?;
+    let args: List = args[1].get()?;
+    let mut idx = 0;
+
+    let res = format
+        .chars()
+        .map(|it| {
+            if it == '&' {
+                idx += 1;
+                format!("{}", args.index(idx))
+            } else {
+                it.to_string()
+            }
+        })
+        .collect::<String>();
+
+    Ok(Value::Str(GcRef::new(res)))
+}
+
 pub fn prelude() -> EnvTable {
     let mut prelude = EnvTable::with_capacity(64);
     macro_rules! insert_fn {
@@ -132,6 +152,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("num", num);
     insert_fn!("exit", exit);
     insert_fn!("raise", raise);
+    insert_fn!("format", format);
 
     insert!("Nil", Value::Type(GcRef::new(YexType::nil())));
     insert!("Bool", Value::Type(GcRef::new(YexType::bool())));
