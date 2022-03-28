@@ -201,9 +201,17 @@ impl VirtualMachine {
                 OpCode::Save(offset) => {
                     let value = self.pop();
 
+                    println!("{:?}", value);
+
+                    println!("{}", offset);
+                    println!("{}", self.used_locals);
+                    println!("{}", frame_locals);
+                    println!("{}", offset + (self.used_locals - frame_locals));
+                    println!();
+
                     self.used_locals += 1;
                     frame_locals += 1;
-                    self.locals[offset + self.used_locals - frame_locals] = value;
+                    self.locals[offset + (self.used_locals - frame_locals)] = value;
                 }
                 OpCode::Drop(_) => {
                     frame_locals -= 1;
@@ -293,8 +301,9 @@ impl VirtualMachine {
             None => panic!("Undefined method: {}", name)?,
         };
 
-        if method.arity != arity {
-            panic!("Expected {} arguments, found {}", method.arity, arity)?;
+        // arity + 1 because we push the receiver
+        if method.arity != arity + 1 {
+            panic!("Expected {} arguments, found {}", method.arity - 1, arity)?;
         }
 
         match &*method.body {
@@ -370,11 +379,13 @@ impl VirtualMachine {
 
     #[inline]
     fn call_bytecode(&mut self, bytecode: BytecodeRef, args: FnArgs) -> InterpretResult<()> {
+        self.used_locals += 1;
         for arg in args {
             self.push(arg);
         }
 
         self.run(bytecode)?;
+        self.used_locals -= 1;
         Ok(())
     }
 
