@@ -1,4 +1,6 @@
-use crate::{env::EnvTable, error::InterpretResult, gc::GcRef, Symbol, Value, VirtualMachine, raise};
+use crate::{
+    env::EnvTable, error::InterpretResult, gc::GcRef, raise, Symbol, Value, VirtualMachine,
+};
 
 use super::{fun::Fn, instance::Instance, list, table};
 
@@ -123,13 +125,14 @@ impl YexType {
     /// Creates a new Fn type.
     pub fn fun() -> Self {
         let methods = EnvTable::new();
-        Self::new(Symbol::from("Fn"), methods, vec![]).with_initializer(GcRef::new(
-            Fn::new_native(1, |_, _| {
+        Self::new(Symbol::from("Fn"), methods, vec![]).with_initializer(GcRef::new(Fn::new_native(
+            1,
+            |_, _| {
                 Ok(Value::Fn(GcRef::new(Fn::new_native(0, |_, _| {
                     Ok(Value::Nil)
                 }))))
-            }),
-        ))
+            },
+        )))
     }
     /// Creates a new Nil type.
     pub fn nil() -> Self {

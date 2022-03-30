@@ -398,7 +398,8 @@ impl VirtualMachine {
             FnKind::Bytecode(_) if fun.arity != arity => {
                 raise!(
                     "Expected function with arity {}, found {}",
-                    arity, fun.arity
+                    arity,
+                    fun.arity
                 )
             }
             FnKind::Bytecode(bytecode) if bytecode != frame => {

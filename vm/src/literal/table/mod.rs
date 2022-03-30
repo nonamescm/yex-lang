@@ -10,9 +10,7 @@ pub struct Table {
 }
 impl Default for Table {
     fn default() -> Self {
-        Self {
-            items: List::new(),
-        }
+        Self { items: List::new() }
     }
 }
 impl Table {
