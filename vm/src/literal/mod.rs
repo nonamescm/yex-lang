@@ -30,6 +30,48 @@ impl From<bool> for Value {
     }
 }
 
+impl From<f64> for Value {
+    fn from(i: f64) -> Self {
+        Value::Num(i)
+    }
+}
+
+impl From<String> for Value {
+    fn from(s: String) -> Self {
+        Value::Str(GcRef::new(s))
+    }
+}
+
+impl From<Symbol> for Value {
+    fn from(s: Symbol) -> Self {
+        Value::Sym(s)
+    }
+}
+
+impl From<Instance> for Value {
+    fn from(i: Instance) -> Self {
+        Value::Instance(GcRef::new(i))
+    }
+}
+
+impl From<YexType> for Value {
+    fn from(y: YexType) -> Self {
+        Value::Type(GcRef::new(y))
+    }
+}
+
+impl From<List> for Value {
+    fn from(l: List) -> Self {
+        Value::List(l)
+    }
+}
+
+impl From<Table> for Value {
+    fn from(t: Table) -> Self {
+        Value::Table(t)
+    }
+}
+
 /// Immediate values that can be consumed
 #[derive(Debug, PartialEq)]
 pub enum Value {
