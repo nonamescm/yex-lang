@@ -174,7 +174,7 @@ impl Lexer {
                 self.next();
                 TokenType::Cons
             }
-            ':' if !self.peek_at(1).is_whitespace() => {
+            ':' => {
                 let sym = self.take_while(|c| c.is_alphanumeric() || c == '_')?;
 
                 match sym.as_str() {
