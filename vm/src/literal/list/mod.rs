@@ -109,6 +109,18 @@ impl List {
         }
         list
     }
+
+    /// drop n items from Self
+    #[must_use]
+    pub fn drop(&self, mut len: usize) -> Self {
+        let mut head = self.head.clone();
+        while len > 0 {
+            head = head.map(|node| node.next.clone()).flatten();
+            len -= 1;
+        }
+
+        Self { head }
+    }
 }
 
 impl std::fmt::Display for List {
