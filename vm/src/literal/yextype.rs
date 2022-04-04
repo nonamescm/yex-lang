@@ -1,6 +1,8 @@
-use crate::{env::EnvTable, error::InterpretResult, gc::GcRef, Symbol, Value, VirtualMachine, raise};
+use crate::{
+    env::EnvTable, error::InterpretResult, gc::GcRef, raise, Symbol, Value, VirtualMachine,
+};
 
-use super::{fun::Fn, instance::Instance, list, table};
+use super::{fun::Fn, instance::Instance, list, str, table};
 
 #[derive(Debug, PartialEq)]
 /// A Yex user-defined type.
@@ -106,16 +108,21 @@ impl YexType {
     pub fn sym() -> Self {
         let methods = EnvTable::new();
         Self::new(Symbol::from("Sym"), methods, vec![]).with_initializer(GcRef::new(
-            Fn::new_native(1, |_, _| Ok(Value::Sym(Symbol::from("nil")))),
+            Fn::new_native(1, |_, _| Ok(Symbol::from(":").into())),
         ))
     }
 
     /// Creates a new Str type.
     pub fn str() -> Self {
-        let methods = EnvTable::new();
-        Self::new(Symbol::from("Str"), methods, vec![]).with_initializer(GcRef::new(
-            Fn::new_native(1, |_, _| Ok(Value::Str(GcRef::new(String::from(""))))),
-        ))
+        let mut methods = EnvTable::new();
+
+        methods.insert(
+            Symbol::new("get"),
+            Value::Fn(GcRef::new(Fn::new_native(2, str::methods::get))),
+        );
+
+        Self::new(Symbol::from("Str"), methods, vec![])
+            .with_initializer(GcRef::new(Fn::new_native(1, str::methods::init)))
     }
 
     /// Creates a new Bool type.
@@ -128,13 +135,14 @@ impl YexType {
     /// Creates a new Fn type.
     pub fn fun() -> Self {
         let methods = EnvTable::new();
-        Self::new(Symbol::from("Fn"), methods, vec![]).with_initializer(GcRef::new(
-            Fn::new_native(1, |_, _| {
+        Self::new(Symbol::from("Fn"), methods, vec![]).with_initializer(GcRef::new(Fn::new_native(
+            1,
+            |_, _| {
                 Ok(Value::Fn(GcRef::new(Fn::new_native(0, |_, _| {
                     Ok(Value::Nil)
                 }))))
-            }),
-        ))
+            },
+        )))
     }
     /// Creates a new Nil type.
     pub fn nil() -> Self {

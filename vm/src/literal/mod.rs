@@ -9,6 +9,7 @@ pub mod instance;
 pub mod list;
 pub mod symbol;
 pub mod table;
+pub mod str;
 pub mod yextype;
 use crate::{error::InterpretResult, gc::GcRef, raise};
 
