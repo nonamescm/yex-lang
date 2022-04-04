@@ -78,10 +78,11 @@ impl Compiler {
         }
     }
 
-    fn emit_save(&mut self, bind: VarDecl, node: &Location) {
+    fn emit_save(&mut self, bind: VarDecl, node: &Location) -> usize {
         let len = self.scope().locals.len() + 1;
         self.scope_mut().locals.entry(bind.name).or_insert(len);
         self.emit_op(OpCode::Save(len), node);
+        len
     }
 
     fn if_expr(&mut self, cond: &Expr, then: &Expr, else_: &Expr, loc: &Location) {
@@ -172,6 +173,18 @@ impl Compiler {
                 } else {
                     self.emit_op(OpCode::Call(args.len()), loc);
                 }
+            }
+
+            ExprKind::Loop { start, counter, body } => {
+                self.expr(start);
+                let counter_ptr = self.emit_save(*counter, loc);
+
+                let loop_label = self.scope().opcodes.len();
+                self.expr(body);
+
+                self.emit_op(OpCode::Save(counter_ptr), loc);
+
+                self.emit_op(OpCode::Jmp(loop_label), loc);
             }
 
             ExprKind::Var(name) => {

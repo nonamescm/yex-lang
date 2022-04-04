@@ -205,6 +205,7 @@ impl Parser {
             Tkt::If => self.condition()?,
             Tkt::Fn => self.fn_()?,
             Tkt::Become => self.become_()?,
+            Tkt::Loop => self.loop_()?,
             _ => self.logic_or()?,
         };
 
@@ -293,6 +294,32 @@ impl Parser {
         }
     }
 
+    fn loop_(&mut self) -> ParseResult<Expr> {
+        self.expect(Tkt::Loop)?;
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let start = self.expr()?;
+        let start = Box::new(start);
+
+        self.expect(Tkt::Comma)?;
+
+        let counter = self.var_decl()?;
+        self.expect(Tkt::In)?;
+
+        let body = self.expr()?;
+
+        Ok(Expr::new(
+            ExprKind::Loop {
+                start,
+                counter,
+                body: Box::new(body),
+            },
+            line,
+            column,
+        ))
+    }
+
     fn fn_(&mut self) -> ParseResult<Expr> {
         self.expect(Tkt::Fn)?;
         self.function()
@@ -333,15 +360,10 @@ impl Parser {
         let line = self.current.line;
         let column = self.current.column;
 
-        let name = match take(&mut self.current.token) {
-            Tkt::Name(id) => id,
-            other => self.throw(format!("Expected name, found `{}`", other))?,
-        };
-
-        self.next()?;
+        let name = self.var_decl()?;
         let value = self.function()?;
 
-        Ok(Bind::new(VarDecl::new(name), Box::new(value), line, column))
+        Ok(Bind::new(name, Box::new(value), line, column))
     }
 
     fn bind(&mut self) -> ParseResult<Bind> {

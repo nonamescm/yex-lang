@@ -156,6 +156,12 @@ pub enum ExprKind {
         tail: bool,
     },
 
+    Loop {
+        start: Box<Expr>,
+        counter: VarDecl,
+        body: Box<Expr>,
+    },
+
     Field {
         obj: Box<Expr>,
         field: VarDecl,
