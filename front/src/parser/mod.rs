@@ -204,6 +204,7 @@ impl Parser {
             Tkt::Let => self.let_()?,
             Tkt::If => self.condition()?,
             Tkt::Fn => self.fn_()?,
+            Tkt::Become => self.become_()?,
             _ => self.logic_or()?,
         };
 
@@ -268,6 +269,28 @@ impl Parser {
         self.next()?;
 
         Ok(args)
+    }
+
+    fn become_(&mut self) -> ParseResult<Expr> {
+        self.expect(Tkt::Become)?;
+
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let callee = self.expr()?;
+
+        match callee.kind {
+            ExprKind::App { callee, args, .. } => Ok(Expr::new(
+                ExprKind::App {
+                    callee,
+                    args,
+                    tail: true,
+                },
+                line,
+                column,
+            )),
+            _ => self.throw("Become can only be used on function calls"),
+        }
     }
 
     fn fn_(&mut self) -> ParseResult<Expr> {
@@ -642,6 +665,7 @@ impl Parser {
             callee = Expr::new(
                 ExprKind::App {
                     callee: Box::new(callee),
+                    tail: false,
                     args,
                 },
                 line,

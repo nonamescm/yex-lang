@@ -153,6 +153,7 @@ pub enum ExprKind {
     App {
         callee: Box<Expr>,
         args: Vec<Expr>,
+        tail: bool,
     },
 
     Field {

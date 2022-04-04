@@ -156,7 +156,7 @@ impl Compiler {
                 self.emit_const(Value::Fn(func), loc);
             }
 
-            ExprKind::App { callee, args } => {
+            ExprKind::App { callee, args, tail } => {
                 // iterate over the arguments
                 // pushing them onto the stack
                 for arg in args.iter().rev() {
@@ -167,7 +167,11 @@ impl Compiler {
                 self.expr(callee);
 
                 // emits the `Call` opcode
-                self.emit_op(OpCode::Call(args.len()), loc);
+                if *tail {
+                    self.emit_op(OpCode::TCall(args.len()), loc);
+                } else {
+                    self.emit_op(OpCode::Call(args.len()), loc);
+                }
             }
 
             ExprKind::Var(name) => {
@@ -252,13 +256,13 @@ impl Compiler {
 
             ExprKind::List(xs) => {
                 // emits the empty list
-                self.emit_const(Value::List(List::new()), &node.location);
+                self.emit_const(Value::List(List::new()), loc);
 
                 // prepend each element to the list, in the reverse order
                 // since it's a linked list
                 for x in xs.iter().rev() {
                     self.expr(x);
-                    self.emit_op(OpCode::Prep, &node.location);
+                    self.emit_op(OpCode::Prep, loc);
                 }
             }
 
@@ -267,23 +271,24 @@ impl Compiler {
                 self.expr(head);
 
                 // prepend the head to the tail
-                self.emit_op(OpCode::Prep, &node.location);
+                self.emit_op(OpCode::Prep, loc);
             }
 
             ExprKind::UnOp(op, right) => {
                 self.expr(right);
-                self.emit_ops((*op).into(), &node.location);
+                self.emit_ops((*op).into(), loc);
             }
 
             ExprKind::Seq { left, right } => {
                 self.expr(left);
+                self.emit_op(OpCode::Pop, loc);
                 self.expr(right);
             }
 
             // compiles field access
             ExprKind::Field { obj, field } => {
                 self.expr(obj);
-                self.emit_op(OpCode::Get(field.name), &node.location);
+                self.emit_op(OpCode::Get(field.name), loc);
             }
 
             // compiles type instantiation
@@ -293,7 +298,7 @@ impl Compiler {
                 }
 
                 self.expr(ty);
-                self.emit_op(OpCode::New(args.len()), &node.location);
+                self.emit_op(OpCode::New(args.len()), loc);
             }
 
             ExprKind::Invoke { obj, field, args } => {
@@ -302,7 +307,7 @@ impl Compiler {
                 }
 
                 self.expr(obj);
-                self.emit_op(OpCode::Invk(field.name, args.len()), &node.location);
+                self.emit_op(OpCode::Invk(field.name, args.len()), loc);
             }
         }
     }
