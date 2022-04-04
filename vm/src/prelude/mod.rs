@@ -95,8 +95,12 @@ fn format(args: &[Value]) -> InterpretResult<Value> {
         .chars()
         .map(|it| {
             if it == '&' {
+                let str = match args.index(idx) {
+                    Value::Str(s) => s.to_string(),
+                    other => format!("{}", other),
+                };
                 idx += 1;
-                format!("{}", args.index(idx))
+                str
             } else {
                 it.to_string()
             }
