@@ -175,7 +175,11 @@ impl Compiler {
                 }
             }
 
-            ExprKind::Loop { start, counter, body } => {
+            ExprKind::Loop {
+                start,
+                counter,
+                body,
+            } => {
                 self.expr(start);
                 let counter_ptr = self.emit_save(*counter, loc);
 

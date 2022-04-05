@@ -82,6 +82,7 @@ impl YexType {
         Self::new(Symbol::from("List"), methods, vec![])
             .with_initializer(GcRef::new(Fn::new_native(1, list::methods::init)))
     }
+
     /// Creates a new Table type.
     pub fn table() -> Self {
         let mut methods = EnvTable::new();
@@ -97,6 +98,7 @@ impl YexType {
         Self::new(Symbol::from("Table"), methods, vec![])
             .with_initializer(GcRef::new(Fn::new_native(1, table::methods::init)))
     }
+
     /// Creates a new Num type.
     pub fn num() -> Self {
         let methods = EnvTable::new();
@@ -144,6 +146,7 @@ impl YexType {
             },
         )))
     }
+
     /// Creates a new Nil type.
     pub fn nil() -> Self {
         let methods = EnvTable::new();

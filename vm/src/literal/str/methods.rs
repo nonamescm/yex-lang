@@ -1,7 +1,8 @@
 use crate::{
     error::InterpretResult,
+    gc::GcRef,
     literal::{nil, TryGet},
-    raise, Value, VirtualMachine, gc::GcRef,
+    raise, Value, VirtualMachine,
 };
 
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
