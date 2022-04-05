@@ -206,7 +206,7 @@ impl Parser {
             Tkt::Fn => self.fn_()?,
             Tkt::Become => self.become_()?,
             Tkt::Loop => self.loop_()?,
-            _ => self.logic_or()?,
+            _ => self.pipe()?,
         };
 
         while let Ok(right) = self.expr() {
@@ -408,6 +408,25 @@ impl Parser {
         self.expect(Tkt::End)?;
 
         Ok(Expr::new(ExprKind::Let { binds, body }, line, column))
+    }
+
+    fn pipe(&mut self) -> ParseResult<Expr> {
+        let mut left = self.logic_or()?;
+
+        while let Tkt::Pipe = self.current.token {
+            self.next()?;
+
+            let args = vec![take(&mut left)];
+            let callee = Box::new(self.logic_or()?);
+            let tail = false;
+
+            left.kind = ExprKind::App { callee, args, tail };
+
+            left.location.line = self.current.line;
+            left.location.column = self.current.column;
+        }
+
+        Ok(left)
     }
 
     fn logic_or(&mut self) -> ParseResult<Expr> {
