@@ -209,12 +209,12 @@ impl Parser {
             _ => self.logic_or()?,
         };
 
-        while self.current.token == Tkt::Seq {
-            self.next()?;
+        while let Ok(right) = self.expr() {
             expr.kind = ExprKind::Seq {
                 left: Box::new(take(&mut expr)),
-                right: Box::new(self.expr()?),
+                right: Box::new(right),
             };
+
             expr.location = Location {
                 line: self.current.line,
                 column: self.current.column,
@@ -236,6 +236,8 @@ impl Parser {
 
         self.expect(Tkt::Else)?;
         let else_ = self.expr()?;
+
+        self.expect(Tkt::End)?;
 
         Ok(Expr::new(
             ExprKind::If {
@@ -309,6 +311,8 @@ impl Parser {
 
         let body = self.expr()?;
 
+        self.expect(Tkt::End)?;
+
         Ok(Expr::new(
             ExprKind::Loop {
                 start,
@@ -330,10 +334,9 @@ impl Parser {
         let column = self.current.column;
 
         let args = self.args()?;
-
-        self.expect(Tkt::Assign)?;
-
         let body = self.expr()?;
+
+        self.expect(Tkt::End)?;
 
         Ok(Expr::new(
             ExprKind::Lambda {
@@ -401,6 +404,8 @@ impl Parser {
         let column = self.current.column;
 
         let body = Box::new(self.expr()?);
+
+        self.expect(Tkt::End)?;
 
         Ok(Expr::new(ExprKind::Let { binds, body }, line, column))
     }
