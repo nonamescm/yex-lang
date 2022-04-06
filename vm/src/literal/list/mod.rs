@@ -125,8 +125,7 @@ impl List {
     /// collect the list into a string, separating elements with `sep`
     #[must_use]
     pub fn join(&self, sep: &str) -> String {
-        let list = self.rev();
-        let mut head = list.head;
+        let mut head = self.head.clone();
 
         let mut str = String::new();
 
