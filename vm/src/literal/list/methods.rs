@@ -138,6 +138,21 @@ pub fn drop(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
     }
 }
 
+pub fn join(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
+    let sep = match &args[1] {
+        Value::Str(s) => s.clone(),
+        other => raise!(
+            "join[1] expected a string, but found {}",
+            other
+        )?,
+    };
+
+    match &args[0] {
+        Value::List(xs) => Ok(xs.join(&sep).into()),
+        _ => unreachable!(),
+    }
+}
+
 pub fn init(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
     Ok(Value::List(List::new()))
 }

@@ -121,6 +121,30 @@ impl List {
 
         Self { head }
     }
+
+    /// collect the list into a string, separating elements with `sep`
+    #[must_use]
+    pub fn join(&self, sep: &str) -> String {
+        let list = self.rev();
+        let mut head = list.head;
+
+        let mut str = String::new();
+
+        while let Some(node) = head {
+            match &node.elem {
+                Value::Str(s) => str.push_str(s),
+                val => str.push_str(&val.to_string()),
+            };
+
+            if node.next.is_some() {
+                str.push_str(sep);
+            }
+
+            head = node.next.clone();
+        }
+
+        str
+    }
 }
 
 impl std::fmt::Display for List {
