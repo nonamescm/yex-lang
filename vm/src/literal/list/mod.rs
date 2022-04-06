@@ -115,7 +115,7 @@ impl List {
     pub fn drop(&self, mut len: usize) -> Self {
         let mut head = self.head.clone();
         while len > 0 {
-            head = head.map(|node| node.next.clone()).flatten();
+            head = head.and_then(|node| node.next.clone());
             len -= 1;
         }
 
