@@ -1,4 +1,4 @@
-use crate::{gc::GcRef, EnvTable, YexType, Value};
+use crate::{gc::GcRef, EnvTable, Value, YexType};
 
 #[derive(Debug, PartialEq)]
 pub struct Instance {

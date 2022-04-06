@@ -2,7 +2,7 @@ use crate::{
     env::EnvTable, error::InterpretResult, gc::GcRef, raise, Symbol, Value, VirtualMachine,
 };
 
-use super::{fun::Fn, instance::Instance, list, str, table, file};
+use super::{file, fun::Fn, instance::Instance, list, str, table};
 
 #[derive(Debug, PartialEq)]
 /// A Yex user-defined type.

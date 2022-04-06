@@ -2,7 +2,7 @@ use crate::{
     error::InterpretResult,
     gc::GcRef,
     literal::{nil, TryGet},
-    raise, Value, VirtualMachine, List,
+    raise, List, Value, VirtualMachine,
 };
 
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
@@ -28,7 +28,10 @@ pub fn split(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
     let string: String = args[0].get()?;
     let separator: String = args[1].get()?;
 
-    let list: List = string.split(&separator).map(|str| str.to_owned().into()).collect();
+    let list: List = string
+        .split(&separator)
+        .map(|str| str.to_owned().into())
+        .collect();
 
     Ok(list.into())
 }

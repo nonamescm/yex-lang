@@ -141,10 +141,7 @@ pub fn drop(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
 pub fn join(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let sep = match &args[1] {
         Value::Str(s) => s.clone(),
-        other => raise!(
-            "join[1] expected a string, but found {}",
-            other
-        )?,
+        other => raise!("join[1] expected a string, but found {}", other)?,
     };
 
     match &args[0] {
