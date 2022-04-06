@@ -120,6 +120,8 @@ impl Parser {
         self.expect(Tkt::Assign)?;
         let value = self.expr()?;
 
+        self.expect(Tkt::End)?;
+
         Ok(Stmt::new(
             StmtKind::Def(Def {
                 bind,
@@ -199,15 +201,19 @@ impl Parser {
         }
     }
 
+    fn single_expr(&mut self) -> ParseResult<Expr> {
+        match self.current.token {
+            Tkt::Let => self.let_(),
+            Tkt::If => self.condition(),
+            Tkt::Fn => self.fn_(),
+            Tkt::Become => self.become_(),
+            Tkt::Loop => self.loop_(),
+            _ => self.pipe(),
+        }
+    }
+
     fn expr(&mut self) -> ParseResult<Expr> {
-        let mut expr = match self.current.token {
-            Tkt::Let => self.let_()?,
-            Tkt::If => self.condition()?,
-            Tkt::Fn => self.fn_()?,
-            Tkt::Become => self.become_()?,
-            Tkt::Loop => self.loop_()?,
-            _ => self.pipe()?,
-        };
+        let mut expr = self.single_expr()?;
 
         while let Ok(right) = self.expr() {
             expr.kind = ExprKind::Seq {
@@ -395,6 +401,11 @@ impl Parser {
                 Tkt::Lparen => self.bind_fn()?,
                 _ => self.bind()?,
             };
+
+            if self.current.token != Tkt::In {
+                self.expect_and_skip(Tkt::Comma)?;
+            }
+
             binds.push(bind);
         }
 
