@@ -33,7 +33,7 @@ pub fn split(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
         .map(|str| str.to_owned().into())
         .collect();
 
-    Ok(list.into())
+    Ok(list.rev().into())
 }
 
 pub fn init(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
