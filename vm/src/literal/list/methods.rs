@@ -22,7 +22,7 @@ pub fn map(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
     };
     let fun = &args[1];
 
-    let xs = xs
+    let xs: InterpretResult<List> = xs
         .iter()
         .map(|it| {
             vm.push(it);
@@ -35,9 +35,9 @@ pub fn map(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
         .try_fold(List::new(), |xs, x| match x {
             Ok(x) => Ok(xs.prepend(x)),
             Err(e) => Err(e),
-        })?;
+        });
 
-    Ok(Value::List(xs.rev()))
+    Ok(Value::List(xs?.rev()))
 }
 
 pub fn fold(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {

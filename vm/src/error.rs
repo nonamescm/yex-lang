@@ -1,4 +1,6 @@
-use std::fmt;
+use std::{fmt, io};
+
+use crate::{COLUMN, LINE};
 
 #[derive(Debug)]
 pub struct InterpretError {
@@ -12,4 +14,15 @@ impl fmt::Display for InterpretError {
         write!(f, "[{}:{}] {}", self.line, self.column, self.err)
     }
 }
+
+impl From<io::Error> for InterpretError {
+    fn from(err: io::Error) -> Self {
+        InterpretError {
+            err: err.to_string(),
+            line: unsafe { LINE },
+            column: unsafe { COLUMN },
+        }
+    }
+}
+
 pub type InterpretResult<T> = Result<T, InterpretError>;

@@ -1,4 +1,4 @@
-use crate::{gc::GcRef, EnvTable, YexType};
+use crate::{gc::GcRef, EnvTable, YexType, Value};
 
 #[derive(Debug, PartialEq)]
 pub struct Instance {
@@ -10,5 +10,10 @@ impl Instance {
     /// Create a new instance
     pub fn new(ty: GcRef<YexType>, fields: EnvTable) -> Self {
         Instance { ty, fields }
+    }
+
+    /// Get the field value
+    pub fn get_field<S: AsRef<str>>(&self, name: S) -> Value {
+        self.fields.get(&name.as_ref().into()).unwrap()
     }
 }

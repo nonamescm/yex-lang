@@ -2,7 +2,7 @@ use crate::{
     env::EnvTable, error::InterpretResult, gc::GcRef, raise, Symbol, Value, VirtualMachine,
 };
 
-use super::{fun::Fn, instance::Instance, list, str, table};
+use super::{fun::Fn, instance::Instance, list, str, table, file};
 
 #[derive(Debug, PartialEq)]
 /// A Yex user-defined type.
@@ -152,6 +152,38 @@ impl YexType {
         let methods = EnvTable::new();
         Self::new(Symbol::from("Nil"), methods, vec![])
             .with_initializer(GcRef::new(Fn::new_native(1, |_, _| Ok(Value::Nil))))
+    }
+
+    /// Creates a new File type.
+    pub fn file() -> Self {
+        let mut methods = EnvTable::new();
+
+        methods.insert(
+            Symbol::new("read"),
+            Value::Fn(GcRef::new(Fn::new_native(1, file::methods::read))),
+        );
+
+        methods.insert(
+            Symbol::new("write"),
+            Value::Fn(GcRef::new(Fn::new_native(2, file::methods::write))),
+        );
+
+        methods.insert(
+            Symbol::new("append"),
+            Value::Fn(GcRef::new(Fn::new_native(2, file::methods::append))),
+        );
+
+        methods.insert(
+            Symbol::new("delete"),
+            Value::Fn(GcRef::new(Fn::new_native(1, file::methods::delete))),
+        );
+
+        methods.insert(
+            Symbol::new("create"),
+            Value::Fn(GcRef::new(Fn::new_native(1, file::methods::create))),
+        );
+
+        Self::new("File".into(), methods, vec!["path".into()])
     }
 }
 

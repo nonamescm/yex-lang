@@ -4,6 +4,7 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub},
 };
 
+pub mod file;
 pub mod fun;
 pub mod instance;
 pub mod list;
