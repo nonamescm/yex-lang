@@ -216,6 +216,7 @@ impl Lexer {
                 }
             }
 
+
             // BitWise
             '&' if self.peek_at(1) == '&' && self.peek_at(2) == '&' => {
                 self.next();
@@ -261,6 +262,18 @@ impl Lexer {
             }
             '>' => TokenType::Greater,
             '.' => TokenType::Dot,
+
+            // Logical
+            '&' if self.peek_at(1) == '&' => {
+                self.next();
+                TokenType::And
+            }
+            '|' if self.peek_at(1) == '|' => {
+                self.next();
+                TokenType::Or
+            }
+            '!' => TokenType::Not,
+
             EOF => TokenType::Eof,
 
             c if c.is_whitespace() => {
