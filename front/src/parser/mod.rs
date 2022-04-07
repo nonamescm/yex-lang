@@ -675,8 +675,7 @@ impl Parser {
     }
 
     fn call(&mut self) -> ParseResult<Expr> {
-        let mut callee = self.primary()?;
-        self.next()?;
+        let mut callee = self.method_ref()?;
 
         while self.current.token == Tkt::Lparen {
             let args = self.call_args()?;
@@ -697,6 +696,28 @@ impl Parser {
 
         Ok(callee)
     }
+
+    fn method_ref(&mut self) -> ParseResult<Expr> {
+        let mut ty = self.primary()?;
+        self.next()?;
+
+        while self.current.token == Tkt::Len {
+            self.next()?;
+            let method = self.var_decl()?;
+
+            ty = Expr::new(
+                ExprKind::MethodRef {
+                    ty: Box::new(ty),
+                    method,
+                },
+                self.current.line,
+                self.current.column,
+            );
+        }
+
+        Ok(ty)
+    }
+
 
     fn list(&mut self) -> ParseResult<Expr> {
         let line = self.current.line;

@@ -287,6 +287,12 @@ impl Compiler {
                 self.emit_op(OpCode::Get(field.name), loc);
             }
 
+            // compiles a method reference access
+            ExprKind::MethodRef { ty, method } => {
+                self.expr(ty);
+                self.emit_op(OpCode::Ref(method.name), loc);
+            }
+
             // compiles type instantiation
             ExprKind::New { ty, args } => {
                 for arg in args.iter().rev() {
@@ -303,7 +309,16 @@ impl Compiler {
                 }
 
                 self.expr(obj);
-                self.emit_op(OpCode::Invk(field.name, args.len()), loc);
+
+                // duplicates the object on the stack
+                self.emit_op(OpCode::Dup, loc);
+
+                // gets the type of the value on the top of the stack, and then returns the method
+                self.emit_op(OpCode::Type, loc);
+                self.emit_op(OpCode::Ref(field.name), loc);
+
+                // calls the method
+                self.emit_op(OpCode::Call(args.len() + 1), loc);
             }
         }
     }

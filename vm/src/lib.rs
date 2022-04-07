@@ -16,6 +16,7 @@ use gc::GcRef;
 use literal::{
     fun::{FnArgs, NativeFn},
     yextype::instantiate,
+    TryGet,
 };
 
 use crate::error::InterpretResult;
@@ -42,10 +43,18 @@ static mut COLUMN: usize = 1;
 #[macro_export]
 #[doc(hidden)]
 macro_rules! raise {
+    ($($tt:tt)+) => {{
+        Err($crate::raise_err!($($tt)+))
+    }}
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! raise_err {
     ($($tt:tt)+) => {
         unsafe {
             let msg = format!($($tt)+);
-            Err($crate::error::InterpretError { line: $crate::LINE, column: $crate::COLUMN, err: msg })
+            $crate::error::InterpretError { line: $crate::LINE, column: $crate::COLUMN, err: msg }
         }
     }
 }
@@ -260,7 +269,20 @@ impl VirtualMachine {
 
                     self.push(value);
                 }
-                OpCode::Invk(name, arity) => self.invoke(name, arity)?,
+                OpCode::Type => {
+                    let value = self.pop();
+                    self.push(Value::Type(value.type_of()));
+                }
+                OpCode::Ref(method) => {
+                    let ty: GcRef<YexType> = self.pop().get()?;
+
+                    let method = ty
+                        .fields
+                        .get(&method)
+                        .ok_or(raise_err!("Undefined method: {}", method))?;
+
+                    self.push(method);
+                }
             }
 
             ip += 1;
@@ -269,39 +291,6 @@ impl VirtualMachine {
         self.used_locals -= frame_locals;
 
         Ok(())
-    }
-
-    fn invoke(&mut self, name: Symbol, arity: usize) -> InterpretResult<()> {
-        let value = self.pop();
-        let ty = value.type_of();
-
-        let mut args = stackvec![];
-        let mut i = 1;
-        for _ in 0..arity {
-            unsafe { args.insert_at(arity - i, self.pop()) };
-            i += 1;
-        }
-        unsafe { args.set_len(arity) };
-
-        args.push(value);
-
-        let method = match ty.fields.get(&name) {
-            Some(value) => match value {
-                Value::Fn(f) => f,
-                _ => unreachable!(),
-            },
-            None => raise!("Undefined method: {}", name)?,
-        };
-
-        // arity + 1 because we push the receiver
-        if method.arity != arity + 1 {
-            raise!("Expected {} arguments, found {}", method.arity - 1, arity)?;
-        }
-
-        match &*method.body {
-            FnKind::Bytecode(bt) => self.call_bytecode(bt, args),
-            FnKind::Native(f) => self.call_native(*f, args),
-        }
     }
 
     #[cfg(debug_assertions)]

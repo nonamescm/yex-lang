@@ -161,6 +161,11 @@ pub enum ExprKind {
         field: VarDecl,
     },
 
+    MethodRef {
+        ty: Box<Expr>,
+        method: VarDecl,
+    },
+
     Var(Symbol),
     Lit(Literal),
     List(Vec<Expr>),
@@ -175,6 +180,7 @@ pub enum ExprKind {
         tail: Box<Expr>,
     },
     Do(Vec<Expr>),
+
     Invoke {
         obj: Box<Expr>,
         field: VarDecl,

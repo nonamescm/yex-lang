@@ -167,10 +167,15 @@ pub enum OpCode {
     /// The stack layout after running it: [field-value]
     Get(Symbol),
 
-    /// Calls a method of a type
-    /// The stack layout before running this opcode: [instance, ...args]
-    /// The stack layout after running it: [return-value]
-    Invk(Symbol, usize),
+    /// Get the type of the value on the top of the stack
+    /// The stack layout before running this opcode: [instance]
+    /// The stack layout after running it: [type]
+    Type,
+
+    /// Get a reference to a function from a type
+    /// The stack layout before running this opcode: [type]
+    /// The stack layout after running it: [function-ref]
+    Ref(Symbol),
 }
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,
