@@ -173,6 +173,7 @@ impl Parser {
         self.skip(tokens)
     }
 
+    #[allow(dead_code)]
     fn peek(&mut self) -> ParseResult<&Token> {
         match self.lexer.peek().unwrap() {
             Ok(t) => Ok(t),
@@ -306,10 +307,6 @@ impl Parser {
         while self.current.token != Tkt::End {
             let expr = self.expr()?;
             body.push(expr);
-
-            if self.current.token != Tkt::End {
-                self.expect_and_skip(Tkt::Semicolon)?;
-            }
         }
 
         self.next()?;
@@ -328,46 +325,23 @@ impl Parser {
         Ok(VarDecl::new(name))
     }
 
-    fn bind_fn(&mut self) -> ParseResult<Bind> {
+    fn let_(&mut self) -> ParseResult<Expr> {
         let line = self.current.line;
         let column = self.current.column;
 
-        let name = self.var_decl()?;
-        let value = self.function()?;
-
-        Ok(Bind::new(name, Box::new(value), line, column))
-    }
-
-    fn bind(&mut self) -> ParseResult<Bind> {
-        if self.peek()?.token == Tkt::Lparen {
-            return self.bind_fn();
-        }
-
-        let line = self.current.line;
-        let column = self.current.column;
+        self.expect(Tkt::Let)?;
 
         let bind = self.var_decl()?;
 
         self.expect(Tkt::Assign)?;
+
         let value = self.expr()?;
 
-        Ok(Bind::new(bind, Box::new(value), line, column))
-    }
-
-    fn let_(&mut self) -> ParseResult<Expr> {
-        self.expect(Tkt::Let)?;
-
-        let bind = match self.peek()?.token {
-            Tkt::Lparen => self.bind_fn()?,
-            _ => self.bind()?,
-        };
-
-        self.next()?;
-
-        let line = self.current.line;
-        let column = self.current.column;
-
-        Ok(Expr::new(ExprKind::Let(bind), line, column))
+        Ok(Expr::new(
+            ExprKind::Let(Bind::new(bind, Box::new(value), line, column)),
+            line,
+            column,
+        ))
     }
 
     fn def_(&mut self) -> ParseResult<Expr> {
@@ -717,7 +691,6 @@ impl Parser {
 
         Ok(ty)
     }
-
 
     fn list(&mut self) -> ParseResult<Expr> {
         let line = self.current.line;

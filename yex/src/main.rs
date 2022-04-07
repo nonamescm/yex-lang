@@ -52,7 +52,7 @@ fn start(args: Vec<String>) -> i32 {
             continue;
         }
 
-        if line.starts_with("def") {
+        if line.starts_with("def") || line.starts_with("let") {
             match front::parse(line) {
                 Ok((bt, ct)) => {
                     vm.set_consts(ct);
