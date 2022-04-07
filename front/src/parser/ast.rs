@@ -142,10 +142,10 @@ pub enum ExprKind {
         then: Box<Expr>,
         else_: Box<Expr>,
     },
-    Let {
-        binds: Vec<Bind>,
-        body: Box<Expr>,
-    },
+
+    Let(Bind),
+    Def(Bind),
+
     Lambda {
         args: Vec<VarDecl>, // specifies the arguments name and types
         body: Box<Expr>,    // the function body
@@ -154,12 +154,6 @@ pub enum ExprKind {
         callee: Box<Expr>,
         args: Vec<Expr>,
         tail: bool,
-    },
-
-    Loop {
-        start: Box<Expr>,
-        counter: VarDecl,
-        body: Box<Expr>,
     },
 
     Field {
@@ -180,10 +174,7 @@ pub enum ExprKind {
         head: Box<Expr>,
         tail: Box<Expr>,
     },
-    Seq {
-        left: Box<Expr>,
-        right: Box<Expr>,
-    },
+    Do(Vec<Expr>),
     Invoke {
         obj: Box<Expr>,
         field: VarDecl,
@@ -279,28 +270,24 @@ impl Stmt {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum BindType {
-    Value,
-    Fn,
-}
-
 #[derive(Debug)]
 pub struct Def {
     pub value: Expr,
     pub bind: VarDecl,
-    pub bind_type: BindType,
 }
 
 #[derive(Debug)]
 pub enum StmtKind {
     Def(Def),
-    Type {
+    Let(Bind),
+
+    Class {
         name: VarDecl,
         params: Vec<VarDecl>,
         methods: Vec<Def>,
         init: Option<Def>,
     },
+
     Expr(Expr),
 }
 

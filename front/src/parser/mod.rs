@@ -6,7 +6,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{Bind, BindType, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl};
+use self::ast::{Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl};
 
 pub mod ast;
 
@@ -29,10 +29,13 @@ impl Parser {
         let mut stmts = Vec::new();
         while self.current.token != Tkt::Eof {
             match self.current.token {
-                Tkt::Type => {
+                Tkt::Class => {
                     stmts.push(self.type_bind()?);
                 }
-                Tkt::Def => stmts.push(self.def_bind()?),
+
+                Tkt::Def => stmts.push(self.def_global()?),
+                Tkt::Let => stmts.push(self.let_global()?),
+
                 _ => stmts.push(self.expr()?.into()),
             }
         }
@@ -40,12 +43,31 @@ impl Parser {
         Ok(stmts)
     }
 
+    pub fn let_global(&mut self) -> ParseResult<Stmt> {
+        let line = self.current.line;
+        let column = self.current.column;
+
+        self.expect(Tkt::Let)?;
+
+        let bind = self.var_decl()?;
+
+        self.expect(Tkt::Assign)?;
+
+        let value = Box::new(self.expr()?);
+
+        Ok(Stmt::new(
+            StmtKind::Let(Bind::new(bind, value, line, column)),
+            line,
+            column,
+        ))
+    }
+
     pub fn parse_expr(mut self) -> ParseResult<Expr> {
         self.expr()
     }
 
     fn type_bind(&mut self) -> ParseResult<Stmt> {
-        self.expect(Tkt::Type)?;
+        self.expect(Tkt::Class)?;
         let line = self.current.line;
         let column = self.current.column;
 
@@ -69,13 +91,10 @@ impl Parser {
         let mut init = None;
 
         while self.current.token != Tkt::End {
-            let def = match self.def_bind()?.kind {
+            let def = match self.def_global()?.kind {
                 StmtKind::Def(def) => def,
                 _ => unreachable!(),
             };
-            if def.bind_type != BindType::Fn {
-                self.throw("Expected method definition")?;
-            }
 
             if def.bind.name.as_str() == "init" {
                 init = Some(def);
@@ -94,7 +113,7 @@ impl Parser {
         self.next()?;
 
         Ok(Stmt::new(
-            StmtKind::Type {
+            StmtKind::Class {
                 name,
                 params,
                 methods,
@@ -105,56 +124,16 @@ impl Parser {
         ))
     }
 
-    fn def_bind(&mut self) -> ParseResult<Stmt> {
+    fn def_global(&mut self) -> ParseResult<Stmt> {
+        let line = self.current.line;
+        let column = self.current.column;
+
         self.expect(Tkt::Def)?;
 
-        if self.peek()?.token == Tkt::Lparen {
-            return self.def_fn();
-        }
-
-        let line = self.current.line;
-        let column = self.current.column;
-
         let bind = self.var_decl()?;
-
-        self.expect(Tkt::Assign)?;
-        let value = self.expr()?;
-
-        self.expect(Tkt::End)?;
-
-        Ok(Stmt::new(
-            StmtKind::Def(Def {
-                bind,
-                value,
-                bind_type: BindType::Value,
-            }),
-            line,
-            column,
-        ))
-    }
-
-    fn def_fn(&mut self) -> ParseResult<Stmt> {
-        let line = self.current.line;
-        let column = self.current.column;
-
-        let name = match take(&mut self.current.token) {
-            Tkt::Name(id) => id,
-            other => self.throw(format!("Expected name, found {}", other))?,
-        };
-
-        self.next()?;
         let value = self.function()?;
-        let bind = VarDecl::new(name);
 
-        Ok(Stmt::new(
-            StmtKind::Def(Def {
-                bind,
-                value,
-                bind_type: BindType::Fn,
-            }),
-            line,
-            column,
-        ))
+        Ok(Stmt::new(StmtKind::Def(Def { bind, value }), line, column))
     }
 
     fn next(&mut self) -> ParseResult<()> {
@@ -201,33 +180,15 @@ impl Parser {
         }
     }
 
-    fn single_expr(&mut self) -> ParseResult<Expr> {
+    fn expr(&mut self) -> ParseResult<Expr> {
         match self.current.token {
             Tkt::Let => self.let_(),
+            Tkt::Def => self.def_(),
             Tkt::If => self.condition(),
             Tkt::Fn => self.fn_(),
             Tkt::Become => self.become_(),
-            Tkt::Loop => self.loop_(),
             _ => self.pipe(),
         }
-    }
-
-    fn expr(&mut self) -> ParseResult<Expr> {
-        let mut expr = self.single_expr()?;
-
-        while let Ok(right) = self.expr() {
-            expr.kind = ExprKind::Seq {
-                left: Box::new(take(&mut expr)),
-                right: Box::new(right),
-            };
-
-            expr.location = Location {
-                line: self.current.line,
-                column: self.current.column,
-            };
-        }
-
-        Ok(expr)
     }
 
     fn condition(&mut self) -> ParseResult<Expr> {
@@ -302,34 +263,6 @@ impl Parser {
         }
     }
 
-    fn loop_(&mut self) -> ParseResult<Expr> {
-        self.expect(Tkt::Loop)?;
-        let line = self.current.line;
-        let column = self.current.column;
-
-        let start = self.expr()?;
-        let start = Box::new(start);
-
-        self.expect(Tkt::Comma)?;
-
-        let counter = self.var_decl()?;
-        self.expect(Tkt::In)?;
-
-        let body = self.expr()?;
-
-        self.expect(Tkt::End)?;
-
-        Ok(Expr::new(
-            ExprKind::Loop {
-                start,
-                counter,
-                body: Box::new(body),
-            },
-            line,
-            column,
-        ))
-    }
-
     fn fn_(&mut self) -> ParseResult<Expr> {
         self.expect(Tkt::Fn)?;
         self.function()
@@ -340,9 +273,8 @@ impl Parser {
         let column = self.current.column;
 
         let args = self.args()?;
-        let body = self.expr()?;
 
-        self.expect(Tkt::End)?;
+        let body = self.fn_body()?;
 
         Ok(Expr::new(
             ExprKind::Lambda {
@@ -352,6 +284,37 @@ impl Parser {
             line,
             column,
         ))
+    }
+
+    fn fn_body(&mut self) -> ParseResult<Expr> {
+        if self.current.token == Tkt::Colon {
+            self.next()?;
+            Ok(self.expr()?)
+        } else {
+            Ok(self.do_()?)
+        }
+    }
+
+    fn do_(&mut self) -> ParseResult<Expr> {
+        self.expect(Tkt::Do)?;
+
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let mut body = vec![];
+
+        while self.current.token != Tkt::End {
+            let expr = self.expr()?;
+            body.push(expr);
+
+            if self.current.token != Tkt::End {
+                self.expect_and_skip(Tkt::Semicolon)?;
+            }
+        }
+
+        self.next()?;
+
+        Ok(Expr::new(ExprKind::Do(body), line, column))
     }
 
     fn var_decl(&mut self) -> ParseResult<VarDecl> {
@@ -394,31 +357,33 @@ impl Parser {
     fn let_(&mut self) -> ParseResult<Expr> {
         self.expect(Tkt::Let)?;
 
-        let mut binds = vec![];
-
-        while self.current.token != Tkt::In {
-            let bind = match self.peek()?.token {
-                Tkt::Lparen => self.bind_fn()?,
-                _ => self.bind()?,
-            };
-
-            if self.current.token != Tkt::In {
-                self.expect_and_skip(Tkt::Comma)?;
-            }
-
-            binds.push(bind);
-        }
+        let bind = match self.peek()?.token {
+            Tkt::Lparen => self.bind_fn()?,
+            _ => self.bind()?,
+        };
 
         self.next()?;
 
         let line = self.current.line;
         let column = self.current.column;
 
-        let body = Box::new(self.expr()?);
+        Ok(Expr::new(ExprKind::Let(bind), line, column))
+    }
 
-        self.expect(Tkt::End)?;
+    fn def_(&mut self) -> ParseResult<Expr> {
+        self.expect(Tkt::Def)?;
 
-        Ok(Expr::new(ExprKind::Let { binds, body }, line, column))
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let name = self.var_decl()?;
+        let value = self.function()?;
+
+        Ok(Expr::new(
+            ExprKind::Def(Bind::new(name, Box::new(value), line, column)),
+            line,
+            column,
+        ))
     }
 
     fn pipe(&mut self) -> ParseResult<Expr> {

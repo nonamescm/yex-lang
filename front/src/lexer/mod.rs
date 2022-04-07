@@ -174,7 +174,7 @@ impl Lexer {
                 self.next();
                 TokenType::Cons
             }
-            ':' => {
+            ':' if self.peek_at(1).is_alphanumeric() => {
                 let sym = self.take_while(|c| c.is_alphanumeric() || c == '_')?;
 
                 match sym.as_str() {
@@ -182,6 +182,8 @@ impl Lexer {
                     _ => TokenType::Sym(Symbol::new(sym)),
                 }
             }
+            ':' => TokenType::Colon,
+
             '=' => TokenType::Assign,
             '"' if self.peek_at(1) == '"' => {
                 self.next();

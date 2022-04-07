@@ -175,22 +175,6 @@ impl Compiler {
                 }
             }
 
-            ExprKind::Loop {
-                start,
-                counter,
-                body,
-            } => {
-                self.expr(start);
-                let counter_ptr = self.emit_save(*counter, loc);
-
-                let loop_label = self.scope().opcodes.len();
-                self.expr(body);
-
-                self.emit_op(OpCode::Save(counter_ptr), loc);
-
-                self.emit_op(OpCode::Jmp(loop_label), loc);
-            }
-
             ExprKind::Var(name) => {
                 // get the local index
                 let pred = self.scope().locals.get(name).copied();
@@ -207,21 +191,12 @@ impl Compiler {
 
             ExprKind::If { cond, then, else_ } => self.if_expr(cond, then, else_, loc),
 
-            ExprKind::Let { binds, body } => {
-                for Bind {
-                    value,
-                    bind,
-                    location: loc,
-                } in binds
-                {
-                    // compiles the value
-                    self.expr(value);
+            ExprKind::Let(Bind { bind, value, .. }) | ExprKind::Def(Bind { bind, value, .. }) => {
+                // compiles the value
+                self.expr(value);
 
-                    // emits the `Save` instruction
-                    self.emit_save(*bind, loc);
-                }
-                // compiles the assignment body
-                self.expr(body);
+                // emits the `Save` instruction
+                self.emit_save(*bind, loc);
             }
 
             ExprKind::Binary { left, op, right } if op == &BinOp::And => {
@@ -296,10 +271,14 @@ impl Compiler {
                 self.emit_ops((*op).into(), loc);
             }
 
-            ExprKind::Seq { left, right } => {
-                self.expr(left);
-                self.emit_op(OpCode::Pop, loc);
-                self.expr(right);
+            ExprKind::Do(body) => {
+                for expr in body {
+                    self.expr(expr);
+                    self.emit_op(OpCode::Pop, loc);
+                }
+
+                // return the last expression
+                self.scope_mut().opcodes.pop();
             }
 
             // compiles field access
@@ -336,8 +315,15 @@ impl Compiler {
                 self.expr(value);
                 self.emit_op(OpCode::Savg(bind.name), &node.location);
             }
+
+            // compiles a `let` statement into a `Savg` instruction
+            StmtKind::Let(Bind { bind, value, .. }) => {
+                self.expr(value);
+                self.emit_op(OpCode::Savg(bind.name), &node.location);
+            }
+
             // compiles a `type` declaration into YexType and save the type to a global name
-            StmtKind::Type {
+            StmtKind::Class {
                 name,
                 methods,
                 params,
