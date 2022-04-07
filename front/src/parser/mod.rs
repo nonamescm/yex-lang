@@ -188,6 +188,7 @@ impl Parser {
             Tkt::If => self.condition(),
             Tkt::Fn => self.fn_(),
             Tkt::Become => self.become_(),
+            Tkt::Do => self.do_(),
             _ => self.pipe(),
         }
     }
