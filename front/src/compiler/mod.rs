@@ -6,7 +6,7 @@ use vm::{
 };
 
 use crate::parser::ast::{
-    BinOp, Bind, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl, WhenArm,
+    BinOp, Bind, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl, WhenArm, WildCard,
 };
 
 #[derive(Default)]
@@ -109,7 +109,7 @@ impl Compiler {
         self.scope_mut().opcodes[else_label].opcode = OpCode::Jmp(self.scope().opcodes.len());
     }
 
-    fn when_expr(&mut self, cond: &Expr, arms: &[WhenArm], loc: &Location) {
+    fn when_expr(&mut self, cond: &Expr, arms: &[WhenArm], wc: Option<&WildCard>, loc: &Location) {
         // compiles the condition
         // TODO: this is a bit hacky, but it works for now
         self.expr(cond);
@@ -144,9 +144,22 @@ impl Compiler {
             self.scope_mut().opcodes[label].opcode = OpCode::Jmf(self.scope().opcodes.len());
         }
 
-        // if nothing matched, pop's the remaining condition and push a nil
-        self.emit_op(OpCode::Pop, loc);
-        self.emit_const(Value::Nil, loc);
+        // emits the wildcard arm, or the default `nil` if there is no wildcard
+        match wc {
+            Some(wc) => {
+                // if there are any binds, save the matched value to the bind
+                wc.bind.map(|bind| self.emit_save(bind, &wc.location));
+
+                self.expr(&wc.body);
+            }
+            None => {
+                // pop's the remaining value
+                self.emit_op(OpCode::Pop, loc);
+
+                // emit's a `nil` value (default)
+                self.emit_const(Value::Nil, loc);
+            }
+        }
 
         // fix all the jump offsets
         let ip = self.scope().opcodes.len();
@@ -237,7 +250,11 @@ impl Compiler {
 
             ExprKind::If { cond, then, else_ } => self.if_expr(cond, then, else_, loc),
 
-            ExprKind::When { expr, arms } => self.when_expr(expr, arms, loc),
+            ExprKind::When {
+                expr,
+                arms,
+                wildcard,
+            } => self.when_expr(expr, arms, wildcard.as_ref(), loc),
 
             ExprKind::Let(Bind { bind, value, .. }) | ExprKind::Def(Bind { bind, value, .. }) => {
                 // compiles the value

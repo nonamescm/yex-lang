@@ -6,7 +6,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm};
+use self::ast::{Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm, WildCard};
 
 pub mod ast;
 
@@ -277,10 +277,16 @@ impl Parser {
         self.expect(Tkt::Do)?;
 
         let mut arms = vec![];
+        let mut wildcard = None;
 
         while self.current.token != Tkt::End {
             let line = self.current.line;
             let column = self.current.column;
+
+            if self.current.token == Tkt::Else {
+                wildcard = Some(self.when_else()?);
+                break;
+            }
 
             let cond = Box::new(self.expr()?);
             self.expect(Tkt::FatArrow)?;
@@ -289,9 +295,36 @@ impl Parser {
             arms.push(WhenArm::new(cond, body, line, column));
         }
 
-        self.next()?;
+        self.expect(Tkt::End)?;
 
-        Ok(Expr::new(ExprKind::When { expr, arms }, line, column))
+        Ok(Expr::new(
+            ExprKind::When {
+                expr,
+                arms,
+                wildcard,
+            },
+            line,
+            column,
+        ))
+    }
+
+    fn when_else(&mut self) -> ParseResult<WildCard> {
+        self.expect(Tkt::Else)?;
+
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let ident = if matches!(self.current.token, Tkt::Name(_)) {
+            Some(self.var_decl()?)
+        } else {
+            None
+        };
+
+        self.expect(Tkt::FatArrow)?;
+
+        let body = Box::new(self.expr()?);
+
+        Ok(WildCard::new(ident, body, line, column))
     }
 
     fn fn_(&mut self) -> ParseResult<Expr> {

@@ -153,6 +153,23 @@ impl WhenArm {
 }
 
 #[derive(Debug)]
+pub struct WildCard {
+    pub bind: Option<VarDecl>,
+    pub body: Box<Expr>,
+    pub location: Location,
+}
+
+impl WildCard {
+    pub fn new(bind: Option<VarDecl>, body: Box<Expr>, line: usize, column: usize) -> Self {
+        Self {
+            bind,
+            body,
+            location: Location { line, column },
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum ExprKind {
     If {
         cond: Box<Expr>,
@@ -166,6 +183,7 @@ pub enum ExprKind {
     When {
         expr: Box<Expr>,
         arms: Vec<WhenArm>,
+        wildcard: Option<WildCard>,
     },
 
     Lambda {
