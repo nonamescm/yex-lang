@@ -197,6 +197,9 @@ impl Compiler {
 
                 // emits the `Save` instruction
                 self.emit_save(*bind, loc);
+
+                // emits a `nil` value, since everything should return something
+                self.emit_const(Value::Nil, loc);
             }
 
             ExprKind::Binary { left, op, right } if op == &BinOp::And => {
