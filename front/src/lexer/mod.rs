@@ -159,11 +159,6 @@ impl Lexer {
                 TokenType::Ne
             }
 
-            '|' if self.peek_at(1) == '>' => {
-                self.next();
-                TokenType::Pipe
-            }
-
             '(' => TokenType::Lparen,
             ')' => TokenType::Rparen,
             '[' => TokenType::Lbrack,
