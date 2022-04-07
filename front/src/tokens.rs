@@ -24,6 +24,7 @@ pub enum TokenType {
     Do,
     End,
     New,
+    When,
 
     // logical operators
     Add,
@@ -97,6 +98,7 @@ impl std::fmt::Display for TokenType {
             Self::Do => "do".into(),
             Self::End => "end".into(),
             Self::New => "new".into(),
+            Self::When => "when".into(),
 
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
@@ -156,6 +158,7 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "do" => Some(TokenType::Do),
         "end" => Some(TokenType::End),
         "new" => Some(TokenType::New),
+        "when" => Some(TokenType::When),
         _ => None,
     }
 }

@@ -6,7 +6,7 @@ use vm::{
 };
 
 use crate::parser::ast::{
-    BinOp, Bind, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl,
+    BinOp, Bind, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl, WhenArm,
 };
 
 #[derive(Default)]
@@ -109,6 +109,52 @@ impl Compiler {
         self.scope_mut().opcodes[else_label].opcode = OpCode::Jmp(self.scope().opcodes.len());
     }
 
+    fn when_expr(&mut self, cond: &Expr, arms: &[WhenArm], loc: &Location) {
+        // compiles the condition
+        // TODO: this is a bit hacky, but it works for now
+        self.expr(cond);
+
+        // keep track of all the jump offsets
+        let mut jmps = vec![];
+
+        for arm in arms {
+            self.emit_op(OpCode::Dup, loc);
+
+            // emits the current arm's condition
+            self.expr(&arm.cond);
+
+            // check if the cond is equal to the current arm's condition
+            self.emit_op(OpCode::Eq, loc);
+
+            // keeps track of the jump offset
+            let label = self.scope().opcodes.len();
+            self.emit_op(OpCode::Jmf(0), loc);
+
+            // emits an extra pop, since we Dup'd the condition
+            self.emit_op(OpCode::Pop, loc);
+
+            self.expr(&arm.body);
+
+            // emit a new jump, since we need to jump to the end of the when if the condition was
+            // met
+            jmps.push(self.scope().opcodes.len());
+            self.emit_op(OpCode::Jmp(0), loc);
+
+            // fix the jump offset
+            self.scope_mut().opcodes[label].opcode = OpCode::Jmf(self.scope().opcodes.len());
+        }
+
+        // if nothing matched, pop's the remaining condition and push a nil
+        self.emit_op(OpCode::Pop, loc);
+        self.emit_const(Value::Nil, loc);
+
+        // fix all the jump offsets
+        let ip = self.scope().opcodes.len();
+        for jmp in jmps {
+            self.scope_mut().opcodes[jmp].opcode = OpCode::Jmp(ip);
+        }
+    }
+
     fn lambda_expr(&mut self, args: &[VarDecl], body: &Expr, loc: &Location) -> GcRef<Fn> {
         // creates the lambda scope
         let mut scope = Scope {
@@ -190,6 +236,8 @@ impl Compiler {
             }
 
             ExprKind::If { cond, then, else_ } => self.if_expr(cond, then, else_, loc),
+
+            ExprKind::When { expr, arms } => self.when_expr(expr, arms, loc),
 
             ExprKind::Let(Bind { bind, value, .. }) | ExprKind::Def(Bind { bind, value, .. }) => {
                 // compiles the value

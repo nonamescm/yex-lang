@@ -6,7 +6,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl};
+use self::ast::{Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm};
 
 pub mod ast;
 
@@ -188,6 +188,7 @@ impl Parser {
             Tkt::If => self.condition(),
             Tkt::Fn => self.fn_(),
             Tkt::Become => self.become_(),
+            Tkt::When => self.when_(),
             Tkt::Do => {
                 self.expect(Tkt::Do)?;
                 self.block(Tkt::End)
@@ -263,6 +264,34 @@ impl Parser {
             )),
             _ => self.throw("Become can only be used on function calls"),
         }
+    }
+
+    fn when_(&mut self) -> ParseResult<Expr> {
+        self.expect(Tkt::When)?;
+
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let expr = Box::new(self.expr()?);
+
+        self.expect(Tkt::Do)?;
+
+        let mut arms = vec![];
+
+        while self.current.token != Tkt::End {
+            let line = self.current.line;
+            let column = self.current.column;
+
+            let cond = Box::new(self.expr()?);
+            self.expect(Tkt::FatArrow)?;
+            let body = Box::new(self.expr()?);
+
+            arms.push(WhenArm::new(cond, body, line, column));
+        }
+
+        self.next()?;
+
+        Ok(Expr::new(ExprKind::When { expr, arms }, line, column))
     }
 
     fn fn_(&mut self) -> ParseResult<Expr> {

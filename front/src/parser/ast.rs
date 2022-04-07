@@ -136,6 +136,23 @@ impl Bind {
 }
 
 #[derive(Debug)]
+pub struct WhenArm {
+    pub cond: Box<Expr>,
+    pub body: Box<Expr>,
+    pub location: Location,
+}
+
+impl WhenArm {
+    pub fn new(cond: Box<Expr>, body: Box<Expr>, line: usize, column: usize) -> Self {
+        Self {
+            cond,
+            body,
+            location: Location { line, column },
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum ExprKind {
     If {
         cond: Box<Expr>,
@@ -145,6 +162,11 @@ pub enum ExprKind {
 
     Let(Bind),
     Def(Bind),
+
+    When {
+        expr: Box<Expr>,
+        arms: Vec<WhenArm>,
+    },
 
     Lambda {
         args: Vec<VarDecl>, // specifies the arguments name and types
