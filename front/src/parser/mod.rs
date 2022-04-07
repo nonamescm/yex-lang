@@ -188,7 +188,10 @@ impl Parser {
             Tkt::If => self.condition(),
             Tkt::Fn => self.fn_(),
             Tkt::Become => self.become_(),
-            Tkt::Do => self.do_(),
+            Tkt::Do => {
+                self.expect(Tkt::Do)?;
+                self.block(Tkt::End)
+            }
             _ => self.pipe(),
         }
     }
@@ -201,12 +204,9 @@ impl Parser {
         let cond = self.expr()?;
 
         self.expect(Tkt::Then)?;
-        let then = self.expr()?;
 
-        self.expect(Tkt::Else)?;
-        let else_ = self.expr()?;
-
-        self.expect(Tkt::End)?;
+        let then = self.block(Tkt::Else)?;
+        let else_ = self.block(Tkt::End)?;
 
         Ok(Expr::new(
             ExprKind::If {
@@ -293,19 +293,18 @@ impl Parser {
             self.next()?;
             Ok(self.expr()?)
         } else {
-            Ok(self.do_()?)
+            self.expect(Tkt::Do)?;
+            self.block(Tkt::End)
         }
     }
 
-    fn do_(&mut self) -> ParseResult<Expr> {
-        self.expect(Tkt::Do)?;
-
+    fn block(&mut self, end: Tkt) -> ParseResult<Expr> {
         let line = self.current.line;
         let column = self.current.column;
 
         let mut body = vec![];
 
-        while self.current.token != Tkt::End {
+        while self.current.token != end {
             let expr = self.expr()?;
             body.push(expr);
         }
