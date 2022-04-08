@@ -21,9 +21,7 @@ pub fn map(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
         .map(|it| {
             vm.push(it);
             vm.push(fun.clone());
-            if let Err(e) = vm.call(1) {
-                raise!("{}", e)?
-            }
+            vm.call(1)?;
             Ok(vm.pop())
         })
         .try_fold(List::new(), |xs, x| match x {
@@ -45,9 +43,9 @@ pub fn fold(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
         vm.push(acc);
         vm.push(it);
         vm.push(fun.clone());
-        if let Err(e) = vm.call(2) {
-            return raise!("{}", e);
-        }
+
+        vm.call(2)?;
+
         acc = vm.pop();
     }
 
@@ -66,9 +64,7 @@ pub fn filter(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Valu
         vm.push(x.clone());
         vm.push(fun.clone());
 
-        if let Err(e) = vm.call(1) {
-            return raise!("{}", e);
-        }
+        vm.call(1)?;
 
         let res = vm.pop();
         if res.to_bool() {
@@ -93,7 +89,7 @@ pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let n: f64 = args[1].get()?;
 
     if n.fract() != 0.0 || n < 0.0 {
-        raise!("expected a valid positive integer, but found {}", n)?;
+        raise!(ValueError)?;
     }
 
     let n = n as usize;
@@ -106,7 +102,7 @@ pub fn drop(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
     let n: f64 = args[1].get()?;
 
     if n.fract() != 0.0 || n < 0.0 {
-        raise!("expected a valid positive integer, but found {}", n)?;
+        raise!(ValueError)?;
     }
 
     let n = n as usize;
@@ -132,12 +128,10 @@ pub fn find(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
         vm.push(x.clone());
         vm.push(fun.clone());
 
-        if let Err(e) = vm.call(1) {
-            return raise!("{}", e);
-        }
+        vm.call(1)?;
 
         if vm.pop().to_bool() {
-            return Ok(x.clone());
+            return Ok(x);
         }
     }
 

@@ -1,52 +1,41 @@
 use crate::{
     env::EnvTable,
+    error::InterpretError,
     gc::GcRef,
     literal::{fun::FnKind, nil, TryGet, Value},
-    raise, InterpretResult, YexType,
+    raise, raise_err, InterpretResult, Symbol, YexType,
 };
 use std::io::Write;
 
 fn println(args: &[Value]) -> InterpretResult<Value> {
-    match &args[0] {
-        Value::Str(s) => println!("{}", &**s),
-        other => println!("{}", other),
-    };
+    let arg: String = args[0].get()?;
+    println!("{}", arg);
+
     Ok(nil())
 }
 
 fn print(args: &[Value]) -> InterpretResult<Value> {
-    match &args[0] {
-        Value::Str(s) => print!("{}", &**s),
-        other => print!("{}", other),
-    };
+    let arg: String = args[0].get()?;
+    print!("{}", arg);
+
     Ok(nil())
 }
 
 fn input(args: &[Value]) -> InterpretResult<Value> {
-    match &args[0] {
-        Value::Str(s) => print!("{}", **s),
-        other => print!("{}", other),
-    };
+    let prompt: String = args[0].get()?;
+    print!("{}", prompt);
 
     if std::io::stdout().flush().is_err() {
-        raise!("Error flushing stdout")?;
+        raise!(IOError)?;
     }
 
     let mut input = String::new();
     if std::io::stdin().read_line(&mut input).is_err() {
-        raise!("Error reading line")?;
+        raise!(IOError)?;
     }
 
     input.pop();
     Ok(Value::Str(GcRef::new(input)))
-}
-
-fn str(args: &[Value]) -> InterpretResult<Value> {
-    if let Value::Str(s) = &args[0] {
-        Ok(Value::Str(s.clone()))
-    } else {
-        Ok(Value::Str(GcRef::new(format!("{}", &args[0]))))
-    }
 }
 
 fn r#typeof(args: &[Value]) -> InterpretResult<Value> {
@@ -58,32 +47,29 @@ fn inspect(args: &[Value]) -> InterpretResult<Value> {
 }
 
 fn num(args: &[Value]) -> InterpretResult<Value> {
-    let str = match &args[0] {
-        Value::Sym(symbol) => symbol.as_str(),
-        Value::Str(str) => &*str,
-        n @ Value::Num(..) => return Ok(n.clone()),
-        other => raise!("Expected a string or a symbol, found {}", other)?,
-    };
+    let str: String = args[0].get()?;
 
-    match str.parse::<f64>() {
-        Ok(n) => Ok(Value::Num(n)),
-        Err(e) => raise!("{:?}", e),
-    }
+    str.parse::<f64>()
+        .map(Value::Num)
+        .map_err(|_| raise_err!(TypeError))
 }
 
 fn exit(args: &[Value]) -> InterpretResult<Value> {
     let code: f64 = args[0].get()?;
     if code.fract() != 0.0 {
-        raise!("Expected an integer, found {}", code)?;
+        raise!(ValueError)?;
     }
     std::process::exit(code as i32);
 }
 
 fn raise(args: &[Value]) -> InterpretResult<Value> {
-    match &args[0] {
-        Value::Str(s) => raise!("{}", &**s),
-        other => raise!("{}", other),
-    }
+    let msg: Symbol = args[0].get()?;
+
+    Err(InterpretError {
+        err: msg,
+        line: unsafe { crate::LINE },
+        column: unsafe { crate::COLUMN },
+    })
 }
 
 pub fn prelude() -> EnvTable {
@@ -126,7 +112,6 @@ pub fn prelude() -> EnvTable {
     insert_fn!("println", println);
     insert_fn!("print", print);
     insert_fn!("input", input);
-    insert_fn!("str", str);
     insert_fn!("typeof", r#typeof);
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);

@@ -145,12 +145,12 @@ impl Value {
     pub fn ord_cmp(&self, rhs: &Self) -> InterpretResult<Ordering> {
         let (left, right) = match (self, rhs) {
             (Self::Num(left), Self::Num(right)) => (left, right),
-            (left, right) => return crate::raise!("Can't compare `{}` and `{}`", left, right),
+            _ => raise!(TypeError)?,
         };
 
         match left.partial_cmp(right) {
             Some(ord) => Ok(ord),
-            None => raise!("Error applying cmp"),
+            None => raise!(TypeError),
         }
     }
 
@@ -240,7 +240,7 @@ impl Add for Value {
         match (self, rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x + y)),
             (Self::Str(x), Self::Str(y)) => Ok(Self::Str(GcRef::new(x.to_string() + &y))),
-            (s, r) => raise!("Can't apply `+` operator between {} and {}", s, r),
+            _ => raise!(TypeError),
         }
     }
 }
@@ -251,7 +251,7 @@ impl Sub for Value {
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x - y)),
-            (s, r) => raise!("Can't apply `-` operator between {} and {}", s, r),
+            _ => raise!(TypeError),
         }
     }
 }
@@ -262,7 +262,7 @@ impl Mul for Value {
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x * y)),
-            (s, r) => raise!("Can't apply `*` operator between {} and {}", s, r),
+            _ => raise!(TypeError),
         }
     }
 }
@@ -273,7 +273,7 @@ impl Div for Value {
     fn div(self, rhs: Self) -> Self::Output {
         match (self, &rhs) {
             (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x / y)),
-            (s, r) => raise!("Can't apply `/` operator between {} and {}", s, r),
+            _ => raise!(TypeError),
         }
     }
 }
@@ -284,7 +284,7 @@ impl Neg for Value {
     fn neg(self) -> Self::Output {
         match self {
             Self::Num(n) => Ok(Self::Num(-n)),
-            s => raise!("Can't apply unary `-` operator on {}", s),
+            _ => raise!(TypeError),
         }
     }
 }
@@ -305,7 +305,7 @@ impl BitXor for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
-            (x, y) => raise!("Can't apply bitwise `^` between {} and {}", x, y),
+            _ => raise!(TypeError),
         }
     }
 }
@@ -318,7 +318,7 @@ impl BitAnd for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
-            (x, y) => raise!("Can't apply bitwise `&` between {} and {}", x, y),
+            _ => raise!(TypeError),
         }
     }
 }
@@ -331,7 +331,7 @@ impl BitOr for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
-            (x, y) => raise!("Can't apply bitwise `|` between {} and {}", x, y),
+            _ => raise!(TypeError),
         }
     }
 }
@@ -344,7 +344,7 @@ impl Shr for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
-            (x, y) => raise!("Can't apply bitwise `>>` between {} and {}", x, y),
+            _ => raise!(TypeError),
         }
     }
 }
@@ -357,7 +357,7 @@ impl Shl for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
-            (x, y) => raise!("Can't apply bitwise `<<` between {} and {}", x, y),
+            _ => raise!(TypeError),
         }
     }
 }
@@ -370,7 +370,7 @@ impl Rem for Value {
 
         match (self, rhs) {
             (Num(x), Num(y)) => Ok(Num(x % y)),
-            (x, y) => raise!("Can't apply `%` between {} and {}", x, y),
+            _ => raise!(TypeError),
         }
     }
 }
@@ -378,13 +378,14 @@ impl Rem for Value {
 pub trait TryGet<T> {
     fn get(&self) -> InterpretResult<T>;
 }
+
 macro_rules! impl_get {
     ($to:ty: $pattern:tt) => {
         impl TryGet<$to> for Value {
             fn get(&self) -> InterpretResult<$to> {
                 match self {
                     Self::$pattern(x) => Ok(x.clone()),
-                    e => crate::raise!("expected {}, found {}", stringify!($to), e),
+                    _ => crate::raise!(TypeError),
                 }
             }
         }
@@ -395,12 +396,13 @@ macro_rules! impl_get {
                 use Value::*;
                 match self {
                     $pattern => Ok($parse_expr),
-                    e => crate::raise!("expected {}, found {}", stringify!($to), e),
+                    _ => crate::raise!(TypeError),
                 }
             }
         }
     };
 }
+
 impl_get!(String: Str(s) => s.to_string());
 impl_get!(f64: Num);
 impl_get!(bool: Bool);

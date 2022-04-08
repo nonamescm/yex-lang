@@ -10,10 +10,7 @@ pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let index: f64 = args[1].get()?;
 
     if index < 0.0 || index.fract() != 0.0 {
-        raise!(
-            "get[1] expected a valid positive integer, but found {}",
-            index
-        )?;
+        raise!(ValueError)?;
     }
 
     let char = string
@@ -43,7 +40,7 @@ fn format_value(vm: &mut VirtualMachine, value: Value) -> InterpretResult<String
         Value::Str(s) => s.to_string(),
         ref val @ Value::Instance(ref i) if i.ty.fields.get(&show).is_some() => {
             vm.push(val.clone());
-            vm.push(i.ty.fields.get(&show).unwrap().clone());
+            vm.push(i.ty.fields.get(&show).unwrap());
 
             vm.call(1)?;
 

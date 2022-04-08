@@ -215,7 +215,7 @@ pub fn instantiate(
     args: Vec<Value>,
 ) -> InterpretResult<()> {
     if args.len() != ty.params.len() {
-        raise!("Wrong number of arguments for type instantiation")?;
+        raise!(TypeError)?;
     }
 
     let mut fields = EnvTable::new();

@@ -78,7 +78,7 @@ impl std::fmt::Display for TokenType {
         let res = match self {
             Self::Num(n) => n.to_string(),
             Self::Str(s) => "\"".to_owned() + s + "\"",
-            Self::Sym(s) => format!(":{}", s),
+            Self::Sym(s) => format!("{}", s),
             Self::Name(v) => format!("{}", v),
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),

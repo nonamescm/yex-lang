@@ -1,10 +1,10 @@
 use std::{fmt, io};
 
-use crate::{COLUMN, LINE};
+use crate::{Symbol, COLUMN, LINE};
 
 #[derive(Debug)]
 pub struct InterpretError {
-    pub err: String,
+    pub err: Symbol,
     pub line: usize,
     pub column: usize,
 }
@@ -18,7 +18,7 @@ impl fmt::Display for InterpretError {
 impl From<io::Error> for InterpretError {
     fn from(err: io::Error) -> Self {
         InterpretError {
-            err: err.to_string(),
+            err: err.kind().to_string().into(),
             line: unsafe { LINE },
             column: unsafe { COLUMN },
         }

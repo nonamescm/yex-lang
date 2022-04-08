@@ -15,6 +15,7 @@ mod stack;
 use gc::GcRef;
 use literal::{
     fun::{FnArgs, NativeFn},
+    instance::Instance,
     yextype::instantiate,
     TryGet,
 };
@@ -43,20 +44,24 @@ static mut COLUMN: usize = 1;
 #[macro_export]
 #[doc(hidden)]
 macro_rules! raise {
-    ($($tt:tt)+) => {{
-        Err($crate::raise_err!($($tt)+))
-    }}
+    ($err: ident) => {{
+        Err($crate::raise_err!($err))
+    }};
 }
 
 #[macro_export]
 #[doc(hidden)]
 macro_rules! raise_err {
-    ($($tt:tt)+) => {
+    ($error: ident) => {
         unsafe {
-            let msg = format!($($tt)+);
-            $crate::error::InterpretError { line: $crate::LINE, column: $crate::COLUMN, err: msg }
+            let msg = $crate::Symbol::new(stringify!($error));
+            $crate::error::InterpretError {
+                line: $crate::LINE,
+                column: $crate::COLUMN,
+                err: msg,
+            }
         }
-    }
+    };
 }
 
 type Stack = StackVec<Value, STACK_SIZE>;
@@ -223,7 +228,7 @@ impl VirtualMachine {
                 OpCode::Loag(name) => {
                     let value = match self.get_global(name) {
                         Some(value) => value,
-                        None => raise!("Undefined global variable: {}", name)?,
+                        None => raise!(NameError)?,
                     };
                     self.push(value);
                 }
@@ -235,19 +240,13 @@ impl VirtualMachine {
                 // list manipulation
                 OpCode::Prep => {
                     let value = self.pop();
-                    let list = match self.pop() {
-                        Value::List(list) => list.prepend(value),
-                        value => raise!("Expected list, got {}", value)?,
-                    };
+                    let list: List = self.pop().get()?;
 
-                    self.push(Value::List(list));
+                    self.push(list.prepend(value).into());
                 }
 
                 OpCode::New(arity) => {
-                    let ty = match self.pop() {
-                        Value::Type(ty) => ty,
-                        value => raise!("Expected type, got `{}`", value)?,
-                    };
+                    let ty: GcRef<YexType> = self.pop().get()?;
 
                     let mut args = vec![];
                     for _ in 0..arity {
@@ -257,15 +256,12 @@ impl VirtualMachine {
                     instantiate(self, ty, args)?;
                 }
                 OpCode::Get(field) => {
-                    let obj = match self.pop() {
-                        Value::Instance(obj) => obj,
-                        value => raise!("Expected instance, got `{}`", value)?,
-                    };
+                    let obj: GcRef<Instance> = self.pop().get()?;
 
-                    let value = match obj.fields.get(&field) {
-                        Some(value) => value.clone(),
-                        None => raise!("Undefined field: {}", field)?,
-                    };
+                    let value = obj
+                        .fields
+                        .get(&field)
+                        .ok_or_else(|| raise_err!(FieldError))?;
 
                     self.push(value);
                 }
@@ -276,10 +272,7 @@ impl VirtualMachine {
                 OpCode::Ref(method) => {
                     let ty: GcRef<YexType> = self.pop().get()?;
 
-                    let method = ty
-                        .fields
-                        .get(&method)
-                        .ok_or(raise_err!("Undefined method: {}", method))?;
+                    let method = ty.fields.get(&method).ok_or(raise_err!(FieldError))?;
 
                     self.push(method);
                 }
@@ -327,10 +320,7 @@ impl VirtualMachine {
     }
 
     pub(crate) fn call(&mut self, arity: usize) -> InterpretResult<()> {
-        let fun = match self.pop() {
-            Value::Fn(f) => f,
-            value => raise!("Expected a function to call, found {value}")?,
-        };
+        let fun: GcRef<Fn> = self.pop().get()?;
 
         if arity < fun.arity {
             let mut args = stackvec![];
@@ -344,7 +334,7 @@ impl VirtualMachine {
         let args = self.call_args(arity, &fun);
 
         if arity > fun.arity {
-            raise!("Too many arguments for function {}", *fun)?;
+            raise!(CallError)?;
         }
 
         if arity < fun.arity {
@@ -379,23 +369,17 @@ impl VirtualMachine {
 
     #[inline]
     fn valid_tail_call(&mut self, arity: usize, frame: BytecodeRef) -> InterpretResult<()> {
-        let fun = match self.pop() {
-            Value::Fn(fun) => fun,
-            value => raise!("Expected a function, found {value}")?,
-        };
+        let fun: GcRef<Fn> = self.pop().get()?;
+
         match &*fun.body {
             FnKind::Bytecode(_) if fun.arity != arity => {
-                raise!(
-                    "Expected function with arity {}, found {}",
-                    arity,
-                    fun.arity
-                )
+                raise!(CallError)
             }
             FnKind::Bytecode(bytecode) if bytecode != frame => {
-                raise!("Tried to tail call a function with a different bytecode")
+                raise!(CallError)
             }
             FnKind::Native(_) => {
-                raise!("Tried to use a tail call on a non-tail callable function")
+                raise!(CallError)
             }
             FnKind::Bytecode(_) => Ok(()),
         }
