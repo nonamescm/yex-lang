@@ -78,11 +78,11 @@ impl Compiler {
         }
     }
 
-    fn emit_save(&mut self, bind: VarDecl, node: &Location) -> usize {
-        let len = self.scope().locals.len() + 1;
-        self.scope_mut().locals.entry(bind.name).or_insert(len);
+    fn emit_save(&mut self, bind: VarDecl, node: &Location) {
+        let len = self.scope().locals.len();
+
+        self.scope_mut().locals.insert(bind.name, len);
         self.emit_op(OpCode::Save(len), node);
-        len
     }
 
     fn if_expr(&mut self, cond: &Expr, then: &Expr, else_: &Expr, loc: &Location) {
