@@ -110,11 +110,13 @@ impl VirtualMachine {
 
     /// Executes a given set of bytecode instructions
     pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<()> {
+        let bytecode = &*bytecode;
+        let mut try_stack = vec![];
+
         let mut ip = 0;
         let mut frame_locals = 0;
 
         while ip < bytecode.len() {
-            let bytecode = &*bytecode;
             let op = unsafe {
                 let op = bytecode[ip];
                 LINE = op.line;
@@ -124,164 +126,196 @@ impl VirtualMachine {
 
             self.debug_stack(&op);
 
-            match op {
-                OpCode::Halt => return Ok(()),
-
-                // Stack manipulation
-                OpCode::Push(value) => {
-                    let value = self.constants[value].clone();
-                    self.push(value);
+            let res = match op {
+                OpCode::Try(offset) => {
+                    try_stack.push(offset);
+                    Ok(())
                 }
-                OpCode::Pop => {
-                    self.pop();
-                }
+                OpCode::EndTry => {
+                    try_stack.pop();
+                    Ok(())
+                },
+                _ => self.run_op(op, &mut frame_locals, &mut ip, bytecode),
+            };
 
-                OpCode::Dup => {
-                    let value = self.pop();
-                    self.push(value.clone());
-                    self.push(value);
-                }
-
-                OpCode::Rev => {
-                    let (a, b) = self.pop_two();
-                    self.push(b);
-                    self.push(a);
+            if let Err(e) = res {
+                if try_stack.is_empty() {
+                    return Err(e);
                 }
 
-                // jump instructions
-                OpCode::Jmp(offset) => {
-                    ip = offset;
-                    continue;
-                }
-                OpCode::Jmf(offset) => {
-                    if !self.pop().to_bool() {
-                        ip = offset;
-                        continue;
-                    }
-                }
-
-                // function calls
-                OpCode::Call(arity) => self.call(arity)?,
-                OpCode::TCall(arity) => {
-                    self.valid_tail_call(arity, bytecode)?;
-                    ip = 0;
-                    continue;
-                }
-
-                // mathematical operators
-                OpCode::Add => self.binop(|a, b| a + b)?,
-                OpCode::Sub => self.binop(|a, b| a - b)?,
-                OpCode::Mul => self.binop(|a, b| a * b)?,
-                OpCode::Div => self.binop(|a, b| a / b)?,
-                OpCode::Rem => self.binop(|a, b| a % b)?,
-
-                // bitwise operators
-                OpCode::BitAnd => self.binop(|a, b| a & b)?,
-                OpCode::BitOr => self.binop(|a, b| a | b)?,
-                OpCode::Xor => self.binop(|a, b| a ^ b)?,
-                OpCode::Shl => self.binop(|a, b| a << b)?,
-                OpCode::Shr => self.binop(|a, b| a >> b)?,
-
-                // comparison operators
-                OpCode::Eq => self.binop(|a, b| Ok(a == b))?,
-                OpCode::Less => {
-                    let (a, b) = self.pop_two();
-                    self.push(a.ord_cmp(&b)?.is_lt().into());
-                }
-                OpCode::LessEq => {
-                    let (a, b) = self.pop_two();
-                    self.push(a.ord_cmp(&b)?.is_le().into());
-                }
-
-                // unary operators
-                OpCode::Not => {
-                    let value = self.pop();
-                    self.push(!value);
-                }
-                OpCode::Len => {
-                    let value = self.pop();
-                    self.push(Value::Num(value.len() as f64));
-                }
-                OpCode::Neg => {
-                    let value = self.pop();
-                    self.try_push(-value)?;
-                }
-
-                // locals manipulation
-                OpCode::Load(offset) => {
-                    let value = self.locals[offset + self.used_locals - frame_locals].clone();
-                    self.push(value);
-                }
-                OpCode::Save(offset) => {
-                    let value = self.pop();
-
-                    self.used_locals += 1;
-                    frame_locals += 1;
-                    self.locals[offset + (self.used_locals - frame_locals)] = value;
-                }
-                OpCode::Drop(_) => {
-                    frame_locals -= 1;
-                    self.used_locals -= 1;
-                }
-
-                // globals manipulation
-                OpCode::Loag(name) => {
-                    let value = match self.get_global(name) {
-                        Some(value) => value,
-                        None => raise!(NameError)?,
-                    };
-                    self.push(value);
-                }
-                OpCode::Savg(name) => {
-                    let value = self.pop();
-                    self.set_global(name, value);
-                }
-
-                // list manipulation
-                OpCode::Prep => {
-                    let value = self.pop();
-                    let list: List = self.pop().get()?;
-
-                    self.push(list.prepend(value).into());
-                }
-
-                OpCode::New(arity) => {
-                    let ty: GcRef<YexType> = self.pop().get()?;
-
-                    let mut args = vec![];
-                    for _ in 0..arity {
-                        args.push(self.pop());
-                    }
-
-                    instantiate(self, ty, args)?;
-                }
-                OpCode::Get(field) => {
-                    let obj: GcRef<Instance> = self.pop().get()?;
-
-                    let value = obj
-                        .fields
-                        .get(&field)
-                        .ok_or_else(|| raise_err!(FieldError))?;
-
-                    self.push(value);
-                }
-                OpCode::Type => {
-                    let value = self.pop();
-                    self.push(Value::Type(value.type_of()));
-                }
-                OpCode::Ref(method) => {
-                    let ty: GcRef<YexType> = self.pop().get()?;
-
-                    let method = ty.fields.get(&method).ok_or(raise_err!(FieldError))?;
-
-                    self.push(method);
-                }
+                let try_ip = try_stack.pop().unwrap();
+                self.push(e.err.into());
+                ip = try_ip;
             }
 
             ip += 1;
         }
 
         self.used_locals -= frame_locals;
+
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn run_op(
+        &mut self,
+        op: OpCode,
+        frame_locals: &mut usize,
+        ip: &mut usize,
+        bt: BytecodeRef,
+    ) -> InterpretResult<()> {
+        match op {
+            OpCode::Nop => (),
+
+            // Stack manipulation
+            OpCode::Push(value) => {
+                let value = self.constants[value].clone();
+                self.push(value);
+            }
+            OpCode::Pop => {
+                self.pop();
+            }
+
+            OpCode::Dup => {
+                let value = self.pop();
+                self.push(value.clone());
+                self.push(value);
+            }
+
+            OpCode::Rev => {
+                let (a, b) = self.pop_two();
+                self.push(b);
+                self.push(a);
+            }
+
+            // jump instructions
+            OpCode::Jmp(offset) => {
+                *ip = offset;
+            }
+            OpCode::Jmf(offset) => {
+                if !self.pop().to_bool() {
+                    *ip = offset;
+                }
+            }
+
+            // function calls
+            OpCode::Call(arity) => self.call(arity)?,
+            OpCode::TCall(arity) => {
+                self.valid_tail_call(arity, bt)?;
+                *ip = 0;
+            }
+
+            // mathematical operators
+            OpCode::Add => self.binop(|a, b| a + b)?,
+            OpCode::Sub => self.binop(|a, b| a - b)?,
+            OpCode::Mul => self.binop(|a, b| a * b)?,
+            OpCode::Div => self.binop(|a, b| a / b)?,
+            OpCode::Rem => self.binop(|a, b| a % b)?,
+
+            // bitwise operators
+            OpCode::BitAnd => self.binop(|a, b| a & b)?,
+            OpCode::BitOr => self.binop(|a, b| a | b)?,
+            OpCode::Xor => self.binop(|a, b| a ^ b)?,
+            OpCode::Shl => self.binop(|a, b| a << b)?,
+            OpCode::Shr => self.binop(|a, b| a >> b)?,
+
+            // comparison operators
+            OpCode::Eq => self.binop(|a, b| Ok(a == b))?,
+            OpCode::Less => {
+                let (a, b) = self.pop_two();
+                self.push(a.ord_cmp(&b)?.is_lt().into());
+            }
+            OpCode::LessEq => {
+                let (a, b) = self.pop_two();
+                self.push(a.ord_cmp(&b)?.is_le().into());
+            }
+
+            // unary operators
+            OpCode::Not => {
+                let value = self.pop();
+                self.push(!value);
+            }
+            OpCode::Len => {
+                let value = self.pop();
+                self.push(Value::Num(value.len() as f64));
+            }
+            OpCode::Neg => {
+                let value = self.pop();
+                self.try_push(-value)?;
+            }
+
+            // locals manipulation
+            OpCode::Load(offset) => {
+                let value = self.locals[offset + self.used_locals - *frame_locals].clone();
+                self.push(value);
+            }
+            OpCode::Save(offset) => {
+                let value = self.pop();
+
+                self.used_locals += 1;
+                *frame_locals += 1;
+                self.locals[offset + (self.used_locals - *frame_locals)] = value;
+            }
+            OpCode::Drop(_) => {
+                *frame_locals -= 1;
+                self.used_locals -= 1;
+            }
+
+            // globals manipulation
+            OpCode::Loag(name) => {
+                let value = match self.get_global(name) {
+                    Some(value) => value,
+                    None => raise!(NameError)?,
+                };
+                self.push(value);
+            }
+            OpCode::Savg(name) => {
+                let value = self.pop();
+                self.set_global(name, value);
+            }
+
+            // list manipulation
+            OpCode::Prep => {
+                let value = self.pop();
+                let list: List = self.pop().get()?;
+
+                self.push(list.prepend(value).into());
+            }
+
+            OpCode::New(arity) => {
+                let ty: GcRef<YexType> = self.pop().get()?;
+
+                let mut args = vec![];
+                for _ in 0..arity {
+                    args.push(self.pop());
+                }
+
+                instantiate(self, ty, args)?;
+            }
+            OpCode::Get(field) => {
+                let obj: GcRef<Instance> = self.pop().get()?;
+
+                let value = obj
+                    .fields
+                    .get(&field)
+                    .ok_or_else(|| raise_err!(FieldError))?;
+
+                self.push(value);
+            }
+            OpCode::Type => {
+                let value = self.pop();
+                self.push(Value::Type(value.type_of()));
+            }
+            OpCode::Ref(method) => {
+                let ty: GcRef<YexType> = self.pop().get()?;
+
+                let method = ty.fields.get(&method).ok_or(raise_err!(FieldError))?;
+
+                self.push(method);
+            }
+
+            OpCode::Try(..) | OpCode::EndTry => unreachable!(),
+        };
 
         Ok(())
     }
@@ -373,13 +407,13 @@ impl VirtualMachine {
 
         match &*fun.body {
             FnKind::Bytecode(_) if fun.arity != arity => {
-                raise!(CallError)
+                raise!(TailCallError)
             }
             FnKind::Bytecode(bytecode) if bytecode != frame => {
-                raise!(CallError)
+                raise!(TailCallError)
             }
             FnKind::Native(_) => {
-                raise!(CallError)
+                raise!(TailCallError)
             }
             FnKind::Bytecode(_) => Ok(()),
         }

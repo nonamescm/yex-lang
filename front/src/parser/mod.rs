@@ -193,6 +193,7 @@ impl Parser {
                 self.expect(Tkt::Do)?;
                 self.block(Tkt::End)
             }
+            Tkt::Try => self.try_(),
             _ => self.logic_or(),
         }
     }
@@ -325,6 +326,25 @@ impl Parser {
         let body = Box::new(self.expr()?);
 
         Ok(WildCard::new(ident, body, line, column))
+    }
+
+    fn try_(&mut self) -> ParseResult<Expr> {
+        self.expect(Tkt::Try)?;
+
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let body = Box::new(self.block(Tkt::Rescue)?);
+
+        let bind = self.var_decl()?;
+
+        let rescue = Box::new(self.block(Tkt::End)?);
+
+        Ok(Expr::new(
+            ExprKind::Try { body, bind, rescue },
+            line,
+            column,
+        ))
     }
 
     fn fn_(&mut self) -> ParseResult<Expr> {

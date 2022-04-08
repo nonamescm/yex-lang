@@ -3,8 +3,8 @@ use crate::Symbol;
 /// OpCodes for the virtualMachine
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum OpCode {
-    /// Stops the virtual machine
-    Halt,
+    /// Do nothing
+    Nop,
 
     /// Push a value by it's index on the constant table on-to the stack
     /// The stack layout before running this opcode: []
@@ -176,6 +176,16 @@ pub enum OpCode {
     /// The stack layout before running this opcode: [type]
     /// The stack layout after running it: [function-ref]
     Ref(Symbol),
+
+    /// Initializes a `Try` block, the argument is the address to jump if an exception is raised
+    /// The stack layout before running this opcode: []
+    /// The stack layout after running it: []
+    Try(usize),
+
+    /// End a `Try` block
+    /// The stack layout before running this opcode: []
+    /// The stack layout after running it: []
+    EndTry,
 }
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,

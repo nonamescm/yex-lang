@@ -25,6 +25,8 @@ pub enum TokenType {
     End,
     New,
     When,
+    Try,
+    Rescue,
 
     // logical operators
     Add,
@@ -91,14 +93,16 @@ impl std::fmt::Display for TokenType {
             Self::Let => "let".into(),
             Self::Fn => "fn".into(),
             Self::Become => "become".into(),
-            Self::And => "and".into(),
-            Self::Or => "or".into(),
-            Self::Not => "not".into(),
+            Self::And => "&&".into(),
+            Self::Or => "||".into(),
+            Self::Not => "!".into(),
             Self::Class => "class".into(),
             Self::Do => "do".into(),
             Self::End => "end".into(),
             Self::New => "new".into(),
             Self::When => "when".into(),
+            Self::Try => "try".into(),
+            Self::Rescue => "rescue".into(),
 
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
@@ -159,6 +163,8 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "end" => Some(TokenType::End),
         "new" => Some(TokenType::New),
         "when" => Some(TokenType::When),
+        "try" => Some(TokenType::Try),
+        "rescue" => Some(TokenType::Rescue),
         _ => None,
     }
 }

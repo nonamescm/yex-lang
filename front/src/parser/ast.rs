@@ -233,6 +233,12 @@ pub enum ExprKind {
         ty: Box<Expr>,
         args: Vec<Expr>,
     }, // types are just values, so I can't really do compile time checking
+
+    Try {
+        body: Box<Expr>,
+        bind: VarDecl,
+        rescue: Box<Expr>,
+    },
 }
 
 #[derive(Debug, Clone)]

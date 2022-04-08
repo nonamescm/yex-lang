@@ -388,6 +388,39 @@ impl Compiler {
                 // calls the method
                 self.emit_op(OpCode::Call(args.len() + 1), loc);
             }
+
+            ExprKind::Try { body, bind, rescue } => {
+                // keeps track of the try location
+                let try_label = self.scope().opcodes.len();
+                self.emit_op(OpCode::Try(0), loc);
+
+                // compiles the body
+                self.expr(body);
+
+                // ends the try block
+                self.emit_op(OpCode::EndTry, loc);
+
+                // keep track of the new jump location
+                let end_label = self.scope().opcodes.len();
+                self.emit_op(OpCode::Jmp(0), loc);
+
+                // fix the try jump offset
+                self.scope_mut().opcodes[try_label].opcode =
+                    OpCode::Try(self.scope().opcodes.len());
+
+                // pop the return from the try block
+                self.emit_op(OpCode::Pop, loc);
+
+                // saves the exception to the bind
+                self.emit_save(*bind, loc);
+
+                // compiles the rescue block
+                self.expr(rescue);
+
+                // fix the end of the rescue block
+                self.scope_mut().opcodes[end_label].opcode =
+                    OpCode::Jmp(self.scope().opcodes.len());
+            }
         }
     }
 
