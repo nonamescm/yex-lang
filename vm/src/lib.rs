@@ -131,11 +131,32 @@ impl VirtualMachine {
                     try_stack.push(offset);
                     Ok(())
                 }
+
                 OpCode::EndTry => {
                     try_stack.pop();
                     Ok(())
-                },
-                _ => self.run_op(op, &mut frame_locals, &mut ip, bytecode),
+                }
+
+                OpCode::Jmp(offset) => {
+                    ip = offset;
+                    continue;
+                }
+
+                OpCode::Jmf(offset) => {
+                    if !self.pop().to_bool() {
+                        ip = offset;
+                        continue;
+                    }
+                    Ok(())
+                }
+
+                OpCode::TCall(arity) => {
+                    self.valid_tail_call(arity, bytecode)?;
+                    ip = 0;
+                    continue;
+                }
+
+                _ => self.run_op(op, &mut frame_locals),
             };
 
             if let Err(e) = res {
@@ -161,8 +182,6 @@ impl VirtualMachine {
         &mut self,
         op: OpCode,
         frame_locals: &mut usize,
-        ip: &mut usize,
-        bt: BytecodeRef,
     ) -> InterpretResult<()> {
         match op {
             OpCode::Nop => (),
@@ -188,22 +207,8 @@ impl VirtualMachine {
                 self.push(a);
             }
 
-            // jump instructions
-            OpCode::Jmp(offset) => {
-                *ip = offset;
-            }
-            OpCode::Jmf(offset) => {
-                if !self.pop().to_bool() {
-                    *ip = offset;
-                }
-            }
-
             // function calls
             OpCode::Call(arity) => self.call(arity)?,
-            OpCode::TCall(arity) => {
-                self.valid_tail_call(arity, bt)?;
-                *ip = 0;
-            }
 
             // mathematical operators
             OpCode::Add => self.binop(|a, b| a + b)?,
@@ -314,7 +319,8 @@ impl VirtualMachine {
                 self.push(method);
             }
 
-            OpCode::Try(..) | OpCode::EndTry => unreachable!(),
+            // these opcodes are handled by the run function, since they can manipulate the ip
+            OpCode::Try(..) | OpCode::EndTry | OpCode::Jmp(..) | OpCode::Jmf(..) | OpCode::TCall(..) => unreachable!(),
         };
 
         Ok(())

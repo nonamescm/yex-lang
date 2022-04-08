@@ -139,34 +139,50 @@ impl Bind {
 pub struct WhenArm {
     pub cond: Box<Expr>,
     pub body: Box<Expr>,
+    pub guard: Option<Box<Expr>>,
     pub location: Location,
 }
 
 impl WhenArm {
-    pub fn new(cond: Box<Expr>, body: Box<Expr>, line: usize, column: usize) -> Self {
+    pub fn new(
+        cond: Expr,
+        body: Expr,
+        guard: Option<Expr>,
+        line: usize,
+        column: usize,
+    ) -> Self {
         Self {
-            cond,
-            body,
+            cond: Box::new(cond),
+            body: Box::new(body),
+            guard: guard.map(Box::new),
             location: Location { line, column },
         }
     }
 }
 
 #[derive(Debug)]
-pub struct WildCard {
-    pub bind: Option<VarDecl>,
+pub struct WhenElse {
+    pub bind: VarDecl,
     pub body: Box<Expr>,
+    pub guard: Option<Box<Expr>>,
     pub location: Location,
 }
 
-impl WildCard {
-    pub fn new(bind: Option<VarDecl>, body: Box<Expr>, line: usize, column: usize) -> Self {
+impl WhenElse {
+    pub fn new(bind: VarDecl, body: Expr, guard: Option<Expr>, line: usize, column: usize) -> Self {
         Self {
             bind,
-            body,
+            body: Box::new(body),
             location: Location { line, column },
+            guard: guard.map(Box::new),
         }
     }
+}
+
+#[derive(Debug)]
+pub enum ArmType {
+    Arm(WhenArm),
+    Else(WhenElse),
 }
 
 #[derive(Debug)]
@@ -182,8 +198,7 @@ pub enum ExprKind {
 
     When {
         expr: Box<Expr>,
-        arms: Vec<WhenArm>,
-        wildcard: Option<WildCard>,
+        arms: Vec<ArmType>,
     },
 
     Lambda {

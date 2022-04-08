@@ -6,7 +6,7 @@ use vm::{
 };
 
 use crate::parser::ast::{
-    BinOp, Bind, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl, WhenArm, WildCard,
+    ArmType, BinOp, Bind, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl,
 };
 
 #[derive(Default)]
@@ -109,7 +109,92 @@ impl Compiler {
         self.scope_mut().opcodes[else_label].opcode = OpCode::Jmp(self.scope().opcodes.len());
     }
 
-    fn when_expr(&mut self, cond: &Expr, arms: &[WhenArm], wc: Option<&WildCard>, loc: &Location) {
+    fn when_arm(&mut self, arm: &ArmType, loc: &Location) -> usize {
+        match arm {
+            ArmType::Arm(when) => {
+                self.emit_op(OpCode::Dup, loc);
+
+                // emits the current arm's condition
+                self.expr(&when.cond);
+
+                // check if the cond is equal to the current arm's condition
+                self.emit_op(OpCode::Eq, loc);
+
+                // keeps track of the jump offset
+                let label = self.scope().opcodes.len();
+                self.emit_op(OpCode::Jmf(0), loc);
+
+                // if the cond is equal to the current arm's condition, check if there's any
+                // guard, and, if so, evaluate it, checking if it's true or false
+                let guard_label = if let Some(guard) = &when.guard {
+                    self.expr(guard);
+                    let label = self.scope().opcodes.len();
+                    self.emit_op(OpCode::Jmf(0), loc);
+                    Some(label)
+                } else {
+                    None
+                };
+
+                // emits an extra pop, since we Dup'd the condition
+                self.emit_op(OpCode::Pop, loc);
+
+                self.expr(&when.body);
+
+                // emit a new jump, since we need to jump to the end of the when if the condition was
+                // met
+                let jmp_label = self.scope().opcodes.len();
+                self.emit_op(OpCode::Jmp(0), loc);
+
+                // fix the jump offset
+                self.scope_mut().opcodes[label].opcode = OpCode::Jmf(self.scope().opcodes.len());
+                guard_label.map(|label| {
+                    self.scope_mut().opcodes[label].opcode =
+                        OpCode::Jmf(self.scope().opcodes.len());
+                });
+
+                jmp_label
+            }
+            ArmType::Else(arm) => {
+                // duplicate the value on the stack
+                self.emit_op(OpCode::Dup, loc);
+
+                // save the matched value to a local
+                self.emit_save(arm.bind, loc);
+
+                // check if there's any guard, and, if so, evaluate it, checking if it's true or
+                // not
+                let guard_label = if let Some(guard) = &arm.guard {
+                    self.expr(guard);
+
+                    let label = self.scope().opcodes.len();
+                    self.emit_op(OpCode::Jmf(0), loc);
+                    Some(label)
+                } else {
+                    None
+                };
+
+                // emit an extra pop, since we Dup'd the condition
+                self.emit_op(OpCode::Pop, loc);
+
+                // compiles the body of the arm
+                self.expr(&arm.body);
+
+                // emit a new jump and return the jump index to be fixed later
+                let jmp_label = self.scope().opcodes.len();
+                self.emit_op(OpCode::Jmp(0), &arm.location);
+
+                // if there was a guard, fix the jump offset
+                guard_label.map(|label| {
+                    self.scope_mut().opcodes[label].opcode =
+                        OpCode::Jmf(self.scope().opcodes.len());
+                });
+
+                jmp_label
+            }
+        }
+    }
+
+    fn when_expr(&mut self, cond: &Expr, arms: &[ArmType], loc: &Location) {
         // compiles the condition
         // TODO: this is a bit hacky, but it works for now
         self.expr(cond);
@@ -118,47 +203,8 @@ impl Compiler {
         let mut jmps = vec![];
 
         for arm in arms {
-            self.emit_op(OpCode::Dup, loc);
-
-            // emits the current arm's condition
-            self.expr(&arm.cond);
-
-            // check if the cond is equal to the current arm's condition
-            self.emit_op(OpCode::Eq, loc);
-
-            // keeps track of the jump offset
-            let label = self.scope().opcodes.len();
-            self.emit_op(OpCode::Jmf(0), loc);
-
-            // emits an extra pop, since we Dup'd the condition
-            self.emit_op(OpCode::Pop, loc);
-
-            self.expr(&arm.body);
-
-            // emit a new jump, since we need to jump to the end of the when if the condition was
-            // met
-            jmps.push(self.scope().opcodes.len());
-            self.emit_op(OpCode::Jmp(0), loc);
-
-            // fix the jump offset
-            self.scope_mut().opcodes[label].opcode = OpCode::Jmf(self.scope().opcodes.len());
-        }
-
-        // emits the wildcard arm, or the default `nil` if there is no wildcard
-        match wc {
-            Some(wc) => {
-                // if there are any binds, save the matched value to the bind
-                wc.bind.map(|bind| self.emit_save(bind, &wc.location));
-
-                self.expr(&wc.body);
-            }
-            None => {
-                // pop's the remaining value
-                self.emit_op(OpCode::Pop, loc);
-
-                // emit's a `nil` value (default)
-                self.emit_const(Value::Nil, loc);
-            }
+            let jmp = self.when_arm(arm, loc);
+            jmps.push(jmp);
         }
 
         // fix all the jump offsets
@@ -250,11 +296,7 @@ impl Compiler {
 
             ExprKind::If { cond, then, else_ } => self.if_expr(cond, then, else_, loc),
 
-            ExprKind::When {
-                expr,
-                arms,
-                wildcard,
-            } => self.when_expr(expr, arms, wildcard.as_ref(), loc),
+            ExprKind::When { expr, arms } => self.when_expr(expr, arms, loc),
 
             ExprKind::Let(Bind { bind, value, .. }) | ExprKind::Def(Bind { bind, value, .. }) => {
                 // compiles the value
@@ -288,19 +330,21 @@ impl Compiler {
             }
 
             ExprKind::Binary { left, op, right } if op == &BinOp::Or => {
-                // compiles the left side of the or expression
+                // compiles the left side of the and expression
                 self.expr(left);
 
+                // duplicate the value on the stack
                 self.emit_op(OpCode::Dup, loc);
 
-                // apply a unary not to the value on the stack
+                // negates the value on the stack, since this is an or
                 self.emit_op(OpCode::Not, loc);
 
                 // keeps track of the jump location
                 let then_label = self.scope().opcodes.len();
                 self.emit_op(OpCode::Jmf(0), loc);
 
-                // compiles the right side of the or expression
+                // pop's the duplicated left value
+                self.emit_op(OpCode::Pop, loc);
                 self.expr(right);
 
                 // fix the jump offset

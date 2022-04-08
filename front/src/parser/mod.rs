@@ -6,7 +6,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm, WildCard};
+use self::ast::{Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm, WhenElse, ArmType};
 
 pub mod ast;
 
@@ -278,54 +278,63 @@ impl Parser {
         self.expect(Tkt::Do)?;
 
         let mut arms = vec![];
-        let mut wildcard = None;
 
         while self.current.token != Tkt::End {
-            let line = self.current.line;
-            let column = self.current.column;
-
             if self.current.token == Tkt::Else {
-                wildcard = Some(self.when_else()?);
-                break;
+                arms.push(ArmType::Else(self.when_else()?));
+                continue;
             }
 
-            let cond = Box::new(self.expr()?);
-            self.expect(Tkt::FatArrow)?;
-            let body = Box::new(self.expr()?);
+            let arm = self.when_arm()?;
 
-            arms.push(WhenArm::new(cond, body, line, column));
+            arms.push(ArmType::Arm(arm));
         }
 
         self.expect(Tkt::End)?;
 
-        Ok(Expr::new(
-            ExprKind::When {
-                expr,
-                arms,
-                wildcard,
-            },
-            line,
-            column,
-        ))
+        Ok(Expr::new(ExprKind::When { expr, arms }, line, column))
     }
 
-    fn when_else(&mut self) -> ParseResult<WildCard> {
+    fn when_else(&mut self) -> ParseResult<WhenElse> {
         self.expect(Tkt::Else)?;
 
         let line = self.current.line;
         let column = self.current.column;
 
-        let ident = if matches!(self.current.token, Tkt::Name(_)) {
-            Some(self.var_decl()?)
+        let ident = self.var_decl()?;
+
+        let guard = if self.current.token == Tkt::If {
+            self.next()?;
+            Some(self.expr()?)
         } else {
             None
         };
 
         self.expect(Tkt::FatArrow)?;
 
-        let body = Box::new(self.expr()?);
+        let body = self.expr()?;
 
-        Ok(WildCard::new(ident, body, line, column))
+        Ok(WhenElse::new(ident, body, guard, line, column))
+    }
+
+    fn when_arm(&mut self) -> ParseResult<WhenArm> {
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let cond = self.expr()?;
+
+        let guard = if self.current.token == Tkt::If {
+            self.next()?;
+            Some(self.expr()?)
+        } else {
+            None
+        };
+
+        self.expect(Tkt::FatArrow)?;
+
+        let body = self.expr()?;
+
+        Ok(WhenArm::new(cond, body, guard, line, column))
     }
 
     fn try_(&mut self) -> ParseResult<Expr> {
