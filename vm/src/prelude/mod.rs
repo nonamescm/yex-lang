@@ -2,21 +2,21 @@ use crate::{
     env::EnvTable,
     error::InterpretError,
     gc::GcRef,
-    literal::{fun::FnKind, nil, TryGet, Value},
-    raise, raise_err, InterpretResult, Symbol, YexType,
+    literal::{fun::FnKind, nil, TryGet, Value, str::methods::format_value},
+    raise, raise_err, InterpretResult, Symbol, YexType, VirtualMachine,
 };
 use std::io::Write;
 
-fn println(args: &[Value]) -> InterpretResult<Value> {
-    let arg: String = args[0].get()?;
-    println!("{}", arg);
+fn println(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
+    let message = format_value(vm, args[0].clone())?;
+    println!("{}", message);
 
     Ok(nil())
 }
 
-fn print(args: &[Value]) -> InterpretResult<Value> {
-    let arg: String = args[0].get()?;
-    print!("{}", arg);
+fn print(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
+    let message = format_value(vm, args[0].clone())?;
+    print!("{}", message);
 
     Ok(nil())
 }
@@ -92,7 +92,7 @@ pub fn prelude() -> EnvTable {
         (@vm $name: expr, $fn: expr, $arity:expr) => {
             prelude.insert(
                 $crate::Symbol::new($name),
-                Value::Fn(GcRef::new(crate::literal::Fn {
+                Value::Fn(GcRef::new(crate::literal::fun::Fn {
                     arity: $arity,
                     body: GcRef::new(FnKind::Native(|vm, it| {
                         $fn(unsafe { vm.as_mut().unwrap() }, &*it)
@@ -109,8 +109,8 @@ pub fn prelude() -> EnvTable {
         };
     }
 
-    insert_fn!("println", println);
-    insert_fn!("print", print);
+    insert_fn!(@vm "println", println, 1);
+    insert_fn!(@vm "print", print, 1);
     insert_fn!("input", input);
     insert_fn!("typeof", r#typeof);
     insert_fn!("inspect", inspect);

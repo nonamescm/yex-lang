@@ -33,7 +33,7 @@ pub fn split(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
     Ok(list.rev().into())
 }
 
-fn format_value(vm: &mut VirtualMachine, value: Value) -> InterpretResult<String> {
+pub fn format_value(vm: &mut VirtualMachine, value: Value) -> InterpretResult<String> {
     let show: Symbol = "show".into();
 
     let str = match value {
