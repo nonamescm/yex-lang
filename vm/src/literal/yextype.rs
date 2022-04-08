@@ -84,6 +84,11 @@ impl YexType {
             Value::Fn(GcRef::new(Fn::new_native(2, list::methods::join))),
         );
 
+        methods.insert(
+            Symbol::from("find"),
+            Value::Fn(GcRef::new(Fn::new_native(2, list::methods::find))),
+        );
+
         Self::new(Symbol::from("List"), methods, vec![])
             .with_initializer(GcRef::new(Fn::new_native(1, list::methods::init)))
     }

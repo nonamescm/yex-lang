@@ -1,25 +1,19 @@
 use crate::{
     error::InterpretResult,
-    literal::{nil, Value},
+    literal::{nil, TryGet, Value},
     raise, VirtualMachine,
 };
 
 use super::List;
 
 pub fn rev(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    let xs = match &args[0] {
-        Value::List(xs) => xs,
-        _ => unreachable!(),
-    };
+    let xs: List = args[0].get()?;
     Ok(Value::List(xs.rev()))
 }
 
 pub fn map(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let vm = unsafe { &mut *vm };
-    let xs = match &args[0] {
-        Value::List(xs) => xs,
-        _ => unreachable!(),
-    };
+    let xs: List = args[0].get()?;
     let fun = &args[1];
 
     let xs: InterpretResult<List> = xs
@@ -37,16 +31,13 @@ pub fn map(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
             Err(e) => Err(e),
         });
 
-    Ok(Value::List(xs?.rev()))
+    Ok(xs?.rev().into())
 }
 
 pub fn fold(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let vm = unsafe { &mut *vm };
 
-    let xs = match &args[0] {
-        Value::List(xs) => xs,
-        other => raise!("fold[2] expected a list, but found `{}`", other)?,
-    };
+    let xs: List = args[0].get()?;
     let mut acc = args[1].clone();
     let fun = args[2].clone();
 
@@ -66,10 +57,7 @@ pub fn fold(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
 pub fn filter(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let vm = unsafe { &mut *vm };
 
-    let xs = match &args[0] {
-        Value::List(xs) => xs,
-        _ => unreachable!(),
-    };
+    let xs: List = args[0].get()?;
     let fun = &args[1];
 
     let mut ys = List::new();
@@ -88,68 +76,74 @@ pub fn filter(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Valu
         }
     }
 
-    Ok(Value::List(ys.rev()))
+    Ok(ys.rev().into())
 }
 
 pub fn head(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    match &args[0] {
-        Value::List(xs) => Ok(match xs.head() {
-            Some(x) => x,
-            None => nil(),
-        }),
-        _ => unreachable!(),
-    }
+    let xs: List = args[0].get()?;
+    Ok(xs.head().unwrap_or(Value::Nil))
 }
 
 pub fn tail(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    match &args[0] {
-        Value::List(xs) => Ok(Value::List(xs.tail())),
-        _ => unreachable!(),
-    }
+    args[0].get().map(|xs: List| xs.tail().into())
 }
 
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    let n = match &args[1] {
-        Value::Num(n) if n.fract() == 0.0 && *n >= 0.0 => *n as usize,
-        other => raise!(
-            "get[1] expected a valid positive integer, but found {}",
-            other
-        )?,
-    };
+    let xs: List = args[0].get()?;
+    let n: f64 = args[1].get()?;
 
-    match &args[0] {
-        Value::List(xs) => Ok(xs.index(n)),
-        _ => unreachable!(),
+    if n.fract() != 0.0 || n < 0.0 {
+        raise!("expected a valid positive integer, but found {}", n)?;
     }
+
+    let n = n as usize;
+
+    Ok(xs.index(n))
 }
 
 pub fn drop(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    let n = match &args[1] {
-        Value::Num(n) if n.fract() == 0.0 && *n >= 0.0 => *n as usize,
-        other => raise!(
-            "drop[1] expected a valid positive integer, but found {}",
-            other
-        )?,
-    };
+    let xs: List = args[0].get()?;
+    let n: f64 = args[1].get()?;
 
-    match &args[0] {
-        Value::List(xs) => Ok(xs.drop(n).into()),
-        _ => unreachable!(),
+    if n.fract() != 0.0 || n < 0.0 {
+        raise!("expected a valid positive integer, but found {}", n)?;
     }
+
+    let n = n as usize;
+
+    Ok(xs.drop(n).into())
 }
 
 pub fn join(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    let sep = match &args[1] {
-        Value::Str(s) => s.clone(),
-        other => raise!("join[1] expected a string, but found {}", other)?,
-    };
+    let xs: List = args[0].get()?;
+    let sep: String = args[1].get()?;
 
-    match &args[0] {
-        Value::List(xs) => Ok(xs.join(&sep).into()),
-        _ => unreachable!(),
+    Ok(xs.join(&sep).into())
+}
+
+pub fn find(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
+    let vm = unsafe { &mut *vm };
+
+    let xs: List = args[0].get()?;
+
+    let fun = &args[1];
+
+    for x in xs.iter() {
+        vm.push(x.clone());
+        vm.push(fun.clone());
+
+        if let Err(e) = vm.call(1) {
+            return raise!("{}", e);
+        }
+
+        if vm.pop().to_bool() {
+            return Ok(x.clone());
+        }
     }
+
+    Ok(nil())
 }
 
 pub fn init(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
-    Ok(Value::List(List::new()))
+    Ok(List::new().into())
 }
