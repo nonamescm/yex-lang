@@ -138,6 +138,11 @@ impl YexType {
             Value::Fn(GcRef::new(Fn::new_native(2, str::methods::split))),
         );
 
+        methods.insert(
+            Symbol::new("fmt"),
+            Value::Fn(GcRef::new(Fn::new_native(2, str::methods::fmt))),
+        );
+
         Self::new(Symbol::from("Str"), methods, vec![])
             .with_initializer(GcRef::new(Fn::new_native(1, str::methods::init)))
     }
