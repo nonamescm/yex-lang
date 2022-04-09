@@ -16,8 +16,9 @@ use gc::GcRef;
 use literal::{
     fun::{FnArgs, NativeFn},
     instance::Instance,
+    tuple::Tuple,
     yextype::instantiate,
-    TryGet, tuple::Tuple,
+    TryGet,
 };
 
 use crate::error::InterpretResult;
@@ -178,11 +179,7 @@ impl VirtualMachine {
     }
 
     #[inline(always)]
-    fn run_op(
-        &mut self,
-        op: OpCode,
-        frame_locals: &mut usize,
-    ) -> InterpretResult<()> {
+    fn run_op(&mut self, op: OpCode, frame_locals: &mut usize) -> InterpretResult<()> {
         match op {
             OpCode::Nop => (),
 
@@ -334,7 +331,11 @@ impl VirtualMachine {
             }
 
             // these opcodes are handled by the run function, since they can manipulate the ip
-            OpCode::Try(..) | OpCode::EndTry | OpCode::Jmp(..) | OpCode::Jmf(..) | OpCode::TCall(..) => unreachable!(),
+            OpCode::Try(..)
+            | OpCode::EndTry
+            | OpCode::Jmp(..)
+            | OpCode::Jmf(..)
+            | OpCode::TCall(..) => unreachable!(),
         };
 
         Ok(())

@@ -144,13 +144,7 @@ pub struct WhenArm {
 }
 
 impl WhenArm {
-    pub fn new(
-        cond: Expr,
-        body: Expr,
-        guard: Option<Expr>,
-        line: usize,
-        column: usize,
-    ) -> Self {
+    pub fn new(cond: Expr, body: Expr, guard: Option<Expr>, line: usize, column: usize) -> Self {
         Self {
             cond: Box::new(cond),
             body: Box::new(body),

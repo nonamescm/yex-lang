@@ -28,7 +28,6 @@ pub fn nil() -> Value {
     Value::Nil
 }
 
-
 impl From<Vec<Value>> for Value {
     fn from(vec: Vec<Value>) -> Self {
         Value::Tuple(Tuple::from(vec))

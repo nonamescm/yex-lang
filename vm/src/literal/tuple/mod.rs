@@ -19,6 +19,14 @@ impl Tuple {
 
 impl std::fmt::Display for Tuple {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "({})", self.0.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", "))
+        write!(
+            f,
+            "({})",
+            self.0
+                .iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
