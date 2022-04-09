@@ -1,3 +1,5 @@
+pub mod methods;
+
 use crate::{gc::GcRef, Value};
 
 #[derive(Debug, PartialEq, Clone)]

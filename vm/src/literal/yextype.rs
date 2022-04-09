@@ -2,7 +2,7 @@ use crate::{
     env::EnvTable, error::InterpretResult, gc::GcRef, raise, Symbol, Value, VirtualMachine,
 };
 
-use super::{file, fun::Fn, instance::Instance, list, str, table};
+use super::{file, fun::Fn, instance::Instance, list, str, table, tuple};
 
 #[derive(Debug, PartialEq)]
 /// A Yex user-defined type.
@@ -111,13 +111,15 @@ impl YexType {
 
     /// Creates a new Tuple type.
     pub fn tuple() -> Self {
-        let methods = EnvTable::new();
+        let mut methods = EnvTable::new();
 
-        Self::new(Symbol::from("Tuple"), methods, vec![]).with_initializer(GcRef::new(
-            Fn::new_native(1, |_, _| {
-                Ok(Value::Tuple(vec![].into()))
-            }),
-        ))
+        methods.insert(
+            Symbol::from("get"),
+            Value::Fn(GcRef::new(Fn::new_native(2, tuple::methods::get))),
+        );
+
+        Self::new(Symbol::from("Tuple"), methods, vec![])
+            .with_initializer(GcRef::new(Fn::new_native(1, tuple::methods::init)))
     }
 
     /// Creates a new Num type.

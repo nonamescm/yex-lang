@@ -2,20 +2,16 @@ use crate::{
     error::InterpretResult,
     gc::GcRef,
     literal::{nil, TryGet},
-    raise, List, Symbol, Value, VirtualMachine,
+    List, Symbol, Value, VirtualMachine,
 };
 
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let string: String = args[0].get()?;
-    let index: f64 = args[1].get()?;
-
-    if index < 0.0 || index.fract() != 0.0 {
-        raise!(ValueError)?;
-    }
+    let index: usize = args[1].get()?;
 
     let char = string
         .chars()
-        .nth(index as usize)
+        .nth(index)
         .map(|c| c.to_string().into())
         .unwrap_or_else(nil);
     Ok(char)

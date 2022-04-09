@@ -428,3 +428,19 @@ impl_get!(GcRef<Instance>: Instance);
 impl_get!(Table: Table);
 impl_get!(Symbol: Sym);
 impl_get!(List: List);
+impl_get!(Tuple: Tuple);
+impl_get!(usize: Num(n) => {
+    if n.fract() != 0.0 || n.is_nan() || n.is_infinite() || *n < 0.0 {
+        return crate::raise!(ValueError);
+    }
+
+    n.round() as usize
+});
+
+impl_get!(isize: Num(n) => {
+    if n.fract() != 0.0 || n.is_nan() || n.is_infinite() {
+        return crate::raise!(ValueError);
+    }
+
+    n.round() as isize
+});

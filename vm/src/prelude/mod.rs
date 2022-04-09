@@ -55,10 +55,8 @@ fn num(args: &[Value]) -> InterpretResult<Value> {
 }
 
 fn exit(args: &[Value]) -> InterpretResult<Value> {
-    let code: f64 = args[0].get()?;
-    if code.fract() != 0.0 {
-        raise!(ValueError)?;
-    }
+    let code: isize = args[0].get()?;
+
     std::process::exit(code as i32);
 }
 

@@ -1,7 +1,7 @@
 use crate::{
     error::InterpretResult,
     literal::{nil, TryGet, Value},
-    raise, VirtualMachine,
+    VirtualMachine,
 };
 
 use super::List;
@@ -86,26 +86,14 @@ pub fn tail(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
 
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let xs: List = args[0].get()?;
-    let n: f64 = args[1].get()?;
-
-    if n.fract() != 0.0 || n < 0.0 {
-        raise!(ValueError)?;
-    }
-
-    let n = n as usize;
+    let n: usize = args[1].get()?;
 
     Ok(xs.index(n))
 }
 
 pub fn drop(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let xs: List = args[0].get()?;
-    let n: f64 = args[1].get()?;
-
-    if n.fract() != 0.0 || n < 0.0 {
-        raise!(ValueError)?;
-    }
-
-    let n = n as usize;
+    let n: usize = args[1].get()?;
 
     Ok(xs.drop(n).into())
 }
