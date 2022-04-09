@@ -74,6 +74,12 @@ pub fn fmt(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
     Ok(res.into())
 }
 
+pub fn len(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
+    let str: String = args[0].get()?;
+
+    Ok((str.len() as f64).into())
+}
+
 pub fn init(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
     Ok(Value::Str(GcRef::new(String::from(""))))
 }

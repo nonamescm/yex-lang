@@ -89,6 +89,11 @@ impl YexType {
             Value::Fn(GcRef::new(Fn::new_native(2, list::methods::find))),
         );
 
+        methods.insert(
+            Symbol::from("len"),
+            Value::Fn(GcRef::new(Fn::new_native(1, list::methods::len))),
+        );
+
         Self::new(Symbol::from("List"), methods, vec![])
             .with_initializer(GcRef::new(Fn::new_native(1, list::methods::init)))
     }
@@ -154,6 +159,11 @@ impl YexType {
         methods.insert(
             Symbol::new("fmt"),
             Value::Fn(GcRef::new(Fn::new_native(2, str::methods::fmt))),
+        );
+
+        methods.insert(
+            Symbol::new("len"),
+            Value::Fn(GcRef::new(Fn::new_native(1, str::methods::len))),
         );
 
         Self::new(Symbol::from("Str"), methods, vec![])

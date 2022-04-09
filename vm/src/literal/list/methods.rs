@@ -126,6 +126,12 @@ pub fn find(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
     Ok(nil())
 }
 
+pub fn len(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
+    let xs: List = args[0].get()?;
+
+    Ok((xs.len() as f64).into())
+}
+
 pub fn init(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
     Ok(List::new().into())
 }
