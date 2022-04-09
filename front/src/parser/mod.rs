@@ -618,7 +618,7 @@ impl Parser {
     fn fact(&mut self) -> ParseResult<Expr> {
         let mut left = self.prefix()?;
 
-        while let Tkt::Mul | Tkt::Div = self.current.token {
+        while let Tkt::Mul | Tkt::Div | Tkt::Rem = self.current.token {
             let op = take(&mut self.current);
             self.next()?;
             let right = self.prefix()?;
