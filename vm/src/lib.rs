@@ -351,7 +351,7 @@ impl VirtualMachine {
     /// Debug the values on the stack and in the bytecode
     pub fn debug_stack(&self, _: &OpCode) {}
 
-    #[inline]
+    #[inline(always)]
     fn call_args(&mut self, arity: usize, fun: &Fn) -> FnArgs {
         if fun.arity == arity && fun.is_bytecode() && fun.args.is_empty() {
             return stackvec![];
@@ -377,15 +377,6 @@ impl VirtualMachine {
     pub(crate) fn call(&mut self, arity: usize) -> InterpretResult<()> {
         let fun: GcRef<Fn> = self.pop().get()?;
 
-        if arity < fun.arity {
-            let mut args = stackvec![];
-            for _ in 0..arity {
-                args.push(self.pop());
-            }
-            self.push(Value::Fn(GcRef::new(fun.apply(args))));
-            return Ok(());
-        }
-
         let args = self.call_args(arity, &fun);
 
         if arity > fun.arity {
@@ -403,7 +394,7 @@ impl VirtualMachine {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn call_bytecode(&mut self, bytecode: BytecodeRef, args: FnArgs) -> InterpretResult<()> {
         self.used_locals += 1;
         for arg in args {
@@ -415,7 +406,7 @@ impl VirtualMachine {
         Ok(())
     }
 
-    #[inline]
+    #[inline(always)]
     fn call_native(&mut self, fp: NativeFn, args: FnArgs) -> InterpretResult<()> {
         let args = args.reverse().into();
         let result = fp(self, args);

@@ -1,4 +1,4 @@
-use std::{mem::transmute, mem::MaybeUninit, ops::Deref};
+use std::{mem::{self, MaybeUninit}, ops::Deref};
 
 /// A wrapper around an array armazenated on the stack
 pub struct StackVec<T, const S: usize> {
@@ -18,27 +18,19 @@ impl<T, const S: usize> StackVec<T, S> {
     }
 
     #[track_caller]
+    #[inline]
     /// Push a new element to the array
     pub fn push(&mut self, new_value: T) {
-        if self.len >= S {
-            panic!(
-                "Index out of bounds, the len is {} but the index is {}",
-                S, self.len
-            )
-        }
         self.array[self.len].write(new_value);
         self.len += 1;
     }
 
     #[track_caller]
+    #[inline]
     /// Pop's the last element
     pub fn pop(&mut self) -> T {
-        if self.is_empty() {
-            panic!("Called pop() on a array with no elements");
-        }
-
         self.len -= 1;
-        unsafe { std::mem::replace(&mut self.array[self.len], MaybeUninit::uninit()).assume_init() }
+        unsafe { mem::replace(&mut self.array[self.len], MaybeUninit::uninit()).assume_init() }
     }
 
     /// Returns the StackVec length
@@ -68,15 +60,9 @@ impl<T, const S: usize> StackVec<T, S> {
     }
 
     #[track_caller]
+    #[inline]
     /// Removes the element at the given index
     pub fn remove(&mut self, index: usize) {
-        if index >= S {
-            panic!(
-                "Index out of bounds, the len is {} but the index is {}",
-                S, self.len
-            )
-        }
-
         self.array[index..self.len].rotate_left(1);
         self.pop();
     }
@@ -245,6 +231,6 @@ impl<T, const S: usize> Deref for StackVec<T, S> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        unsafe { transmute(&self.array[0..self.len]) }
+        unsafe { mem::transmute(&self.array[0..self.len]) }
     }
 }

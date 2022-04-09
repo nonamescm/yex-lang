@@ -48,26 +48,23 @@ impl<T> GcRef<T> {
 }
 
 impl<T> Clone for GcRef<T> {
+    #[inline(always)]
     fn clone(&self) -> Self {
         self.inc_ref();
         Self::from_inner(self.inner)
     }
 }
 
-// impl<T> std::ops::DerefMut for GcRef<T> {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         unsafe { &mut self.inner.as_mut().inner }
-//     }
-// }
-
 impl<T> std::ops::Deref for GcRef<T> {
     type Target = T;
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         unsafe { &self.inner.as_ref().inner }
     }
 }
 
 impl<T> Drop for GcRef<T> {
+    #[inline(always)]
     fn drop(&mut self) {
         self.dec_ref();
 

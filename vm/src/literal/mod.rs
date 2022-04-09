@@ -397,6 +397,7 @@ pub trait TryGet<T> {
 macro_rules! impl_get {
     ($to:ty: $pattern:tt) => {
         impl TryGet<$to> for Value {
+            #[inline(always)]
             fn get(&self) -> InterpretResult<$to> {
                 match self {
                     Self::$pattern(x) => Ok(x.clone()),
@@ -407,6 +408,7 @@ macro_rules! impl_get {
     };
     ($to:ty: $pattern:pat => $parse_expr:expr) => {
         impl TryGet<$to> for Value {
+            #[inline(always)]
             fn get(&self) -> InterpretResult<$to> {
                 use Value::*;
                 match self {
