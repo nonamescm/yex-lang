@@ -319,6 +319,14 @@ impl VirtualMachine {
                 self.push(method);
             }
 
+            OpCode::Tup(len) => {
+                let mut tup = vec![];
+                for _ in 0..len {
+                    tup.push(self.pop());
+                }
+                self.push(tup.into());
+            }
+
             // these opcodes are handled by the run function, since they can manipulate the ip
             OpCode::Try(..) | OpCode::EndTry | OpCode::Jmp(..) | OpCode::Jmf(..) | OpCode::TCall(..) => unreachable!(),
         };

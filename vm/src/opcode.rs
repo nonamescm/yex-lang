@@ -186,6 +186,11 @@ pub enum OpCode {
     /// The stack layout before running this opcode: []
     /// The stack layout after running it: []
     EndTry,
+
+    /// Creates a new `Tuple`, receives the tuple length as argument
+    /// The stack layout before running this opcode: [...args]
+    /// The stack layout after running it: [tuple]
+    Tup(usize),
 }
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,

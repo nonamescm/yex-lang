@@ -109,6 +109,17 @@ impl YexType {
             .with_initializer(GcRef::new(Fn::new_native(1, table::methods::init)))
     }
 
+    /// Creates a new Tuple type.
+    pub fn tuple() -> Self {
+        let methods = EnvTable::new();
+
+        Self::new(Symbol::from("Tuple"), methods, vec![]).with_initializer(GcRef::new(
+            Fn::new_native(1, |_, _| {
+                Ok(Value::Tuple(vec![].into()))
+            }),
+        ))
+    }
+
     /// Creates a new Num type.
     pub fn num() -> Self {
         let methods = EnvTable::new();

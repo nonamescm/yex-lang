@@ -465,6 +465,14 @@ impl Compiler {
                 self.scope_mut().opcodes[end_label].opcode =
                     OpCode::Jmp(self.scope().opcodes.len());
             }
+
+            ExprKind::Tuple(xs) => {
+                for x in xs.iter().rev() {
+                    self.expr(x);
+                }
+
+                self.emit_op(OpCode::Tup(xs.len()), loc);
+            }
         }
     }
 

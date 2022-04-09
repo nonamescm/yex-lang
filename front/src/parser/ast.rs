@@ -254,6 +254,8 @@ pub enum ExprKind {
         bind: VarDecl,
         rescue: Box<Expr>,
     },
+
+    Tuple(Vec<Expr>),
 }
 
 #[derive(Debug, Clone)]

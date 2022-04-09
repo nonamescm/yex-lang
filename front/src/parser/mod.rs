@@ -6,7 +6,9 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm, WhenElse, ArmType};
+use self::ast::{
+    ArmType, Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm, WhenElse,
+};
 
 pub mod ast;
 
@@ -768,6 +770,8 @@ impl Parser {
         let line = self.current.line;
         let column = self.current.column;
 
+        self.expect(Tkt::Lbrack)?;
+
         let mut exprs = Vec::new();
         while self.current.token != Tkt::Rbrack {
             exprs.push(self.expr()?); // compiles the argument
@@ -785,6 +789,34 @@ impl Parser {
         Ok(Expr::new(ExprKind::List(exprs), line, column))
     }
 
+    fn tuple(&mut self) -> ParseResult<Expr> {
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let mut exprs = Vec::new();
+
+        self.expect(Tkt::Lparen)?;
+
+        while self.current.token != Tkt::Rparen {
+            exprs.push(self.expr()?); // compiles the argument
+
+            match &self.current.token {
+                Tkt::Comma => self.skip(Tkt::Comma)?,
+                Tkt::Rparen => break,
+                _ => self.throw(format!(
+                    "Expected `,`, `)` or other token, found `{}`",
+                    &self.current.token
+                ))?,
+            }
+        }
+
+        if exprs.len() == 1 {
+            Ok(exprs.pop().unwrap())
+        } else {
+            Ok(Expr::new(ExprKind::Tuple(exprs), line, column))
+        }
+    }
+
     fn primary(&mut self) -> ParseResult<Expr> {
         let line = self.current.line;
         let column = self.current.column;
@@ -796,16 +828,8 @@ impl Parser {
             Tkt::False => Expr::new(ExprKind::Lit(Literal::Bool(false)), line, column),
             Tkt::Name(s) => Expr::new(ExprKind::Var(s), line, column),
             Tkt::Sym(s) => Expr::new(ExprKind::Lit(Literal::Sym(s)), line, column),
-            Tkt::Lbrack => {
-                self.next()?;
-                self.list()?
-            }
-            Tkt::Lparen => {
-                self.next()?;
-                let expr = self.expr()?;
-                self.assert(Tkt::Rparen)?;
-                expr
-            }
+            Tkt::Lbrack => self.list()?,
+            Tkt::Lparen => self.tuple()?,
             Tkt::Nil => Expr::new(ExprKind::Lit(Literal::Unit), line, column),
             other => self.throw(format!("unexpected token `{}`", other))?,
         };

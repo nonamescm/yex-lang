@@ -11,7 +11,9 @@ pub mod list;
 pub mod str;
 pub mod symbol;
 pub mod table;
+pub mod tuple;
 pub mod yextype;
+
 use crate::{error::InterpretResult, gc::GcRef, raise};
 
 use fun::Fn;
@@ -20,10 +22,17 @@ use list::List;
 use symbol::Symbol;
 use yextype::YexType;
 
-use self::table::Table;
+use self::{table::Table, tuple::Tuple};
 
 pub fn nil() -> Value {
     Value::Nil
+}
+
+
+impl From<Vec<Value>> for Value {
+    fn from(vec: Vec<Value>) -> Self {
+        Value::Tuple(Tuple::from(vec))
+    }
 }
 
 impl From<bool> for Value {
@@ -95,6 +104,8 @@ pub enum Value {
     Type(GcRef<YexType>),
     /// Yex instances
     Instance(GcRef<Instance>),
+    /// Tuples
+    Tuple(Tuple),
     /// null
     Nil,
 }
@@ -113,6 +124,7 @@ impl Clone for Value {
             Type(t) => Type(t.clone()),
             Instance(i) => Instance(i.clone()),
             Table(t) => Table(t.clone()),
+            Tuple(t) => Tuple(t.clone()),
             Nil => Nil,
         }
     }
@@ -136,7 +148,8 @@ impl Value {
             Value::Bool(_) => mem::size_of::<bool>(),
             Value::Type(t) => mem::size_of_val(&t),
             Value::Instance(i) => mem::size_of_val(&i),
-            Value::Table(t) => mem::size_of_val(&t),
+            Value::Table(t) => t.items.len(),
+            Value::Tuple(t) => t.len(),
             Value::Nil => 4,
         }
     }
@@ -168,9 +181,10 @@ impl Value {
             Nil => false,
             List(xs) => !xs.is_empty(),
             Fn(_) => true,
-            Value::Type(_) => true,
+            Type(_) => true,
             Table(_) => true,
-            Value::Instance(_) => true,
+            Tuple(_) => true,
+            Instance(_) => true,
         }
     }
 
@@ -193,6 +207,7 @@ impl Value {
             Nil => YexType::nil(),
             Sym(_) => YexType::sym(),
             Table(_) => YexType::table(),
+            Tuple(_) => YexType::tuple(),
             Type(_) | Instance(_) => unreachable!(),
         };
 
@@ -227,6 +242,7 @@ impl std::fmt::Display for Value {
             Type(t) => format!("<type({})>", t.name),
             Instance(i) => format!("<instance({})>", i.ty.name),
             Table(t) => format!("{t}"),
+            Tuple(t) => format!("{t}"),
             Bool(b) => b.to_string(),
         };
         write!(f, "{}", tk)
