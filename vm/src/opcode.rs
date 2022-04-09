@@ -191,6 +191,13 @@ pub enum OpCode {
     /// The stack layout before running this opcode: [...args]
     /// The stack layout after running it: [tuple]
     Tup(usize),
+
+    /// Indexes a tuple, receives the tuple index as argument
+    /// NOTE: this isn't used by the `.get()` method on tuples because this requires compile-time
+    /// access to the index, which isn't possible.
+    /// The stack layout before running this opcode: [tuple]
+    /// The stack layout after running it: [tuple-element]
+    TupGet(usize),
 }
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,

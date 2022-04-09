@@ -17,7 +17,7 @@ use literal::{
     fun::{FnArgs, NativeFn},
     instance::Instance,
     yextype::instantiate,
-    TryGet,
+    TryGet, tuple::Tuple,
 };
 
 use crate::error::InterpretResult;
@@ -325,6 +325,12 @@ impl VirtualMachine {
                     tup.push(self.pop());
                 }
                 self.push(tup.into());
+            }
+
+            OpCode::TupGet(index) => {
+                let tup: Tuple = self.pop().get()?;
+                let elem = tup.0.get(index).unwrap(); // this SHOULD be unreachable
+                self.push(elem.clone());
             }
 
             // these opcodes are handled by the run function, since they can manipulate the ip

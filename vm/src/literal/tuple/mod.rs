@@ -3,7 +3,7 @@ pub mod methods;
 use crate::{gc::GcRef, Value};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Tuple(GcRef<Box<[Value]>>);
+pub struct Tuple(pub GcRef<Box<[Value]>>);
 
 impl From<Vec<Value>> for Tuple {
     fn from(vec: Vec<Value>) -> Self {
