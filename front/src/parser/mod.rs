@@ -189,7 +189,7 @@ impl Parser {
             Tkt::Def => self.def_(),
             Tkt::If => self.condition(),
             Tkt::Fn => self.fn_(),
-            Tkt::Become => self.become_(),
+            Tkt::Arrow => self.become_(),
             Tkt::When => self.when_(),
             Tkt::Do => {
                 self.expect(Tkt::Do)?;
@@ -248,7 +248,7 @@ impl Parser {
     }
 
     fn become_(&mut self) -> ParseResult<Expr> {
-        self.expect(Tkt::Become)?;
+        self.expect(Tkt::Arrow)?;
 
         let line = self.current.line;
         let column = self.current.column;
@@ -265,7 +265,7 @@ impl Parser {
                 line,
                 column,
             )),
-            _ => self.throw("Become can only be used on function calls"),
+            _ => self.throw("`->` can only be used on function calls"),
         }
     }
 

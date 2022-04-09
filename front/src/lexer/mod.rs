@@ -143,6 +143,7 @@ impl Lexer {
                 TokenType::Arrow
             }
             '-' => TokenType::Sub,
+
             '/' => TokenType::Div,
             '*' => TokenType::Mul,
             '%' => TokenType::Rem,
