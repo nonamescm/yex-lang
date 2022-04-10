@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 #![allow(unused_unsafe)]
 #![deny(clippy::all)]
-#![allow(clippy::unit_arg)]
+#![allow(clippy::unit_arg, clippy::option_map_unit_fn)]
 //! Virtual Machine implementation for the yex programming language
 mod env;
 mod error;

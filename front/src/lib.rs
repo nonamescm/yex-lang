@@ -1,4 +1,6 @@
 #![deny(missing_docs)]
+#![allow(clippy::option_map_unit_fn)]
+
 //! Compiler for the yex language
 mod compiler;
 mod error;
