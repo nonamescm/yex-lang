@@ -3,9 +3,9 @@ use crate::{
     error::InterpretError,
     gc::GcRef,
     literal::{fun::FnKind, nil, str::methods::format_value, TryGet, Value},
-    raise, raise_err, InterpretResult, Symbol, VirtualMachine, YexType,
+    raise_err, InterpretResult, Symbol, VirtualMachine, YexType,
 };
-use std::io::Write;
+use std::io::{Write, self};
 
 fn println(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
     let message = format_value(vm, args[0].clone())?;
@@ -25,16 +25,14 @@ fn input(args: &[Value]) -> InterpretResult<Value> {
     let prompt: String = args[0].get()?;
     print!("{}", prompt);
 
-    if std::io::stdout().flush().is_err() {
-        raise!(IOError)?;
-    }
+    io::stdout().flush()?;
 
     let mut input = String::new();
-    if std::io::stdin().read_line(&mut input).is_err() {
-        raise!(IOError)?;
-    }
+
+    io::stdin().read_line(&mut input)?;
 
     input.pop();
+
     Ok(Value::Str(GcRef::new(input)))
 }
 
