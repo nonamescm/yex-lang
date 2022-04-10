@@ -201,7 +201,10 @@ impl Parser {
     }
 
     fn condition(&mut self) -> ParseResult<Expr> {
-        self.expect(Tkt::If)?;
+        self.assert(Tkt::If).or_else(|_| self.assert(Tkt::ElseIf))?;
+
+        self.next()?;
+
         let line = self.current.line;
         let column = self.current.column;
 
@@ -209,14 +212,27 @@ impl Parser {
 
         self.expect(Tkt::Then)?;
 
-        let then = self.block(Tkt::Else)?;
-        let else_ = self.block(Tkt::End)?;
+        let then = self.block_any(&[Tkt::End, Tkt::ElseIf, Tkt::Else])?;
+
+        let else_ = match self.current.token {
+            Tkt::Else => {
+                self.next()?;
+                Some(self.block(Tkt::End)?)
+            }
+            Tkt::ElseIf => Some(self.condition()?),
+            Tkt::End => {
+                self.next()?;
+                None
+            },
+
+            _ => unreachable!(),
+        };
 
         Ok(Expr::new(
             ExprKind::If {
                 cond: Box::new(cond),
                 then: Box::new(then),
-                else_: Box::new(else_),
+                else_: else_.map(Box::new),
             },
             line,
             column,
@@ -392,17 +408,21 @@ impl Parser {
     }
 
     fn block(&mut self, end: Tkt) -> ParseResult<Expr> {
+        let expr = self.block_any(&[end])?;
+        self.next()?;
+        Ok(expr)
+    }
+
+    fn block_any(&mut self, possible_ends: &[Tkt]) -> ParseResult<Expr> {
         let line = self.current.line;
         let column = self.current.column;
 
         let mut body = vec![];
 
-        while self.current.token != end {
+        while !possible_ends.contains(&self.current.token) {
             let expr = self.expr()?;
             body.push(expr);
         }
-
-        self.next()?;
 
         Ok(Expr::new(ExprKind::Do(body), line, column))
     }

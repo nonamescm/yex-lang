@@ -187,7 +187,7 @@ pub enum ExprKind {
     If {
         cond: Box<Expr>,
         then: Box<Expr>,
-        else_: Box<Expr>,
+        else_: Option<Box<Expr>>,
     },
 
     Let(Bind),

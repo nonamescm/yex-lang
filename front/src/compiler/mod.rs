@@ -85,7 +85,7 @@ impl Compiler {
         self.emit_op(OpCode::Save(len), node);
     }
 
-    fn if_expr(&mut self, cond: &Expr, then: &Expr, else_: &Expr, loc: &Location) {
+    fn if_expr(&mut self, cond: &Expr, then: &Expr, else_: Option<&Expr>, loc: &Location) {
         // compiles the codition
         self.expr(cond);
 
@@ -103,7 +103,10 @@ impl Compiler {
         // fix the then jump offset
         self.scope_mut().opcodes[then_label].opcode = OpCode::Jmf(self.scope().opcodes.len());
 
-        self.expr(else_);
+        match else_ {
+            Some(block) => self.expr(block),
+            None => self.emit_lit(&Literal::Unit, loc),
+        };
 
         // fix the else jump offset
         self.scope_mut().opcodes[else_label].opcode = OpCode::Jmp(self.scope().opcodes.len());
@@ -294,7 +297,7 @@ impl Compiler {
                 }
             }
 
-            ExprKind::If { cond, then, else_ } => self.if_expr(cond, then, else_, loc),
+            ExprKind::If { cond, then, else_ } => self.if_expr(cond, then, else_.as_deref(), loc),
 
             ExprKind::When { expr, arms } => self.when_expr(expr, arms, loc),
 
