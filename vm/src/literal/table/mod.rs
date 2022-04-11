@@ -26,7 +26,7 @@ impl Table {
     #[must_use]
     pub fn insert(self, key: Symbol, val: Value) -> Self {
         Self::from_list(self.items.prepend(Value::List(
-            List::new().prepend(val).prepend(Value::Sym(key)),
+            List::new().prepend(val).prepend(Value::Sym(key.into())),
         )))
     }
     #[inline]
@@ -36,7 +36,7 @@ impl Table {
             .iter()
             .find(|item| {
                 let list: List = item.get().unwrap();
-                list.index(0) == Value::Sym(key)
+                list.index(0) == Value::Sym(key.into())
             })
             .map(|x| {
                 let xs: List = x.get().unwrap();

@@ -4,6 +4,7 @@ use crate::{Symbol, raise_err};
 
 #[derive(Debug)]
 pub struct InterpretError {
+    pub msg: String,
     pub err: Symbol,
     pub line: usize,
     pub column: usize,
@@ -11,13 +12,13 @@ pub struct InterpretError {
 
 impl fmt::Display for InterpretError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}:{}] {}", self.line, self.column, self.err)
+        write!(f, "[{}:{}] :{}\n  {}", self.line, self.column, self.err, self.msg)
     }
 }
 
 impl From<io::Error> for InterpretError {
     fn from(_: io::Error) -> Self {
-        raise_err!(IOError)
+        raise_err!(IOError, "Internal IO error")
     }
 }
 

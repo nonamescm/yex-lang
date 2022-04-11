@@ -45,21 +45,22 @@ static mut COLUMN: usize = 1;
 #[macro_export]
 #[doc(hidden)]
 macro_rules! raise {
-    ($err: ident) => {{
-        Err($crate::raise_err!($err))
+    ($err: ident, $($fmtargs:expr),*) => {{
+        Err($crate::raise_err!($err, $($fmtargs),*))
     }};
 }
 
 #[macro_export]
 #[doc(hidden)]
 macro_rules! raise_err {
-    ($error: ident) => {
+    ($error: ident, $($fmtargs:expr),*) => {
         unsafe {
             let msg = $crate::Symbol::new(stringify!($error));
             $crate::error::InterpretError {
                 line: $crate::LINE,
                 column: $crate::COLUMN,
                 err: msg,
+                msg: format!($($fmtargs),*),
             }
         }
     };
@@ -267,7 +268,7 @@ impl VirtualMachine {
             OpCode::Loag(name) => {
                 let value = match self.get_global(name) {
                     Some(value) => value,
-                    None => raise!(NameError)?,
+                    None => raise!(NameError, "Undefined variable `{}`", name)?,
                 };
                 self.push(value);
             }
@@ -297,10 +298,14 @@ impl VirtualMachine {
             OpCode::Get(field) => {
                 let obj: GcRef<Instance> = self.pop().get()?;
 
-                let value = obj
-                    .fields
-                    .get(&field)
-                    .ok_or_else(|| raise_err!(FieldError))?;
+                let value = obj.fields.get(&field).ok_or_else(|| {
+                    raise_err!(
+                        FieldError,
+                        "Undefined field `{}` for value `{}`",
+                        field,
+                        Value::Instance(obj)
+                    )
+                })?;
 
                 self.push(value);
             }
@@ -311,7 +316,12 @@ impl VirtualMachine {
             OpCode::Ref(method) => {
                 let ty: GcRef<YexType> = self.pop().get()?;
 
-                let method = ty.fields.get(&method).ok_or(raise_err!(FieldError))?;
+                let method = ty.fields.get(&method).ok_or(raise_err!(
+                    FieldError,
+                    "Undefined method `{}` for type `{}`",
+                    method,
+                    ty.name
+                ))?;
 
                 self.push(method);
             }
@@ -380,7 +390,11 @@ impl VirtualMachine {
         let args = self.call_args(arity, &fun);
 
         if arity > fun.arity {
-            raise!(CallError)?;
+            raise!(
+                CallError,
+                "Too many arguments passed for function {:?}",
+                fun
+            )?;
         }
 
         if arity < fun.arity {
@@ -419,13 +433,13 @@ impl VirtualMachine {
 
         match &*fun.body {
             FnKind::Bytecode(_) if fun.arity != arity => {
-                raise!(TailCallError)
+                raise!(TailCallError, "")
             }
             FnKind::Bytecode(bytecode) if bytecode != frame => {
-                raise!(TailCallError)
+                raise!(TailCallError, "")
             }
             FnKind::Native(_) => {
-                raise!(TailCallError)
+                raise!(TailCallError, "")
             }
             FnKind::Bytecode(_) => Ok(()),
         }

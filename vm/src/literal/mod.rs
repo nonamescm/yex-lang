@@ -22,7 +22,7 @@ use list::List;
 use symbol::Symbol;
 use yextype::YexType;
 
-use self::{table::Table, tuple::Tuple};
+use self::{table::Table, tuple::Tuple, symbol::YexSymbol};
 
 pub fn nil() -> Value {
     Value::Nil
@@ -54,7 +54,7 @@ impl From<String> for Value {
 
 impl From<Symbol> for Value {
     fn from(s: Symbol) -> Self {
-        Value::Sym(s)
+        Value::Sym(s.into())
     }
 }
 
@@ -90,7 +90,7 @@ pub enum Value {
     /// Strings
     Str(GcRef<String>),
     /// erlang-like atoms
-    Sym(Symbol),
+    Sym(YexSymbol),
     /// Booleans
     Bool(bool),
     /// Fnctions
@@ -157,12 +157,12 @@ impl Value {
     pub fn ord_cmp(&self, rhs: &Self) -> InterpretResult<Ordering> {
         let (left, right) = match (self, rhs) {
             (Self::Num(left), Self::Num(right)) => (left, right),
-            _ => raise!(TypeError)?,
+            (l, r) => raise!(TypeError, "cmp not supported with `{}` and `{}`", l, r)?,
         };
 
         match left.partial_cmp(right) {
             Some(ord) => Ok(ord),
-            None => raise!(TypeError),
+            None => raise!(TypeError, "Cannot compare `{}` and `{}`", left, right),
         }
     }
 
@@ -248,50 +248,57 @@ impl std::fmt::Display for Value {
     }
 }
 
-impl Add for Value {
-    type Output = ConstantErr;
+macro_rules! impl_numeric {
+    ($($t:ident $op:tt $fn:ident);+$(;)?) => {
+        $(
+            impl $t for Value {
+                type Output = ConstantErr;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
-            (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x + y)),
-            (Self::Str(x), Self::Str(y)) => Ok(Self::Str(GcRef::new(x.to_string() + &y))),
-            _ => raise!(TypeError),
-        }
+                fn $fn(self, rhs: Self) -> Self::Output {
+                    match (self, rhs) {
+                        (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x $op y)),
+                        (Self::Str(x), Self::Str(y)) => Ok(Self::Str(GcRef::new(x.to_string() + &y))),
+                        (l, r) => raise!(TypeError, "Cannot apply `{}` operator between `{}` and `{}`", stringify!($t), l, r),
+                    }
+                }
+            }
+        )+
     }
 }
 
-impl Sub for Value {
-    type Output = ConstantErr;
+impl_numeric!(
+    Add + add;
+    Sub - sub;
+    Mul * mul;
+    Div / div;
+    Rem % rem;
+);
 
-    fn sub(self, rhs: Self) -> Self::Output {
-        match (self, &rhs) {
-            (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x - y)),
-            _ => raise!(TypeError),
-        }
+macro_rules! impl_bit {
+    ($($t:ident $op:tt $opname:literal $fn:ident);+ $(;)? ) => {
+        $(
+            impl $t for Value {
+                type Output = ConstantErr;
+
+                fn $fn(self, rhs: Self) -> Self::Output {
+                    match (self, rhs) {
+                        (Self::Num(x), Self::Num(y)) if x.fract() == 0.0 && y.fract() == 0.0 => Ok(Self::Num(((x as u64) $op (y as u64)) as f64)),
+                        (Self::Str(x), Self::Str(y)) => Ok(Self::Str(GcRef::new(x.to_string() + &y))),
+                        (l, r) => raise!(TypeError, "Cannot apply `{}` operator between `{}` and `{}`", $opname, l, r),
+                    }
+                }
+            }
+        )+
     }
 }
 
-impl Mul for Value {
-    type Output = ConstantErr;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        match (self, &rhs) {
-            (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x * y)),
-            _ => raise!(TypeError),
-        }
-    }
-}
-
-impl Div for Value {
-    type Output = ConstantErr;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        match (self, &rhs) {
-            (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x / y)),
-            _ => raise!(TypeError),
-        }
-    }
-}
+impl_bit!(
+    BitAnd & "&&&" bitand;
+    BitOr | "|||" bitor;
+    BitXor ^ "^^^" bitxor;
+    Shl << "<<<" shl;
+    Shr >> ">>>" shr;
+);
 
 impl Neg for Value {
     type Output = ConstantErr;
@@ -299,7 +306,7 @@ impl Neg for Value {
     fn neg(self) -> Self::Output {
         match self {
             Self::Num(n) => Ok(Self::Num(-n)),
-            _ => raise!(TypeError),
+            _ => raise!(TypeError, "Cannot apply `-` operator on `{}`", self),
         }
     }
 }
@@ -309,84 +316,6 @@ impl Not for Value {
 
     fn not(self) -> Self::Output {
         Self::Bool(!self.to_bool())
-    }
-}
-
-impl BitXor for Value {
-    type Output = ConstantErr;
-
-    fn bitxor(self, rhs: Self) -> Self::Output {
-        use Value::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) ^ (y.round() as i64)) as f64)),
-            _ => raise!(TypeError),
-        }
-    }
-}
-
-impl BitAnd for Value {
-    type Output = ConstantErr;
-
-    fn bitand(self, rhs: Self) -> Self::Output {
-        use Value::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) & (y.round() as i64)) as f64)),
-            _ => raise!(TypeError),
-        }
-    }
-}
-
-impl BitOr for Value {
-    type Output = ConstantErr;
-
-    fn bitor(self, rhs: Self) -> Self::Output {
-        use Value::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) | (y.round() as i64)) as f64)),
-            _ => raise!(TypeError),
-        }
-    }
-}
-
-impl Shr for Value {
-    type Output = ConstantErr;
-
-    fn shr(self, rhs: Self) -> Self::Output {
-        use Value::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) >> (y.round() as i64)) as f64)),
-            _ => raise!(TypeError),
-        }
-    }
-}
-
-impl Shl for Value {
-    type Output = ConstantErr;
-
-    fn shl(self, rhs: Self) -> Self::Output {
-        use Value::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(((x.round() as i64) << (y.round() as i64)) as f64)),
-            _ => raise!(TypeError),
-        }
-    }
-}
-
-impl Rem for Value {
-    type Output = ConstantErr;
-
-    fn rem(self, rhs: Self) -> Self::Output {
-        use Value::*;
-
-        match (self, rhs) {
-            (Num(x), Num(y)) => Ok(Num(x % y)),
-            _ => raise!(TypeError),
-        }
     }
 }
 
@@ -401,7 +330,7 @@ macro_rules! impl_get {
             fn get(&self) -> InterpretResult<$to> {
                 match self {
                     Self::$pattern(x) => Ok(x.clone()),
-                    _ => crate::raise!(TypeError),
+                    _ => crate::raise!(TypeError, "Unexpected type `{}`", self.type_of().name),
                 }
             }
         }
@@ -413,7 +342,7 @@ macro_rules! impl_get {
                 use Value::*;
                 match self {
                     $pattern => Ok($parse_expr),
-                    _ => crate::raise!(TypeError),
+                    _ => crate::raise!(TypeError, "Unexpected type `{}`", self.type_of().name),
                 }
             }
         }
@@ -427,12 +356,12 @@ impl_get!(GcRef<YexType>: Type);
 impl_get!(GcRef<Fn>: Fn);
 impl_get!(GcRef<Instance>: Instance);
 impl_get!(Table: Table);
-impl_get!(Symbol: Sym);
+impl_get!(Symbol: Sym(s) => s.0);
 impl_get!(List: List);
 impl_get!(Tuple: Tuple);
 impl_get!(usize: Num(n) => {
     if n.fract() != 0.0 || n.is_nan() || n.is_infinite() || *n < 0.0 {
-        return crate::raise!(ValueError);
+        return crate::raise!(ValueError, "Expected a positive integer, got `{}`", n);
     }
 
     n.round() as usize
@@ -440,7 +369,7 @@ impl_get!(usize: Num(n) => {
 
 impl_get!(isize: Num(n) => {
     if n.fract() != 0.0 || n.is_nan() || n.is_infinite() {
-        return crate::raise!(ValueError);
+        return crate::raise!(ValueError, "Expected an integer, got `{}`", n);
     }
 
     n.round() as isize

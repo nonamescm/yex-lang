@@ -5,7 +5,7 @@ use crate::{
     literal::{fun::FnKind, nil, str::methods::format_value, TryGet, Value},
     raise_err, InterpretResult, Symbol, VirtualMachine, YexType,
 };
-use std::io::{Write, self};
+use std::io::{self, Write};
 
 fn println(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
     let message = format_value(vm, args[0].clone())?;
@@ -49,7 +49,7 @@ fn num(args: &[Value]) -> InterpretResult<Value> {
 
     str.parse::<f64>()
         .map(Value::Num)
-        .map_err(|_| raise_err!(TypeError))
+        .map_err(|_| raise_err!(TypeError, "Cannot convert `{}` to number", str))
 }
 
 fn exit(args: &[Value]) -> InterpretResult<Value> {
@@ -59,10 +59,12 @@ fn exit(args: &[Value]) -> InterpretResult<Value> {
 }
 
 fn raise(args: &[Value]) -> InterpretResult<Value> {
-    let msg: Symbol = args[0].get()?;
+    let err: Symbol = args[0].get()?;
+    let msg: String = args[1].get()?;
 
     Err(InterpretError {
-        err: msg,
+        err,
+        msg,
         line: unsafe { crate::LINE },
         column: unsafe { crate::COLUMN },
     })
@@ -112,7 +114,7 @@ pub fn prelude() -> EnvTable {
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
     insert_fn!("exit", exit);
-    insert_fn!("raise", raise);
+    insert_fn!("raise", raise, 2);
 
     insert!("Nil", Value::Type(GcRef::new(YexType::nil())));
     insert!("Bool", Value::Type(GcRef::new(YexType::bool())));

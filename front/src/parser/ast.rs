@@ -270,7 +270,7 @@ impl PartialEq<Value> for Literal {
             (Literal::Num(a), Value::Num(b)) => a == b,
             (Literal::Str(a), Value::Str(b)) => a == &**b,
             (Literal::Bool(a), Value::Bool(b)) => a == b,
-            (Literal::Sym(a), Value::Sym(b)) => a == b,
+            (Literal::Sym(a), Value::Sym(b)) => *a == **b,
             (Literal::Unit, Value::Nil) => true,
             _ => false,
         }
@@ -283,7 +283,7 @@ impl From<Literal> for Value {
             Literal::Num(n) => Value::Num(n),
             Literal::Str(s) => Value::Str(GcRef::new(s)),
             Literal::Bool(b) => Value::Bool(b),
-            Literal::Sym(s) => Value::Sym(s),
+            Literal::Sym(s) => Value::Sym(s.into()),
             Literal::Unit => Value::Nil,
         }
     }

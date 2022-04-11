@@ -1,6 +1,6 @@
 use std::{
-    fmt::Formatter,
-    hash::{Hash, Hasher},
+    fmt::{Formatter, self},
+    hash::{Hash, Hasher}, ops::Deref,
 };
 
 /// Symbol struct, contains the symbol string and a pre-hashed value for faster comparison
@@ -26,7 +26,7 @@ impl Eq for Symbol {}
 
 impl std::fmt::Display for Symbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, ":{}", self.string)?;
+        write!(f, "{}", self.string)?;
         Ok(())
     }
 }
@@ -63,5 +63,28 @@ impl Symbol {
 impl<T: AsRef<str>> From<T> for Symbol {
     fn from(str: T) -> Self {
         Self::new(str.as_ref())
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct YexSymbol(pub Symbol);
+
+impl From<Symbol> for YexSymbol {
+    fn from(sym: Symbol) -> Self {
+        Self(sym)
+    }
+}
+
+impl fmt::Display for YexSymbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, ":{}", self.0)
+    }
+}
+
+impl Deref for YexSymbol {
+    type Target = Symbol;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
