@@ -232,14 +232,14 @@ impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Value::*;
         let tk = match self {
-            Fn(f) => format!("<fun({})>", f.arity),
+            Fn(f) => format!("fn({})", f.arity),
             Nil => "nil".to_string(),
             List(xs) => format!("{}", *xs),
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
-            Type(t) => format!("<type({})>", t.name),
-            Instance(i) => format!("<instance({})>", i.ty.name),
+            Type(t) => format!("type({})", t.name),
+            Instance(i) => format!("instance({})", i.ty.name),
             Table(t) => format!("{t}"),
             Tuple(t) => format!("{t}"),
             Bool(b) => b.to_string(),
