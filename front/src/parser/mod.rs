@@ -223,7 +223,7 @@ impl Parser {
             Tkt::End => {
                 self.next()?;
                 None
-            },
+            }
 
             _ => unreachable!(),
         };
@@ -685,40 +685,65 @@ impl Parser {
 
             Ok(Expr::new(ExprKind::New { ty, args }, op.line, op.column))
         } else {
-            self.dot()
+            self.field_or_method()
         }
     }
 
-    fn dot(&mut self) -> ParseResult<Expr> {
+    fn field_or_method(&mut self) -> ParseResult<Expr> {
         let mut obj = self.call()?;
 
-        while self.current.token == Tkt::Dot {
-            obj = self.dot_access(obj)?;
+        loop {
+            obj = match self.current.token {
+                Tkt::Dot => self.field_access(obj)?,
+                Tkt::Colon => self.invoke_method(obj)?,
+                _ => break,
+            }
         }
 
         Ok(obj)
     }
 
-    fn dot_access(&mut self, obj: Expr) -> ParseResult<Expr> {
+    fn field_access(&mut self, obj: Expr) -> ParseResult<Expr> {
+        self.expect(Tkt::Dot)?;
+
         let line = self.current.line;
         let column = self.current.column;
 
-        self.next()?;
-
-        let obj = Box::new(obj);
-
         let field = self.var_decl()?;
-        if self.current.token == Tkt::Lparen {
-            let args = self.call_args()?;
 
-            Ok(Expr::new(
-                ExprKind::Invoke { obj, field, args },
-                line,
-                column,
-            ))
+        Ok(Expr::new(
+            ExprKind::Field {
+                obj: Box::new(obj),
+                field,
+            },
+            line,
+            column,
+        ))
+    }
+
+    fn invoke_method(&mut self, obj: Expr) -> ParseResult<Expr> {
+        self.expect(Tkt::Colon)?;
+
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let method = self.var_decl()?;
+
+        let args = if self.current.token == Tkt::Lparen {
+            self.call_args()?
         } else {
-            Ok(Expr::new(ExprKind::Field { obj, field }, line, column))
-        }
+            Vec::new()
+        };
+
+        Ok(Expr::new(
+            ExprKind::Invoke {
+                obj: Box::new(obj),
+                field: method,
+                args,
+            },
+            line,
+            column,
+        ))
     }
 
     fn call_args(&mut self) -> ParseResult<Vec<Expr>> {
