@@ -238,7 +238,7 @@ pub fn instantiate(
     args: Vec<Value>,
 ) -> InterpretResult<()> {
     if args.len() != ty.params.len() {
-        raise!(TypeError, "Wrong number of parameters passed to type constructor `{}`", ty.name)?;
+        raise!(TypeError, "Wrong number of parameters passed to type constructor '{}'", ty.name)?;
     }
 
     let mut fields = EnvTable::new();

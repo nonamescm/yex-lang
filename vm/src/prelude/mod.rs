@@ -49,7 +49,7 @@ fn num(args: &[Value]) -> InterpretResult<Value> {
 
     str.parse::<f64>()
         .map(Value::Num)
-        .map_err(|_| raise_err!(TypeError, "Cannot convert `{}` to number", str))
+        .map_err(|_| raise_err!(TypeError, "Cannot convert '{}' to number", str))
 }
 
 fn exit(args: &[Value]) -> InterpretResult<Value> {

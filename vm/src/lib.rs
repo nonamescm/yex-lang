@@ -268,7 +268,7 @@ impl VirtualMachine {
             OpCode::Loag(name) => {
                 let value = match self.get_global(name) {
                     Some(value) => value,
-                    None => raise!(NameError, "Undefined variable `{}`", name)?,
+                    None => raise!(NameError, "Undefined variable '{}'", name)?,
                 };
                 self.push(value);
             }
@@ -301,7 +301,7 @@ impl VirtualMachine {
                 let value = obj.fields.get(&field).ok_or_else(|| {
                     raise_err!(
                         FieldError,
-                        "Undefined field `{}` for value `{}`",
+                        "Undefined field '{}' for value '{}'",
                         field,
                         Value::Instance(obj)
                     )
@@ -318,7 +318,7 @@ impl VirtualMachine {
 
                 let method = ty.fields.get(&method).ok_or(raise_err!(
                     FieldError,
-                    "Undefined method `{}` for type `{}`",
+                    "Undefined method '{}' for type '{}'",
                     method,
                     ty.name
                 ))?;

@@ -93,7 +93,7 @@ impl Lexer {
             '\\' => '\\',
             '"' => '"',
             'r' => '\r',
-            other => self.throw(format!("Unknow escape char `{}`", other))?,
+            other => self.throw(format!("Unknow escape char '{}'", other))?,
         };
         self.next();
         Ok(char.into())
@@ -275,7 +275,7 @@ impl Lexer {
                 return self.get();
             }
 
-            c => self.throw(format!("Unknown start of token `{}`", c))?,
+            c => self.throw(format!("Unknown start of token '{}'", c))?,
         };
 
         Ok(Token {

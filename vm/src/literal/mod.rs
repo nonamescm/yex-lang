@@ -157,12 +157,12 @@ impl Value {
     pub fn ord_cmp(&self, rhs: &Self) -> InterpretResult<Ordering> {
         let (left, right) = match (self, rhs) {
             (Self::Num(left), Self::Num(right)) => (left, right),
-            (l, r) => raise!(TypeError, "cmp not supported with `{}` and `{}`", l, r)?,
+            (l, r) => raise!(TypeError, "cmp not supported with '{}' and '{}'", l, r)?,
         };
 
         match left.partial_cmp(right) {
             Some(ord) => Ok(ord),
-            None => raise!(TypeError, "Cannot compare `{}` and `{}`", left, right),
+            None => raise!(TypeError, "Cannot compare '{}' and '{}'", left, right),
         }
     }
 
@@ -258,7 +258,7 @@ macro_rules! impl_numeric {
                     match (self, rhs) {
                         (Self::Num(x), Self::Num(y)) => Ok(Self::Num(x $op y)),
                         (Self::Str(x), Self::Str(y)) => Ok(Self::Str(GcRef::new(x.to_string() + &y))),
-                        (l, r) => raise!(TypeError, "Cannot apply `{}` operator between `{}` and `{}`", stringify!($t), l, r),
+                        (l, r) => raise!(TypeError, "Cannot apply '{}' operator between '{}' and '{}'", stringify!($t), l, r),
                     }
                 }
             }
@@ -284,7 +284,7 @@ macro_rules! impl_bit {
                     match (self, rhs) {
                         (Self::Num(x), Self::Num(y)) if x.fract() == 0.0 && y.fract() == 0.0 => Ok(Self::Num(((x as u64) $op (y as u64)) as f64)),
                         (Self::Str(x), Self::Str(y)) => Ok(Self::Str(GcRef::new(x.to_string() + &y))),
-                        (l, r) => raise!(TypeError, "Cannot apply `{}` operator between `{}` and `{}`", $opname, l, r),
+                        (l, r) => raise!(TypeError, "Cannot apply '{}' operator between '{}' and '{}'", $opname, l, r),
                     }
                 }
             }
@@ -306,7 +306,7 @@ impl Neg for Value {
     fn neg(self) -> Self::Output {
         match self {
             Self::Num(n) => Ok(Self::Num(-n)),
-            _ => raise!(TypeError, "Cannot apply `-` operator on `{}`", self),
+            _ => raise!(TypeError, "Cannot apply '-' operator on '{}'", self),
         }
     }
 }
@@ -330,7 +330,7 @@ macro_rules! impl_get {
             fn get(&self) -> InterpretResult<$to> {
                 match self {
                     Self::$pattern(x) => Ok(x.clone()),
-                    _ => crate::raise!(TypeError, "Unexpected type `{}`", self.type_of().name),
+                    _ => crate::raise!(TypeError, "Unexpected type '{}'", self.type_of().name),
                 }
             }
         }
@@ -342,7 +342,7 @@ macro_rules! impl_get {
                 use Value::*;
                 match self {
                     $pattern => Ok($parse_expr),
-                    _ => crate::raise!(TypeError, "Unexpected type `{}`", self.type_of().name),
+                    _ => crate::raise!(TypeError, "Unexpected type '{}'", self.type_of().name),
                 }
             }
         }
@@ -361,7 +361,7 @@ impl_get!(List: List);
 impl_get!(Tuple: Tuple);
 impl_get!(usize: Num(n) => {
     if n.fract() != 0.0 || n.is_nan() || n.is_infinite() || *n < 0.0 {
-        return crate::raise!(ValueError, "Expected a positive integer, got `{}`", n);
+        return crate::raise!(ValueError, "Expected a positive integer, got '{}'", n);
     }
 
     n.round() as usize
@@ -369,7 +369,7 @@ impl_get!(usize: Num(n) => {
 
 impl_get!(isize: Num(n) => {
     if n.fract() != 0.0 || n.is_nan() || n.is_infinite() {
-        return crate::raise!(ValueError, "Expected an integer, got `{}`", n);
+        return crate::raise!(ValueError, "Expected an integer, got '{}'", n);
     }
 
     n.round() as isize

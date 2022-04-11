@@ -109,7 +109,7 @@ impl Parser {
                 {
                     methods.push(def)
                 }
-                _ => self.throw("Methods should receive `this` as a parameter")?,
+                _ => self.throw("Methods should receive 'this' as a parameter")?,
             }
         }
         self.next()?;
@@ -157,7 +157,7 @@ impl Parser {
             Ok(())
         } else {
             self.throw(format!(
-                "Expected {}, found `{}`",
+                "Expected {}, found '{}'",
                 expected, self.current.token
             ))
         }
@@ -253,7 +253,7 @@ impl Parser {
                 Tkt::Comma => self.skip(Tkt::Comma)?,
                 Tkt::Rparen => break,
                 _ => self.throw(format!(
-                    "Expected `,`, `)` or other token, found `{}`",
+                    "Expected ',', ')' or other token, found '{}'",
                     &self.current.token
                 ))?,
             }
@@ -281,7 +281,7 @@ impl Parser {
                 line,
                 column,
             )),
-            _ => self.throw("`->` can only be used on function calls"),
+            _ => self.throw("'->' can only be used on function calls"),
         }
     }
 
@@ -430,7 +430,7 @@ impl Parser {
     fn var_decl(&mut self) -> ParseResult<VarDecl> {
         let name = match take(&mut self.current.token) {
             Tkt::Name(id) => id,
-            other => self.throw(format!("Expected name, found `{}`", other))?,
+            other => self.throw(format!("Expected name, found '{}'", other))?,
         };
 
         self.next()?;
@@ -732,7 +732,7 @@ impl Parser {
                 Tkt::Comma => self.skip(Tkt::Comma)?,
                 Tkt::Rparen => break,
                 _ => self.throw(format!(
-                    "Expected `,`, `)` or other token, found `{}`",
+                    "Expected ',', ')' or other token, found '{}'",
                     &self.current.token
                 ))?,
             }
@@ -800,7 +800,7 @@ impl Parser {
                 Tkt::Comma => self.skip(Tkt::Comma)?,
                 Tkt::Rbrack => break,
                 _ => self.throw(format!(
-                    "Expected `,`, `]` or other token, found `{}`",
+                    "Expected ',', ']' or other token, found '{}'",
                     &self.current.token
                 ))?,
             }
@@ -824,7 +824,7 @@ impl Parser {
                 Tkt::Comma => self.skip(Tkt::Comma)?,
                 Tkt::Rparen => break,
                 _ => self.throw(format!(
-                    "Expected `,`, `)` or other token, found `{}`",
+                    "Expected ',', ')' or other token, found '{}'",
                     &self.current.token
                 ))?,
             }
@@ -851,7 +851,7 @@ impl Parser {
             Tkt::Lbrack => self.list()?,
             Tkt::Lparen => self.tuple()?,
             Tkt::Nil => Expr::new(ExprKind::Lit(Literal::Unit), line, column),
-            other => self.throw(format!("unexpected token `{}`", other))?,
+            other => self.throw(format!("unexpected token '{}'", other))?,
         };
 
         Ok(obj)
