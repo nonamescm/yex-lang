@@ -39,6 +39,7 @@ pub enum BinOp {
     Ne,
     And,
     Or,
+    Is,
 }
 
 impl<'a> From<BinOp> for &'a [OpCode] {
@@ -60,6 +61,7 @@ impl<'a> From<BinOp> for &'a [OpCode] {
             BinOp::Shl => &[OpCode::Shl],
             BinOp::Eq => &[OpCode::Eq],
             BinOp::Ne => &[OpCode::Eq, OpCode::Not],
+            BinOp::Is => &[OpCode::Rev, OpCode::Type, OpCode::Eq],
             BinOp::And => unreachable!(),
             BinOp::Or => unreachable!(),
         }

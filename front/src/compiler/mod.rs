@@ -374,7 +374,7 @@ impl Compiler {
                 // emits the empty list
                 self.emit_const(Value::List(List::new()), loc);
 
-                for it in 0..xs.len() {
+                for _ in 0..xs.len() {
                     self.emit_op(OpCode::Prep, loc);
                 }
             }

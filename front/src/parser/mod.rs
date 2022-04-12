@@ -500,13 +500,13 @@ impl Parser {
     }
 
     fn logic_and(&mut self) -> ParseResult<Expr> {
-        let mut left = self.eq()?;
+        let mut left = self.is()?;
 
         while let Tkt::And = self.current.token {
             let op = take(&mut self.current.token).try_into().unwrap();
 
             self.next()?;
-            let right = self.eq()?;
+            let right = self.is()?;
 
             let line = left.line();
             let column = left.column();
@@ -515,6 +515,30 @@ impl Parser {
                 ExprKind::Binary {
                     left: Box::new(left),
                     op,
+                    right: Box::new(right),
+                },
+                line,
+                column,
+            );
+        }
+
+        Ok(left)
+    }
+
+    fn is(&mut self) -> ParseResult<Expr> {
+        let mut left = self.eq()?;
+
+        while let Tkt::Is = self.current.token {
+            let line = left.line();
+            let column = left.column();
+
+            self.next()?;
+            let right = self.eq()?;
+
+            left = Expr::new(
+                ExprKind::Binary {
+                    left: Box::new(left),
+                    op: ast::BinOp::Is,
                     right: Box::new(right),
                 },
                 line,

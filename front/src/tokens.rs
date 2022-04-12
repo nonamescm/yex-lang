@@ -17,9 +17,6 @@ pub enum TokenType {
     Def,
     Let,
     Fn,
-    And,
-    Or,
-    Not,
     Class,
     Do,
     End,
@@ -27,8 +24,9 @@ pub enum TokenType {
     When,
     Try,
     Rescue,
+    Is,
 
-    // logical operators
+    // mathematical operators
     Add,
     Sub,
     Mul,
@@ -50,6 +48,11 @@ pub enum TokenType {
     BitXor,
     Shr, // right-shift
     Shl, // left-shift
+
+    // logical operators
+    And,
+    Or,
+    Not,
 
     // Symbol
     Lparen,
@@ -93,9 +96,6 @@ impl std::fmt::Display for TokenType {
             Self::Def => "def".into(),
             Self::Let => "let".into(),
             Self::Fn => "fn".into(),
-            Self::And => "&&".into(),
-            Self::Or => "||".into(),
-            Self::Not => "!".into(),
             Self::Class => "class".into(),
             Self::Do => "do".into(),
             Self::End => "end".into(),
@@ -103,6 +103,7 @@ impl std::fmt::Display for TokenType {
             Self::When => "when".into(),
             Self::Try => "try".into(),
             Self::Rescue => "rescue".into(),
+            Self::Is => "is".into(),
 
             Self::Add => '+'.into(),
             Self::Sub => '-'.into(),
@@ -124,6 +125,10 @@ impl std::fmt::Display for TokenType {
             Self::BitXor => "^^^".into(),
             Self::Shr => ">>>".into(),
             Self::Shl => "<<<".into(),
+
+            Self::And => "&&".into(),
+            Self::Or => "||".into(),
+            Self::Not => "!".into(),
 
             Self::Lparen => '('.into(),
             Self::Rparen => ')'.into(),
@@ -165,6 +170,7 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "when" => Some(TokenType::When),
         "try" => Some(TokenType::Try),
         "rescue" => Some(TokenType::Rescue),
+        "is" => Some(TokenType::Is),
         _ => None,
     }
 }
