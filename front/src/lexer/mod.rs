@@ -225,7 +225,7 @@ impl Lexer {
             '>' if self.peek_at(1) == '>' && self.peek_at(2) == '>' => {
                 self.next();
                 self.next();
-                TokenType::Shl
+                TokenType::Shr
             }
 
             '>' if self.peek_at(1) == '>' => {
@@ -236,7 +236,7 @@ impl Lexer {
             '<' if self.peek_at(1) == '<' && self.peek_at(2) == '<' => {
                 self.next();
                 self.next();
-                TokenType::Shr
+                TokenType::Shl
             }
             '^' if self.peek_at(1) == '^' && self.peek_at(2) == '^' => {
                 self.next();
