@@ -268,12 +268,8 @@ impl Compiler {
             ExprKind::App { callee, args, tail } => {
                 // iterate over the arguments
                 // pushing them onto the stack
-                for (idx, arg) in args.iter().enumerate() {
+                for arg in args.iter().rev() {
                     self.expr(arg);
-
-                    if idx > 0 {
-                        self.emit_op(OpCode::Rev, loc);
-                    }
                 }
 
                 // compiles the caller
@@ -366,7 +362,8 @@ impl Compiler {
             }
 
             ExprKind::List(xs) => {
-                // push the elements to be prepended onto the stack
+                // prepend each element to the list, in the reverse order
+                // since it's a linked list
                 for x in xs.iter() {
                     self.expr(x);
                 }
@@ -416,12 +413,8 @@ impl Compiler {
 
             // compiles type instantiation
             ExprKind::New { ty, args } => {
-                for (idx, arg) in args.iter().enumerate() {
+                for arg in args.iter().rev() {
                     self.expr(arg);
-
-                    if idx > 0 {
-                        self.emit_op(OpCode::Rev, loc);
-                    }
                 }
 
                 self.expr(ty);
@@ -429,12 +422,8 @@ impl Compiler {
             }
 
             ExprKind::Invoke { obj, field, args } => {
-                for (idx, arg) in args.iter().enumerate() {
+                for arg in args.iter().rev() {
                     self.expr(arg);
-
-                    if idx > 0 {
-                        self.emit_op(OpCode::Rev, loc);
-                    }
                 }
 
                 self.expr(obj);
@@ -484,11 +473,8 @@ impl Compiler {
             }
 
             ExprKind::Tuple(xs) => {
-                for (idx, x) in xs.iter().enumerate() {
+                for x in xs.iter().rev() {
                     self.expr(x);
-                    if idx > 0 {
-                        self.emit_op(OpCode::Rev, loc);
-                    }
                 }
 
                 self.emit_op(OpCode::Tup(xs.len()), loc);

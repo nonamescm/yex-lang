@@ -200,7 +200,9 @@ impl VirtualMachine {
             }
 
             OpCode::Rev => {
-                self.stack.array.swap(0, 1);
+                let (a, b) = self.pop_two();
+                self.push(b);
+                self.push(a);
             }
 
             // function calls
