@@ -200,9 +200,7 @@ impl VirtualMachine {
             }
 
             OpCode::Rev => {
-                let (a, b) = self.pop_two();
-                self.push(b);
-                self.push(a);
+                self.stack.array.swap(0, 1);
             }
 
             // function calls
@@ -279,8 +277,8 @@ impl VirtualMachine {
 
             // list manipulation
             OpCode::Prep => {
-                let value = self.pop();
                 let list: List = self.pop().get()?;
+                let value = self.pop();
 
                 self.push(list.prepend(value).into());
             }

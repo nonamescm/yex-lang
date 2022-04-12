@@ -3,7 +3,7 @@ use std::{mem::{self, MaybeUninit}, ops::Deref};
 /// A wrapper around an array armazenated on the stack
 pub struct StackVec<T, const S: usize> {
     len: usize,
-    array: [MaybeUninit<T>; S],
+    pub(super) array: [MaybeUninit<T>; S],
 }
 
 impl<T, const S: usize> StackVec<T, S> {

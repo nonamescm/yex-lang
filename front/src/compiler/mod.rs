@@ -268,8 +268,12 @@ impl Compiler {
             ExprKind::App { callee, args, tail } => {
                 // iterate over the arguments
                 // pushing them onto the stack
-                for arg in args.iter().rev() {
+                for (idx, arg) in args.iter().enumerate() {
                     self.expr(arg);
+
+                    if idx > 0 {
+                        self.emit_op(OpCode::Rev, loc);
+                    }
                 }
 
                 // compiles the caller
@@ -362,13 +366,15 @@ impl Compiler {
             }
 
             ExprKind::List(xs) => {
+                // push the elements to be prepended onto the stack
+                for x in xs.iter() {
+                    self.expr(x);
+                }
+
                 // emits the empty list
                 self.emit_const(Value::List(List::new()), loc);
 
-                // prepend each element to the list, in the reverse order
-                // since it's a linked list
-                for x in xs.iter().rev() {
-                    self.expr(x);
+                for it in 0..xs.len() {
                     self.emit_op(OpCode::Prep, loc);
                 }
             }
@@ -410,8 +416,12 @@ impl Compiler {
 
             // compiles type instantiation
             ExprKind::New { ty, args } => {
-                for arg in args.iter().rev() {
+                for (idx, arg) in args.iter().enumerate() {
                     self.expr(arg);
+
+                    if idx > 0 {
+                        self.emit_op(OpCode::Rev, loc);
+                    }
                 }
 
                 self.expr(ty);
@@ -419,8 +429,12 @@ impl Compiler {
             }
 
             ExprKind::Invoke { obj, field, args } => {
-                for arg in args.iter().rev() {
+                for (idx, arg) in args.iter().enumerate() {
                     self.expr(arg);
+
+                    if idx > 0 {
+                        self.emit_op(OpCode::Rev, loc);
+                    }
                 }
 
                 self.expr(obj);
@@ -470,8 +484,11 @@ impl Compiler {
             }
 
             ExprKind::Tuple(xs) => {
-                for x in xs.iter().rev() {
+                for (idx, x) in xs.iter().enumerate() {
                     self.expr(x);
+                    if idx > 0 {
+                        self.emit_op(OpCode::Rev, loc);
+                    }
                 }
 
                 self.emit_op(OpCode::Tup(xs.len()), loc);
