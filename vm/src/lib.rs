@@ -385,6 +385,17 @@ impl VirtualMachine {
     pub(crate) fn call(&mut self, arity: usize) -> InterpretResult<()> {
         let fun: GcRef<Fn> = self.pop().get()?;
 
+        if arity < fun.arity {
+            let mut args = stackvec![];
+
+            for _ in 0..arity {
+                unsafe { args.insert_at(arity, self.pop()) };
+            }
+
+            self.push(Value::Fn(GcRef::new(fun.apply(args))));
+            return Ok(());
+        }
+
         let args = self.call_args(arity, &fun);
 
         if arity > fun.arity {
@@ -393,11 +404,6 @@ impl VirtualMachine {
                 "Too many arguments passed for function {:?}",
                 fun
             )?;
-        }
-
-        if arity < fun.arity {
-            self.push(Value::Fn(GcRef::new(fun.apply(args))));
-            return Ok(());
         }
 
         match &*fun.body {
