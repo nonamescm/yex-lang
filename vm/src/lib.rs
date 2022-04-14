@@ -363,7 +363,7 @@ impl VirtualMachine {
 
     #[inline(always)]
     fn call_args(&mut self, arity: usize, fun: &Fn) -> FnArgs {
-        if fun.arity == arity && fun.is_bytecode() && fun.args.is_empty() {
+        if fun.is_bytecode() && fun.args.is_empty() {
             return stackvec![];
         }
 
@@ -391,7 +391,7 @@ impl VirtualMachine {
             let mut args = stackvec![];
 
             for _ in 0..arity {
-                unsafe { args.insert_at(arity, self.pop()) };
+                args.push(self.pop());
             }
 
             self.push(Value::Fn(GcRef::new(fun.apply(args))));
