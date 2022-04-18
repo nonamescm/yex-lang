@@ -6,6 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-vm = { path = "../vm" }
-front = { path = "../front" }
+vm = { path = "../vm", version = "*" }
+front = { path = "../front", version = "*" }
 rustyline = "9.0.0"
