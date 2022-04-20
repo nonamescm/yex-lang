@@ -75,11 +75,11 @@ assert(tailcall(10, nil) == "Done", "Tailcall test failed")
 def partial(a, b, c, d): a * b - c * d
 
 let partialTest = [
-	partial(1, 2, 3, 4) == -10
-	partial(1)(2, 3, 4) == -10
-	partial(1)(2, 3)(4) == -10
-	partial(1, 2)(3, 4) == -10
-	partial(1, 2, 3)(4) == -10
+	partial(1, 2, 3, 4) == -10,
+	partial(1)(2, 3, 4) == -10,
+	partial(1)(2, 3)(4) == -10,
+	partial(1, 2)(3, 4) == -10,
+	partial(1, 2, 3)(4) == -10,
 ]
 
 partialTest:map(fn(test) do
