@@ -31,16 +31,16 @@ ops_tests:map(fn(test) do
 end)
 
 class Person(name, age)
-	def init(this) do
-		assert(this.name is Str, "Name must be a string")
-		assert(this.age is Num, "Age must be a number")
-		this
+	def new(name, age) do
+		assert(name is Str, "Name must be a string")
+		assert(age is Num, "Age must be a number")
+		Person { name: name, age: age }
 	end
 
 	def adult?(this): this.age >= 18
 end
 
-let p = new Person("John", 18)
+let p = Person#new("John", 18)
 assert(p:adult?(), "Person is not adult")
 assert(p is Person, "p is not a Person")
 

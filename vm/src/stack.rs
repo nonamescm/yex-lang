@@ -112,6 +112,15 @@ impl<T, const S: usize> StackVec<T, S> {
     pub unsafe fn set_len(&mut self, len: usize) {
         self.len = len;
     }
+
+    #[track_caller]
+    /// Returns a MaybeUninit reference to the element at the given index
+    /// # Safety
+    /// This function is unsafe because it doesn't check if the index is out of bounds, it's up to
+    /// the caller to make sure that the index is valid
+    pub unsafe fn get_uninit_mut(&mut self, idx: usize) -> &mut MaybeUninit<T> {
+        &mut self.array[idx]
+    }
 }
 
 impl<T: std::fmt::Debug, const S: usize> std::fmt::Debug for StackVec<T, S> {

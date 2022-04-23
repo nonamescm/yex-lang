@@ -13,6 +13,6 @@ pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     Ok(tup.0.get(idx).cloned().unwrap_or_else(nil))
 }
 
-pub fn init(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
+pub fn new(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
     Ok(vec![].into())
 }

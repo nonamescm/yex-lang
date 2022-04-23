@@ -132,6 +132,6 @@ pub fn len(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     Ok((xs.len() as f64).into())
 }
 
-pub fn init(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
+pub fn new(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
     Ok(List::new().into())
 }

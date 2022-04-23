@@ -160,12 +160,17 @@ pub enum OpCode {
     /// Instantiates a new object
     /// The stack layout before running this opcode: [type, ...args]
     /// The stack layout after running it: [object]
-    New(usize),
+    New,
 
-    /// Access a field of a type
+    /// Access a field of a instance
     /// The stack layout before running this opcode: [instance]
     /// The stack layout after running it: [field-value]
     Get(Symbol),
+
+    /// Sets a field of a instance
+    /// The stack layout before running this opcode: [instance, value]
+    /// The stack layout after running it: [instance]
+    Set(Symbol),
 
     /// Get the type of the value on the top of the stack
     /// The stack layout before running this opcode: [instance]

@@ -1,4 +1,4 @@
-use std::{iter::Peekable, mem::take};
+use std::{collections::HashMap, iter::Peekable, mem::take};
 
 use crate::{
     error::{ParseError, ParseResult},
@@ -90,27 +90,13 @@ impl Parser {
         self.next()?;
 
         let mut methods = Vec::new();
-        let mut init = None;
 
         while self.current.token != Tkt::End {
             let def = match self.def_global()?.kind {
                 StmtKind::Def(def) => def,
                 _ => unreachable!(),
             };
-
-            if def.bind.name.as_str() == "init" {
-                init = Some(def);
-                continue;
-            }
-
-            match def.value.kind {
-                ExprKind::Lambda { ref args, .. }
-                    if !args.is_empty() && args[0].name.as_str() == "this" =>
-                {
-                    methods.push(def)
-                }
-                _ => self.throw("Methods should receive 'this' as a parameter")?,
-            }
+            methods.push(def);
         }
         self.next()?;
 
@@ -119,7 +105,6 @@ impl Parser {
                 name,
                 params,
                 methods,
-                init,
             },
             line,
             column,
@@ -697,20 +682,40 @@ impl Parser {
     }
 
     fn instance(&mut self) -> ParseResult<Expr> {
-        if let Tkt::New = &self.current.token {
-            let op = take(&mut self.current);
+        let mut left = self.field_or_method()?;
+
+        let line = self.current.line;
+        let column = self.current.column;
+
+        while self.current.token == Tkt::Lbrace {
             self.next()?;
 
-            let ty = Box::new(self.primary()?);
-            self.next()?;
+            let mut args = HashMap::new();
 
-            self.assert(Tkt::Lparen)?;
-            let args = self.call_args()?;
+            while matches!(self.current.token, Tkt::Name(_)) {
+                let field = self.var_decl()?;
+                self.expect(Tkt::Colon)?;
+                let value = self.instance()?;
 
-            Ok(Expr::new(ExprKind::New { ty, args }, op.line, op.column))
-        } else {
-            self.field_or_method()
+                args.insert(field.name, value);
+                if self.current.token != Tkt::Rbrace {
+                    self.expect(Tkt::Comma)?;
+                }
+            }
+
+            self.expect(Tkt::Rbrace)?;
+
+            left = Expr::new(
+                ExprKind::Instance {
+                    ty: Box::new(left),
+                    args,
+                },
+                line,
+                column,
+            );
         }
+
+        Ok(left)
     }
 
     fn field_or_method(&mut self) -> ParseResult<Expr> {

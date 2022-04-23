@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use vm::{gc::GcRef, OpCode, Symbol, Value};
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -243,10 +245,10 @@ pub enum ExprKind {
 
     UnOp(UnOp, Box<Expr>),
 
-    New {
+    Instance {
         ty: Box<Expr>,
-        args: Vec<Expr>,
-    }, // types are just values, so I can't really do compile time checking
+        args: HashMap<Symbol, Expr>,
+    },
 
     Try {
         body: Box<Expr>,
@@ -353,7 +355,6 @@ pub enum StmtKind {
         name: VarDecl,
         params: Vec<VarDecl>,
         methods: Vec<Def>,
-        init: Option<Def>,
     },
 
     Expr(Expr),

@@ -2,7 +2,7 @@ use crate::{error::InterpretResult, literal::TryGet, Symbol, Value, VirtualMachi
 
 use super::Table;
 
-pub fn init(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
+pub fn new(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
     Ok(Value::Table(Table::new()))
 }
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {

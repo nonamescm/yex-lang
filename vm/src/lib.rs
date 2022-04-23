@@ -285,16 +285,11 @@ impl VirtualMachine {
                 self.push(list.prepend(value).into());
             }
 
-            OpCode::New(arity) => {
+            OpCode::New => {
                 let ty: GcRef<YexType> = self.pop().get()?;
-
-                let mut args = vec![];
-                for _ in 0..arity {
-                    args.push(self.pop());
-                }
-
-                instantiate(self, ty, args)?;
+                instantiate(self, ty)?;
             }
+
             OpCode::Get(field) => {
                 let obj: GcRef<Instance> = self.pop().get()?;
 
@@ -309,6 +304,18 @@ impl VirtualMachine {
 
                 self.push(value);
             }
+
+            OpCode::Set(field) => unsafe {
+                let value = self.pop();
+                let mut obj: GcRef<Instance> = self
+                    .stack
+                    .get_uninit_mut(self.stack.len() - 1)
+                    .assume_init_mut()
+                    .get()?;
+
+                obj.mut_ref().fields.insert(field, value);
+            },
+
             OpCode::Type => {
                 let value = self.pop();
                 self.push(Value::Type(value.type_of()));

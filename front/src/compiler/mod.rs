@@ -412,13 +412,14 @@ impl Compiler {
             }
 
             // compiles type instantiation
-            ExprKind::New { ty, args } => {
-                for arg in args.iter().rev() {
-                    self.expr(arg);
-                }
-
+            ExprKind::Instance { ty, args } => {
                 self.expr(ty);
-                self.emit_op(OpCode::New(args.len()), loc);
+                self.emit_op(OpCode::New, loc);
+
+                for (k, v) in args.iter() {
+                    self.expr(v);
+                    self.emit_op(OpCode::Set(*k), loc);
+                }
             }
 
             ExprKind::Invoke { obj, field, args } => {
@@ -501,12 +502,10 @@ impl Compiler {
                 name,
                 methods,
                 params,
-                init,
             } => {
                 self.typedef(
                     name,
                     methods,
-                    init,
                     &params.iter().map(|x| x.name).collect::<Vec<_>>(),
                     &node.location,
                 );
@@ -516,14 +515,7 @@ impl Compiler {
         }
     }
 
-    fn typedef(
-        &mut self,
-        decl: &VarDecl,
-        methods: &[Def],
-        init: &Option<Def>,
-        params: &[Symbol],
-        loc: &Location,
-    ) {
+    fn typedef(&mut self, decl: &VarDecl, methods: &[Def], params: &[Symbol], loc: &Location) {
         let mut table = EnvTable::new();
         for m in methods {
             let func = match &m.value.kind {
@@ -534,16 +526,7 @@ impl Compiler {
             table.insert(m.bind.name, func);
         }
 
-        let mut ty = YexType::new(decl.name, table, params.to_vec());
-
-        if let Some(init) = init {
-            let func = match &init.value.kind {
-                ExprKind::Lambda { args, body } => self.lambda_expr(args, body, loc),
-                _ => unreachable!(),
-            };
-
-            ty = ty.with_initializer(func);
-        }
+        let ty = YexType::new(decl.name, table, params.to_vec());
 
         self.emit_const(Value::Type(GcRef::new(ty)), loc);
         self.emit_op(OpCode::Savg(decl.name), loc);
