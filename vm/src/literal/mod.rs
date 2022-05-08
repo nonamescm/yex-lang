@@ -12,7 +12,7 @@ pub mod str;
 pub mod symbol;
 pub mod table;
 pub mod tuple;
-pub mod yextype;
+pub mod yexmodule;
 
 use crate::{error::InterpretResult, gc::GcRef, raise};
 
@@ -20,7 +20,7 @@ use fun::Fn;
 use instance::Instance;
 use list::List;
 use symbol::Symbol;
-use yextype::YexType;
+use yexmodule::YexModule;
 
 use self::{table::Table, tuple::Tuple, symbol::YexSymbol};
 
@@ -64,9 +64,9 @@ impl From<Instance> for Value {
     }
 }
 
-impl From<YexType> for Value {
-    fn from(y: YexType) -> Self {
-        Value::Type(GcRef::new(y))
+impl From<YexModule> for Value {
+    fn from(y: YexModule) -> Self {
+        Value::Module(GcRef::new(y))
     }
 }
 
@@ -100,7 +100,7 @@ pub enum Value {
     /// Yex lists
     List(List),
     /// Yex user-defined types
-    Type(GcRef<YexType>),
+    Module(GcRef<YexModule>),
     /// Yex instances
     Instance(GcRef<Instance>),
     /// Tuples
@@ -120,7 +120,7 @@ impl Clone for Value {
             Bool(b) => Bool(*b),
             Num(n) => Num(*n),
             Sym(s) => Sym(*s),
-            Type(t) => Type(t.clone()),
+            Module(t) => Module(t.clone()),
             Instance(i) => Instance(i.clone()),
             Table(t) => Table(t.clone()),
             Tuple(t) => Tuple(t.clone()),
@@ -145,7 +145,7 @@ impl Value {
             Value::Str(s) => s.len(),
             Value::Fn(f) => mem::size_of_val(&f),
             Value::Bool(_) => mem::size_of::<bool>(),
-            Value::Type(t) => mem::size_of_val(&t),
+            Value::Module(t) => mem::size_of_val(&t),
             Value::Instance(i) => mem::size_of_val(&i),
             Value::Table(t) => t.items.len(),
             Value::Tuple(t) => t.len(),
@@ -180,7 +180,7 @@ impl Value {
             Nil => false,
             List(xs) => !xs.is_empty(),
             Fn(_) => true,
-            Type(_) => true,
+            Module(_) => true,
             Table(_) => true,
             Tuple(_) => true,
             Instance(_) => true,
@@ -188,26 +188,26 @@ impl Value {
     }
 
     /// returns the type of the value
-    pub fn type_of(&self) -> GcRef<YexType> {
+    pub fn type_of(&self) -> GcRef<YexModule> {
         use Value::*;
 
         match self {
-            Type(t) => return t.clone(),
+            Module(t) => return t.clone(),
             Instance(i) => return i.ty.clone(),
             _ => {}
         };
 
         let ty = match self {
-            List(_) => YexType::list(),
-            Fn(_) => YexType::fun(),
-            Num(_) => YexType::num(),
-            Str(_) => YexType::str(),
-            Bool(_) => YexType::bool(),
-            Nil => YexType::nil(),
-            Sym(_) => YexType::sym(),
-            Table(_) => YexType::table(),
-            Tuple(_) => YexType::tuple(),
-            Type(_) | Instance(_) => unreachable!(),
+            List(_) => YexModule::list(),
+            Fn(_) => YexModule::fun(),
+            Num(_) => YexModule::num(),
+            Str(_) => YexModule::str(),
+            Bool(_) => YexModule::bool(),
+            Nil => YexModule::nil(),
+            Sym(_) => YexModule::sym(),
+            Table(_) => YexModule::table(),
+            Tuple(_) => YexModule::tuple(),
+            Module(_) | Instance(_) => unreachable!(),
         };
 
         GcRef::new(ty)
@@ -238,7 +238,7 @@ impl std::fmt::Display for Value {
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
-            Type(t) => format!("type({})", t.name),
+            Module(t) => format!("type({})", t.name),
             Instance(i) => format!("instance({})", i.ty.name),
             Table(t) => format!("{t}"),
             Tuple(t) => format!("{t}"),
@@ -352,7 +352,7 @@ macro_rules! impl_get {
 impl_get!(String: Str(s) => s.to_string());
 impl_get!(f64: Num);
 impl_get!(bool: Bool);
-impl_get!(GcRef<YexType>: Type);
+impl_get!(GcRef<YexModule>: Module);
 impl_get!(GcRef<Fn>: Fn);
 impl_get!(GcRef<Instance>: Instance);
 impl_get!(Table: Table);

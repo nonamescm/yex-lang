@@ -17,7 +17,6 @@ use literal::{
     fun::{FnArgs, NativeFn},
     instance::Instance,
     tuple::Tuple,
-    yextype::instantiate,
     TryGet,
 };
 
@@ -29,7 +28,7 @@ pub use crate::{
         fun::{Fn, FnKind},
         list::List,
         symbol::Symbol,
-        yextype::YexType,
+        yexmodule::YexModule,
         Value,
     },
     opcode::{OpCode, OpCodeMetadata},
@@ -286,8 +285,7 @@ impl VirtualMachine {
             }
 
             OpCode::New => {
-                let ty: GcRef<YexType> = self.pop().get()?;
-                instantiate(self, ty)?;
+                todo!()
             }
 
             OpCode::Get(field) => {
@@ -318,10 +316,10 @@ impl VirtualMachine {
 
             OpCode::Type => {
                 let value = self.pop();
-                self.push(Value::Type(value.type_of()));
+                self.push(Value::Module(value.type_of()));
             }
             OpCode::Ref(method) => {
-                let ty: GcRef<YexType> = self.pop().get()?;
+                let ty: GcRef<YexModule> = self.pop().get()?;
 
                 let method = ty.fields.get(&method).ok_or(raise_err!(
                     FieldError,

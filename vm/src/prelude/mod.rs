@@ -3,7 +3,7 @@ use crate::{
     error::InterpretError,
     gc::GcRef,
     literal::{fun::FnKind, nil, str::methods::format_value, TryGet, Value},
-    raise_err, InterpretResult, Symbol, VirtualMachine, YexType,
+    raise_err, InterpretResult, Symbol, VirtualMachine, YexModule,
 };
 use std::io::{self, Write};
 
@@ -37,7 +37,7 @@ fn input(args: &[Value]) -> InterpretResult<Value> {
 }
 
 fn r#typeof(args: &[Value]) -> InterpretResult<Value> {
-    Ok(Value::Type(args[0].type_of()))
+    Ok(Value::Module(args[0].type_of()))
 }
 
 fn inspect(args: &[Value]) -> InterpretResult<Value> {
@@ -116,16 +116,16 @@ pub fn prelude() -> EnvTable {
     insert_fn!("exit", exit);
     insert_fn!("raise", raise, 2);
 
-    insert!("Nil", Value::Type(GcRef::new(YexType::nil())));
-    insert!("Bool", Value::Type(GcRef::new(YexType::bool())));
-    insert!("Num", Value::Type(GcRef::new(YexType::num())));
-    insert!("Str", Value::Type(GcRef::new(YexType::str())));
-    insert!("List", Value::Type(GcRef::new(YexType::list())));
-    insert!("Sym", Value::Type(GcRef::new(YexType::sym())));
-    insert!("Fn", Value::Type(GcRef::new(YexType::fun())));
-    insert!("Tuple", Value::Type(GcRef::new(YexType::tuple())));
-    insert!("File", Value::Type(GcRef::new(YexType::file())));
+    insert!("Nil", Value::Module(GcRef::new(YexModule::nil())));
+    insert!("Bool", Value::Module(GcRef::new(YexModule::bool())));
+    insert!("Num", Value::Module(GcRef::new(YexModule::num())));
+    insert!("Str", Value::Module(GcRef::new(YexModule::str())));
+    insert!("List", Value::Module(GcRef::new(YexModule::list())));
+    insert!("Sym", Value::Module(GcRef::new(YexModule::sym())));
+    insert!("Fn", Value::Module(GcRef::new(YexModule::fun())));
+    insert!("Tuple", Value::Module(GcRef::new(YexModule::tuple())));
+    insert!("File", Value::Module(GcRef::new(YexModule::file())));
 
-    insert!("Table", Value::Type(GcRef::new(YexType::table())));
+    insert!("Table", Value::Module(GcRef::new(YexModule::table())));
     prelude
 }

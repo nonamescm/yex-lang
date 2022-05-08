@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use vm::{
     gc::GcRef, stackvec, Bytecode, EnvTable, Fn, FnKind, List, OpCode, OpCodeMetadata, Symbol,
-    Value, YexType,
+    Value, YexModule,
 };
 
 use crate::parser::ast::{
@@ -399,45 +399,10 @@ impl Compiler {
                 self.scope_mut().opcodes.pop();
             }
 
-            // compiles field access
-            ExprKind::Field { obj, field } => {
-                self.expr(obj);
-                self.emit_op(OpCode::Get(field.name), loc);
-            }
-
             // compiles a method reference access
             ExprKind::MethodRef { ty, method } => {
                 self.expr(ty);
                 self.emit_op(OpCode::Ref(method.name), loc);
-            }
-
-            // compiles type instantiation
-            ExprKind::Instance { ty, args } => {
-                self.expr(ty);
-                self.emit_op(OpCode::New, loc);
-
-                for (k, v) in args.iter() {
-                    self.expr(v);
-                    self.emit_op(OpCode::Set(*k), loc);
-                }
-            }
-
-            ExprKind::Invoke { obj, field, args } => {
-                for arg in args.iter().rev() {
-                    self.expr(arg);
-                }
-
-                self.expr(obj);
-
-                // duplicates the object on the stack
-                self.emit_op(OpCode::Dup, loc);
-
-                // gets the type of the value on the top of the stack, and then returns the method
-                self.emit_op(OpCode::Type, loc);
-                self.emit_op(OpCode::Ref(field.name), loc);
-
-                // calls the method
-                self.emit_op(OpCode::Call(args.len() + 1), loc);
             }
 
             ExprKind::Try { body, bind, rescue } => {
@@ -497,25 +462,17 @@ impl Compiler {
                 self.emit_op(OpCode::Savg(bind.name), &node.location);
             }
 
-            // compiles a `type` declaration into YexType and save the type to a global name
-            StmtKind::Class {
-                name,
-                methods,
-                params,
-            } => {
-                self.typedef(
-                    name,
-                    methods,
-                    &params.iter().map(|x| x.name).collect::<Vec<_>>(),
-                    &node.location,
-                );
+            // compiles a `module` declaration into an YexModule and save the module to a global name
+            StmtKind::Module { name, functions } => {
+                self.module(name, functions, &node.location);
             }
+
             // compiles a expression statement
             StmtKind::Expr(expr) => self.expr(expr),
         }
     }
 
-    fn typedef(&mut self, decl: &VarDecl, methods: &[Def], params: &[Symbol], loc: &Location) {
+    fn module(&mut self, decl: &VarDecl, methods: &[Def], loc: &Location) {
         let mut table = EnvTable::new();
         for m in methods {
             let func = match &m.value.kind {
@@ -526,9 +483,9 @@ impl Compiler {
             table.insert(m.bind.name, func);
         }
 
-        let ty = YexType::new(decl.name, table, params.to_vec());
+        let ty = YexModule::new(decl.name, table);
 
-        self.emit_const(Value::Type(GcRef::new(ty)), loc);
+        self.emit_const(Value::Module(GcRef::new(ty)), loc);
         self.emit_op(OpCode::Savg(decl.name), loc);
     }
 

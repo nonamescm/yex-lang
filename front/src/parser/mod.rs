@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter::Peekable, mem::take};
+use std::{iter::Peekable, mem::take};
 
 use crate::{
     error::{ParseError, ParseResult},
@@ -31,8 +31,8 @@ impl Parser {
         let mut stmts = Vec::new();
         while self.current.token != Tkt::Eof {
             match self.current.token {
-                Tkt::Class => {
-                    stmts.push(self.type_bind()?);
+                Tkt::Mod => {
+                    stmts.push(self.module()?);
                 }
 
                 Tkt::Def => stmts.push(self.def_global()?),
@@ -68,44 +68,26 @@ impl Parser {
         self.expr()
     }
 
-    fn type_bind(&mut self) -> ParseResult<Stmt> {
-        self.expect(Tkt::Class)?;
+    fn module(&mut self) -> ParseResult<Stmt> {
+        self.expect(Tkt::Mod)?;
         let line = self.current.line;
         let column = self.current.column;
 
         let name = self.var_decl()?;
-        let mut params = Vec::new();
 
-        self.expect(Tkt::Lparen)?;
-        while self.current.token != Tkt::Rparen {
-            params.push(self.var_decl()?);
-
-            if self.current.token == Tkt::Rparen {
-                break;
-            }
-
-            self.expect_and_skip(Tkt::Comma)?;
-        }
-
-        self.next()?;
-
-        let mut methods = Vec::new();
+        let mut functions = Vec::new();
 
         while self.current.token != Tkt::End {
             let def = match self.def_global()?.kind {
                 StmtKind::Def(def) => def,
                 _ => unreachable!(),
             };
-            methods.push(def);
+            functions.push(def);
         }
         self.next()?;
 
         Ok(Stmt::new(
-            StmtKind::Class {
-                name,
-                params,
-                methods,
-            },
+            StmtKind::Module { name, functions },
             line,
             column,
         ))
@@ -234,13 +216,8 @@ impl Parser {
             let var = self.var_decl()?;
             args.push(var);
 
-            match &self.current.token {
-                Tkt::Comma => self.skip(Tkt::Comma)?,
-                Tkt::Rparen => break,
-                _ => self.throw(format!(
-                    "Expected ',', ')' or other token, found '{}'",
-                    &self.current.token
-                ))?,
+            if self.current.token != Tkt::Rparen {
+                self.expect_and_skip(Tkt::Comma)?;
             }
         }
         self.next()?;
@@ -677,102 +654,8 @@ impl Parser {
                 op.column,
             ))
         } else {
-            self.instance()
+            self.call()
         }
-    }
-
-    fn instance(&mut self) -> ParseResult<Expr> {
-        let mut left = self.field_or_method()?;
-
-        let line = self.current.line;
-        let column = self.current.column;
-
-        while self.current.token == Tkt::Lbrace {
-            self.next()?;
-
-            let mut args = HashMap::new();
-
-            while matches!(self.current.token, Tkt::Name(_)) {
-                let field = self.var_decl()?;
-                self.expect(Tkt::Colon)?;
-                let value = self.instance()?;
-
-                args.insert(field.name, value);
-                if self.current.token != Tkt::Rbrace {
-                    self.expect(Tkt::Comma)?;
-                }
-            }
-
-            self.expect(Tkt::Rbrace)?;
-
-            left = Expr::new(
-                ExprKind::Instance {
-                    ty: Box::new(left),
-                    args,
-                },
-                line,
-                column,
-            );
-        }
-
-        Ok(left)
-    }
-
-    fn field_or_method(&mut self) -> ParseResult<Expr> {
-        let mut obj = self.call()?;
-
-        loop {
-            obj = match self.current.token {
-                Tkt::Dot => self.field_access(obj)?,
-                Tkt::Colon => self.invoke_method(obj)?,
-                _ => break,
-            }
-        }
-
-        Ok(obj)
-    }
-
-    fn field_access(&mut self, obj: Expr) -> ParseResult<Expr> {
-        self.expect(Tkt::Dot)?;
-
-        let line = self.current.line;
-        let column = self.current.column;
-
-        let field = self.var_decl()?;
-
-        Ok(Expr::new(
-            ExprKind::Field {
-                obj: Box::new(obj),
-                field,
-            },
-            line,
-            column,
-        ))
-    }
-
-    fn invoke_method(&mut self, obj: Expr) -> ParseResult<Expr> {
-        self.expect(Tkt::Colon)?;
-
-        let line = self.current.line;
-        let column = self.current.column;
-
-        let method = self.var_decl()?;
-
-        let args = if self.current.token == Tkt::Lparen {
-            self.call_args()?
-        } else {
-            Vec::new()
-        };
-
-        Ok(Expr::new(
-            ExprKind::Invoke {
-                obj: Box::new(obj),
-                field: method,
-                args,
-            },
-            line,
-            column,
-        ))
     }
 
     fn call_args(&mut self) -> ParseResult<Vec<Expr>> {
@@ -782,13 +665,8 @@ impl Parser {
         while self.current.token != Tkt::Rparen {
             args.push(self.expr()?);
 
-            match &self.current.token {
-                Tkt::Comma => self.skip(Tkt::Comma)?,
-                Tkt::Rparen => break,
-                _ => self.throw(format!(
-                    "Expected ',', ')' or other token, found '{}'",
-                    &self.current.token
-                ))?,
+            if self.current.token != Tkt::Rparen {
+                self.expect_and_skip(Tkt::Comma)?;
             }
         }
         self.next()?;
@@ -850,13 +728,8 @@ impl Parser {
         while self.current.token != Tkt::Rbrack {
             exprs.push(self.expr()?); // compiles the argument
 
-            match &self.current.token {
-                Tkt::Comma => self.skip(Tkt::Comma)?,
-                Tkt::Rbrack => break,
-                _ => self.throw(format!(
-                    "Expected ',', ']' or other token, found '{}'",
-                    &self.current.token
-                ))?,
+            if self.current.token != Tkt::Rbrack {
+                self.expect_and_skip(Tkt::Comma)?;
             }
         }
 
@@ -874,13 +747,8 @@ impl Parser {
         while self.current.token != Tkt::Rparen {
             exprs.push(self.expr()?); // compiles the argument
 
-            match &self.current.token {
-                Tkt::Comma => self.skip(Tkt::Comma)?,
-                Tkt::Rparen => break,
-                _ => self.throw(format!(
-                    "Expected ',', ')' or other token, found '{}'",
-                    &self.current.token
-                ))?,
+            if self.current.token != Tkt::Rparen {
+                self.expect_and_skip(Tkt::Comma)?;
             }
         }
 

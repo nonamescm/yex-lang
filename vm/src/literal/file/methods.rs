@@ -7,7 +7,7 @@ use crate::{
     error::InterpretResult,
     gc::GcRef,
     literal::{instance::Instance, TryGet},
-    EnvTable, Value, VirtualMachine, YexType,
+    EnvTable, Value, VirtualMachine, YexModule,
 };
 
 pub fn create(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
@@ -73,5 +73,5 @@ pub fn new(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let mut envtable = EnvTable::new();
     envtable.insert("path".into(), path.into());
 
-    Ok(Instance::new(GcRef::new(YexType::file()), envtable).into())
+    Ok(Instance::new(GcRef::new(YexModule::file()), envtable).into())
 }

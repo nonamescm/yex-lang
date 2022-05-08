@@ -1,14 +1,14 @@
-use crate::{gc::GcRef, EnvTable, Value, YexType};
+use crate::{gc::GcRef, EnvTable, Value, YexModule};
 
 #[derive(Debug, PartialEq)]
 pub struct Instance {
-    pub ty: GcRef<YexType>,
+    pub ty: GcRef<YexModule>,
     pub fields: EnvTable,
 }
 
 impl Instance {
     /// Create a new instance
-    pub fn new(ty: GcRef<YexType>, fields: EnvTable) -> Self {
+    pub fn new(ty: GcRef<YexModule>, fields: EnvTable) -> Self {
         Instance { ty, fields }
     }
 

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use vm::{gc::GcRef, OpCode, Symbol, Value};
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -206,15 +204,11 @@ pub enum ExprKind {
         args: Vec<VarDecl>, // specifies the arguments name and types
         body: Box<Expr>,    // the function body
     },
+
     App {
         callee: Box<Expr>,
         args: Vec<Expr>,
         tail: bool,
-    },
-
-    Field {
-        obj: Box<Expr>,
-        field: VarDecl,
     },
 
     MethodRef {
@@ -235,20 +229,10 @@ pub enum ExprKind {
         head: Box<Expr>,
         tail: Box<Expr>,
     },
+
     Do(Vec<Expr>),
 
-    Invoke {
-        obj: Box<Expr>,
-        field: VarDecl,
-        args: Vec<Expr>,
-    },
-
     UnOp(UnOp, Box<Expr>),
-
-    Instance {
-        ty: Box<Expr>,
-        args: HashMap<Symbol, Expr>,
-    },
 
     Try {
         body: Box<Expr>,
@@ -350,13 +334,7 @@ pub struct Def {
 pub enum StmtKind {
     Def(Def),
     Let(Bind),
-
-    Class {
-        name: VarDecl,
-        params: Vec<VarDecl>,
-        methods: Vec<Def>,
-    },
-
+    Module { name: VarDecl, functions: Vec<Def> },
     Expr(Expr),
 }
 

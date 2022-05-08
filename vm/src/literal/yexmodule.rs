@@ -1,28 +1,22 @@
-use crate::{env::EnvTable, error::InterpretResult, gc::GcRef, Symbol, Value, VirtualMachine};
+use crate::{env::EnvTable, gc::GcRef, Symbol, Value};
 
-use super::{file, fun::Fn, instance::Instance, list, nil, str, table, tuple};
+use super::{file, fun::Fn, list, str, table, tuple};
 
 #[derive(Debug, PartialEq)]
 /// A Yex user-defined type.
-pub struct YexType {
-    /// The name of the type.
+pub struct YexModule {
+    /// Module name.
     pub name: Symbol,
-    /// The fields of the type (methods).
+    /// Module functions.
     pub fields: EnvTable,
-    /// The parameters that the type needs to be instantiated.
-    pub params: Vec<Symbol>,
-    /// The method that runs after the type is instantiated.
-    pub initializer: Option<GcRef<Fn>>,
 }
 
-impl YexType {
+impl YexModule {
     /// Creates a new Yex type.
-    pub fn new(name: Symbol, fields: EnvTable, params: Vec<Symbol>) -> Self {
+    pub fn new(name: Symbol, fields: EnvTable) -> Self {
         Self {
             name,
             fields,
-            params,
-            initializer: None,
         }
     }
 
@@ -90,7 +84,7 @@ impl YexType {
             Value::Fn(GcRef::new(Fn::new_native(0, list::methods::new))),
         );
 
-        Self::new(Symbol::from("List"), methods, vec![])
+        Self::new(Symbol::from("List"), methods)
     }
 
     /// Creates a new Table type.
@@ -112,7 +106,7 @@ impl YexType {
             Value::Fn(GcRef::new(Fn::new_native(0, table::methods::new))),
         );
 
-        Self::new(Symbol::from("Table"), methods, vec![])
+        Self::new(Symbol::from("Table"), methods)
     }
 
     /// Creates a new Tuple type.
@@ -129,19 +123,19 @@ impl YexType {
             Value::Fn(GcRef::new(Fn::new_native(0, tuple::methods::new))),
         );
 
-        Self::new(Symbol::from("Tuple"), methods, vec![])
+        Self::new(Symbol::from("Tuple"), methods)
     }
 
     /// Creates a new Num type.
     pub fn num() -> Self {
         let methods = EnvTable::new();
-        Self::new(Symbol::from("Num"), methods, vec![])
+        Self::new(Symbol::from("Num"), methods)
     }
 
     /// Creates a new Sym type.
     pub fn sym() -> Self {
         let methods = EnvTable::new();
-        Self::new(Symbol::from("Sym"), methods, vec![])
+        Self::new(Symbol::from("Sym"), methods)
     }
 
     /// Creates a new Str type.
@@ -173,25 +167,25 @@ impl YexType {
             Value::Fn(GcRef::new(Fn::new_native(0, str::methods::new))),
         );
 
-        Self::new(Symbol::from("Str"), methods, vec![])
+        Self::new(Symbol::from("Str"), methods)
     }
 
     /// Creates a new Bool type.
     pub fn bool() -> Self {
         let methods = EnvTable::new();
-        Self::new(Symbol::from("Bool"), methods, vec![])
+        Self::new(Symbol::from("Bool"), methods)
     }
 
     /// Creates a new Fn type.
     pub fn fun() -> Self {
         let methods = EnvTable::new();
-        Self::new(Symbol::from("Fn"), methods, vec![])
+        Self::new(Symbol::from("Fn"), methods)
     }
 
     /// Creates a new Nil type.
     pub fn nil() -> Self {
         let methods = EnvTable::new();
-        Self::new(Symbol::from("Nil"), methods, vec![])
+        Self::new(Symbol::from("Nil"), methods)
     }
 
     /// Creates a new File type.
@@ -228,20 +222,6 @@ impl YexType {
             Value::Fn(GcRef::new(Fn::new_native(1, file::methods::new))),
         );
 
-        Self::new("File".into(), methods, vec!["path".into()])
+        Self::new("File".into(), methods)
     }
-}
-
-/// Instantiates a type with the given parameters.
-/// Push the new instance to the stack.
-pub fn instantiate(vm: &mut VirtualMachine, ty: GcRef<YexType>) -> InterpretResult<()> {
-    let mut fields = EnvTable::new();
-    for entry in ty.params.iter() {
-        fields.insert(*entry, nil());
-    }
-
-    let inst = Value::Instance(GcRef::new(Instance::new(ty, fields)));
-    vm.push(inst);
-
-    Ok(())
 }
