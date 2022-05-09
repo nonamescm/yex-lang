@@ -36,12 +36,12 @@ pub fn fold(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
     let vm = unsafe { &mut *vm };
 
     let xs: List = args[2].get()?;
-    let mut acc = args[0].clone();
-    let fun = args[1].clone();
+    let mut acc = args[1].clone();
+    let fun = args[0].clone();
 
     for it in xs.iter() {
-        vm.push(acc);
         vm.push(it);
+        vm.push(acc);
         vm.push(fun.clone());
 
         vm.call(2)?;

@@ -55,7 +55,7 @@ assert(
 	|> List#map(fn(i): i * 2)
 	|> List#map(fn(i): i + 1)
 	|> List#filter(fn(i): i != 3)
-	|> List#fold(0, fn(acc, i): acc + i)
+	|> List#fold(fn(acc, x): acc + x, 0)
 	|> (fn(x): x == 12),
 	"List tests failed",
 )
