@@ -6,7 +6,7 @@ use vm::{
 };
 
 use crate::parser::ast::{
-    ArmType, BinOp, Bind, Def, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl,
+    ArmType, BinOp, Bind, Def, DefProto, Expr, ExprKind, Literal, Location, Stmt, StmtKind, VarDecl,
 };
 
 #[derive(Default)]
@@ -445,6 +445,20 @@ impl Compiler {
 
                 self.emit_op(OpCode::Tup(xs.len()), loc);
             }
+
+            ExprKind::Struct { ty, fields } => {
+                self.emit_op(OpCode::Struct(*ty), loc);
+
+                for (name, value) in fields {
+                    self.expr(value);
+                    self.emit_op(OpCode::Set(*name), loc);
+                }
+            }
+
+            ExprKind::Get { field, obj } => {
+                self.expr(obj);
+                self.emit_op(OpCode::Get(*field), loc);
+            }
         }
     }
 
@@ -467,6 +481,11 @@ impl Compiler {
                 self.module(name, functions, &node.location);
             }
 
+            // compiles a `trait` declaration into an YexModule and save the trait to a global name
+            StmtKind::Trait { name, functions } => {
+                self.trait_(name, functions, &node.location);
+            }
+
             // compiles a expression statement
             StmtKind::Expr(expr) => self.expr(expr),
         }
@@ -481,6 +500,47 @@ impl Compiler {
             };
 
             table.insert(m.bind.name, func);
+        }
+
+        let ty = YexModule::new(decl.name, table);
+
+        self.emit_const(Value::Module(GcRef::new(ty)), loc);
+        self.emit_op(OpCode::Savg(decl.name), loc);
+    }
+
+    fn trait_(&mut self, decl: &VarDecl, methods: &[DefProto], loc: &Location) {
+        let mut table = EnvTable::new();
+        for m in methods {
+            let name = m.name.name;
+            match &m.body {
+                Some(body) => {
+                    let func = self.lambda_expr(&m.args, body, loc);
+                    table.insert(name, Value::Fn(func));
+                }
+                None => {
+                    self.scope_stack.push(Scope::new());
+
+                    // put the main value in the top of the stack
+                    self.emit_op(OpCode::Swap(0, m.args.len() - 1), loc);
+
+                    // gets the method reference from the trait
+                    self.emit_op(OpCode::Dup, loc);
+                    self.emit_op(OpCode::Type, loc);
+                    self.emit_op(OpCode::Ref(name), loc);
+
+                    // fix the stack
+                    self.emit_op(OpCode::Swap(0, m.args.len() - 1), loc);
+
+                    // call the method
+                    self.emit_op(OpCode::Call(m.args.len()), loc);
+
+                    let scope = self.scope_stack.pop().unwrap();
+                    let body = scope.opcodes;
+                    let func = Fn::new_bt(m.args.len(), body);
+
+                    table.insert(name, Value::Fn(GcRef::new(func)));
+                }
+            }
         }
 
         let ty = YexModule::new(decl.name, table);

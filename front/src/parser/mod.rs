@@ -7,7 +7,8 @@ use crate::{
 };
 
 use self::ast::{
-    ArmType, Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm, WhenElse,
+    ArmType, Bind, Def, DefProto, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm,
+    WhenElse,
 };
 
 pub mod ast;
@@ -31,8 +32,12 @@ impl Parser {
         let mut stmts = Vec::new();
         while self.current.token != Tkt::Eof {
             match self.current.token {
-                Tkt::Mod => {
+                Tkt::Module => {
                     stmts.push(self.module()?);
+                }
+
+                Tkt::Trait => {
+                    stmts.push(self.trait_()?);
                 }
 
                 Tkt::Def => stmts.push(self.def_global()?),
@@ -68,8 +73,36 @@ impl Parser {
         self.expr()
     }
 
+    fn trait_(&mut self) -> ParseResult<Stmt> {
+        self.expect(Tkt::Trait)?;
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let name = self.var_decl()?;
+
+        let mut functions = Vec::new();
+
+        while self.current.token != Tkt::End {
+            self.expect(Tkt::Def)?;
+            let name = self.var_decl()?;
+            let args = self.args()?;
+
+            let body = if matches!(self.current.token, Tkt::Colon | Tkt::Do) {
+                Some(self.fn_body()?)
+            } else {
+                None
+            };
+
+            functions.push(DefProto { name, args, body });
+        }
+
+        self.expect(Tkt::End)?;
+
+        Ok(Stmt::new(StmtKind::Trait { name, functions }, line, column))
+    }
+
     fn module(&mut self) -> ParseResult<Stmt> {
-        self.expect(Tkt::Mod)?;
+        self.expect(Tkt::Module)?;
         let line = self.current.line;
         let column = self.current.column;
 
@@ -144,10 +177,7 @@ impl Parser {
 
     #[allow(dead_code)]
     fn peek(&mut self) -> ParseResult<&Token> {
-        match self.lexer.peek().unwrap() {
-            Ok(t) => Ok(t),
-            Err(e) => Err(*e),
-        }
+        self.lexer.peek().unwrap().as_ref().map_err(|e| *e)
     }
 
     fn expr(&mut self) -> ParseResult<Expr> {
@@ -163,8 +193,40 @@ impl Parser {
                 self.block(Tkt::End)
             }
             Tkt::Try => self.try_(),
-            _ => self.logic_or(),
+            _ => self.pipe(),
         }
+    }
+
+    fn struct_(&mut self) -> ParseResult<Expr> {
+        self.expect(Tkt::Rem)?;
+
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let ty = if let Tkt::Name(name) = self.current.token {
+            self.next()?;
+            Some(name)
+        } else {
+            None
+        };
+
+        let mut fields = Vec::new();
+
+        self.expect(Tkt::Lbrace)?;
+
+        while self.current.token != Tkt::Rbrace {
+            let entry = self.var_decl()?;
+            self.expect(Tkt::Colon)?;
+            let value = self.expr()?;
+
+            if self.current.token != Tkt::Rbrace {
+                self.expect_and_skip(Tkt::Comma)?;
+            }
+
+            fields.push((entry.name, Box::new(value)));
+        }
+
+        Ok(Expr::new(ExprKind::Struct { ty, fields }, line, column))
     }
 
     fn condition(&mut self) -> ParseResult<Expr> {
@@ -435,6 +497,29 @@ impl Parser {
         ))
     }
 
+    fn pipe(&mut self) -> ParseResult<Expr> {
+        let mut left = self.logic_or()?;
+
+        while self.current.token == Tkt::Pipe {
+            self.next()?;
+
+            let line = self.current.line;
+            let column = self.current.column;
+
+            left = Expr::new(
+                ExprKind::App {
+                    args: vec![left],
+                    callee: Box::new(self.method_or_call()?),
+                    tail: false,
+                },
+                line,
+                column,
+            );
+        }
+
+        Ok(left)
+    }
+
     fn logic_or(&mut self) -> ParseResult<Expr> {
         let mut left = self.logic_and()?;
 
@@ -624,7 +709,7 @@ impl Parser {
     fn fact(&mut self) -> ParseResult<Expr> {
         let mut left = self.prefix()?;
 
-        while let Tkt::Mul | Tkt::Div | Tkt::Rem = self.current.token {
+        while let Tkt::Mul | Tkt::Div | Tkt::Mod = self.current.token {
             let op = take(&mut self.current);
             self.next()?;
             let right = self.prefix()?;
@@ -654,7 +739,7 @@ impl Parser {
                 op.column,
             ))
         } else {
-            self.call()
+            self.method_or_call()
         }
     }
 
@@ -674,9 +759,21 @@ impl Parser {
         Ok(args)
     }
 
-    fn call(&mut self) -> ParseResult<Expr> {
-        let mut callee = self.method_ref()?;
+    fn method_or_call(&mut self) -> ParseResult<Expr> {
+        let mut expr = self.dot()?;
 
+        while let Tkt::Len | Tkt::Lparen = self.current.token {
+            if self.current.token == Tkt::Len {
+                expr = self.method_ref(expr)?;
+            } else {
+                expr = self.call(expr)?;
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn call(&mut self, mut callee: Expr) -> ParseResult<Expr> {
         while self.current.token == Tkt::Lparen {
             let args = self.call_args()?;
 
@@ -697,10 +794,7 @@ impl Parser {
         Ok(callee)
     }
 
-    fn method_ref(&mut self) -> ParseResult<Expr> {
-        let mut ty = self.primary()?;
-        self.next()?;
-
+    fn method_ref(&mut self, mut ty: Expr) -> ParseResult<Expr> {
         while self.current.token == Tkt::Len {
             self.next()?;
             let method = self.var_decl()?;
@@ -716,6 +810,26 @@ impl Parser {
         }
 
         Ok(ty)
+    }
+
+    fn dot(&mut self) -> ParseResult<Expr> {
+        let mut obj = self.primary()?;
+        self.next()?;
+
+        while self.current.token == Tkt::Dot {
+            self.next()?;
+            let field = self.var_decl()?;
+            obj = Expr::new(
+                ExprKind::Get {
+                    obj: Box::new(obj),
+                    field: field.name,
+                },
+                self.current.line,
+                self.current.column,
+            );
+        }
+
+        Ok(obj)
     }
 
     fn list(&mut self) -> ParseResult<Expr> {
@@ -772,6 +886,7 @@ impl Parser {
             Tkt::Sym(s) => Expr::new(ExprKind::Lit(Literal::Sym(s)), line, column),
             Tkt::Lbrack => self.list()?,
             Tkt::Lparen => self.tuple()?,
+            Tkt::Rem => self.struct_()?,
             Tkt::Nil => Expr::new(ExprKind::Lit(Literal::Unit), line, column),
             other => self.throw(format!("unexpected token '{}'", other))?,
         };

@@ -1,6 +1,6 @@
 use crate::{env::EnvTable, gc::GcRef, Symbol, Value};
 
-use super::{file, fun::Fn, list, str, table, tuple};
+use super::{fun::Fn, list, str, table, tuple};
 
 #[derive(Debug, PartialEq)]
 /// A Yex user-defined type.
@@ -88,7 +88,7 @@ impl YexModule {
     }
 
     /// Creates a new Table type.
-    pub fn table() -> Self {
+    pub fn struct_() -> Self {
         let mut methods = EnvTable::new();
 
         methods.insert(
@@ -106,7 +106,7 @@ impl YexModule {
             Value::Fn(GcRef::new(Fn::new_native(0, table::methods::new))),
         );
 
-        Self::new(Symbol::from("Table"), methods)
+        Self::new(Symbol::from("Struct"), methods)
     }
 
     /// Creates a new Tuple type.
@@ -153,11 +153,6 @@ impl YexModule {
         );
 
         methods.insert(
-            Symbol::new("fmt"),
-            Value::Fn(GcRef::new(Fn::new_native(2, str::methods::fmt))),
-        );
-
-        methods.insert(
             Symbol::new("len"),
             Value::Fn(GcRef::new(Fn::new_native(1, str::methods::len))),
         );
@@ -186,42 +181,5 @@ impl YexModule {
     pub fn nil() -> Self {
         let methods = EnvTable::new();
         Self::new(Symbol::from("Nil"), methods)
-    }
-
-    /// Creates a new File type.
-    pub fn file() -> Self {
-        let mut methods = EnvTable::new();
-
-        methods.insert(
-            Symbol::new("read"),
-            Value::Fn(GcRef::new(Fn::new_native(1, file::methods::read))),
-        );
-
-        methods.insert(
-            Symbol::new("write"),
-            Value::Fn(GcRef::new(Fn::new_native(2, file::methods::write))),
-        );
-
-        methods.insert(
-            Symbol::new("append"),
-            Value::Fn(GcRef::new(Fn::new_native(2, file::methods::append))),
-        );
-
-        methods.insert(
-            Symbol::new("delete"),
-            Value::Fn(GcRef::new(Fn::new_native(1, file::methods::delete))),
-        );
-
-        methods.insert(
-            Symbol::new("create"),
-            Value::Fn(GcRef::new(Fn::new_native(1, file::methods::create))),
-        );
-
-        methods.insert(
-            Symbol::new("new"),
-            Value::Fn(GcRef::new(Fn::new_native(1, file::methods::new))),
-        );
-
-        Self::new("File".into(), methods)
     }
 }

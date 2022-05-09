@@ -4,9 +4,8 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub},
 };
 
-pub mod file;
+//pub mod file;
 pub mod fun;
-pub mod instance;
 pub mod list;
 pub mod str;
 pub mod symbol;
@@ -17,12 +16,11 @@ pub mod yexmodule;
 use crate::{error::InterpretResult, gc::GcRef, raise};
 
 use fun::Fn;
-use instance::Instance;
 use list::List;
 use symbol::Symbol;
 use yexmodule::YexModule;
 
-use self::{table::Table, tuple::Tuple, symbol::YexSymbol};
+use self::{table::YexStruct, tuple::Tuple, symbol::YexSymbol};
 
 pub fn nil() -> Value {
     Value::Nil
@@ -58,12 +56,6 @@ impl From<Symbol> for Value {
     }
 }
 
-impl From<Instance> for Value {
-    fn from(i: Instance) -> Self {
-        Value::Instance(GcRef::new(i))
-    }
-}
-
 impl From<YexModule> for Value {
     fn from(y: YexModule) -> Self {
         Value::Module(GcRef::new(y))
@@ -76,9 +68,9 @@ impl From<List> for Value {
     }
 }
 
-impl From<Table> for Value {
-    fn from(t: Table) -> Self {
-        Value::Table(t)
+impl From<YexStruct> for Value {
+    fn from(t: YexStruct) -> Self {
+        Value::Struct(t)
     }
 }
 
@@ -96,13 +88,11 @@ pub enum Value {
     /// Fnctions
     Fn(GcRef<Fn>),
     /// Tables
-    Table(Table),
+    Struct(YexStruct),
     /// Yex lists
     List(List),
     /// Yex user-defined types
     Module(GcRef<YexModule>),
-    /// Yex instances
-    Instance(GcRef<Instance>),
     /// Tuples
     Tuple(Tuple),
     /// null
@@ -121,8 +111,7 @@ impl Clone for Value {
             Num(n) => Num(*n),
             Sym(s) => Sym(*s),
             Module(t) => Module(t.clone()),
-            Instance(i) => Instance(i.clone()),
-            Table(t) => Table(t.clone()),
+            Struct(t) => Struct(t.clone()),
             Tuple(t) => Tuple(t.clone()),
             Nil => Nil,
         }
@@ -146,8 +135,7 @@ impl Value {
             Value::Fn(f) => mem::size_of_val(&f),
             Value::Bool(_) => mem::size_of::<bool>(),
             Value::Module(t) => mem::size_of_val(&t),
-            Value::Instance(i) => mem::size_of_val(&i),
-            Value::Table(t) => t.items.len(),
+            Value::Struct(t) => t.items.len(),
             Value::Tuple(t) => t.len(),
             Value::Nil => 4,
         }
@@ -181,9 +169,8 @@ impl Value {
             List(xs) => !xs.is_empty(),
             Fn(_) => true,
             Module(_) => true,
-            Table(_) => true,
+            Struct(_) => true,
             Tuple(_) => true,
-            Instance(_) => true,
         }
     }
 
@@ -193,8 +180,8 @@ impl Value {
 
         match self {
             Module(t) => return t.clone(),
-            Instance(i) => return i.ty.clone(),
-            _ => {}
+            Struct(YexStruct { module, .. }) => return module.clone(),
+            _ => {},
         };
 
         let ty = match self {
@@ -205,9 +192,8 @@ impl Value {
             Bool(_) => YexModule::bool(),
             Nil => YexModule::nil(),
             Sym(_) => YexModule::sym(),
-            Table(_) => YexModule::table(),
             Tuple(_) => YexModule::tuple(),
-            Module(_) | Instance(_) => unreachable!(),
+            Module(_) | Struct(_) => unreachable!(),
         };
 
         GcRef::new(ty)
@@ -239,8 +225,7 @@ impl std::fmt::Display for Value {
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
             Module(t) => format!("type({})", t.name),
-            Instance(i) => format!("instance({})", i.ty.name),
-            Table(t) => format!("{t}"),
+            Struct(t) => format!("{t}"),
             Tuple(t) => format!("{t}"),
             Bool(b) => b.to_string(),
         };
@@ -354,8 +339,7 @@ impl_get!(f64: Num);
 impl_get!(bool: Bool);
 impl_get!(GcRef<YexModule>: Module);
 impl_get!(GcRef<Fn>: Fn);
-impl_get!(GcRef<Instance>: Instance);
-impl_get!(Table: Table);
+impl_get!(YexStruct: Struct);
 impl_get!(Symbol: Sym(s) => s.0);
 impl_get!(List: List);
 impl_get!(Tuple: Tuple);

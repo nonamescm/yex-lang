@@ -13,8 +13,8 @@ pub fn rev(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
 
 pub fn map(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let vm = unsafe { &mut *vm };
-    let xs: List = args[0].get()?;
-    let fun = &args[1];
+    let xs: List = args[1].get()?;
+    let fun = &args[0];
 
     let xs: InterpretResult<List> = xs
         .iter()
@@ -35,9 +35,9 @@ pub fn map(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
 pub fn fold(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let vm = unsafe { &mut *vm };
 
-    let xs: List = args[0].get()?;
-    let mut acc = args[1].clone();
-    let fun = args[2].clone();
+    let xs: List = args[2].get()?;
+    let mut acc = args[0].clone();
+    let fun = args[1].clone();
 
     for it in xs.iter() {
         vm.push(acc);
@@ -55,8 +55,8 @@ pub fn fold(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
 pub fn filter(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let vm = unsafe { &mut *vm };
 
-    let xs: List = args[0].get()?;
-    let fun = &args[1];
+    let xs: List = args[1].get()?;
+    let fun = &args[0];
 
     let mut ys = List::new();
 
@@ -85,22 +85,22 @@ pub fn tail(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
 }
 
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    let xs: List = args[0].get()?;
-    let n: usize = args[1].get()?;
+    let xs: List = args[1].get()?;
+    let n: usize = args[0].get()?;
 
     Ok(xs.index(n))
 }
 
 pub fn drop(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    let xs: List = args[0].get()?;
-    let n: usize = args[1].get()?;
+    let xs: List = args[1].get()?;
+    let n: usize = args[0].get()?;
 
     Ok(xs.drop(n).into())
 }
 
 pub fn join(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    let xs: List = args[0].get()?;
-    let sep: String = args[1].get()?;
+    let xs: List = args[1].get()?;
+    let sep: String = args[0].get()?;
 
     Ok(xs.join(&sep).into())
 }
@@ -108,9 +108,9 @@ pub fn join(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
 pub fn find(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let vm = unsafe { &mut *vm };
 
-    let xs: List = args[0].get()?;
+    let xs: List = args[1].get()?;
 
-    let fun = &args[1];
+    let fun = &args[0];
 
     for x in xs.iter() {
         vm.push(x.clone());
@@ -127,7 +127,7 @@ pub fn find(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
 }
 
 pub fn len(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    let xs: List = args[0].get()?;
+    let xs: List = args[1].get()?;
 
     Ok((xs.len() as f64).into())
 }

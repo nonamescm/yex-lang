@@ -268,6 +268,11 @@ impl Lexer {
             }
             '!' => TokenType::Not,
 
+            '|' if self.peek_at(1) == '>' => {
+                self.next();
+                TokenType::Pipe
+            }
+
             EOF => TokenType::Eof,
 
             c if c.is_whitespace() => {

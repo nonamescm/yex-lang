@@ -2,21 +2,25 @@ use crate::{
     env::EnvTable,
     error::InterpretError,
     gc::GcRef,
-    literal::{fun::FnKind, nil, str::methods::format_value, TryGet, Value},
-    raise_err, InterpretResult, Symbol, VirtualMachine, YexModule,
+    literal::{fun::FnKind, nil, TryGet, Value},
+    raise_err, InterpretResult, Symbol, YexModule,
 };
 use std::io::{self, Write};
 
-fn println(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
-    let message = format_value(vm, args[0].clone())?;
-    println!("{}", message);
+fn println(args: &[Value]) -> InterpretResult<Value> {
+    match &args[0] {
+        Value::Str(s) => println!("{}", **s),
+        other => println!("{}", other),
+    };
 
     Ok(nil())
 }
 
-fn print(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
-    let message = format_value(vm, args[0].clone())?;
-    print!("{}", message);
+fn print(args: &[Value]) -> InterpretResult<Value> {
+    match &args[0] {
+        Value::Str(s) => print!("{}", **s),
+        other => print!("{}", other),
+    };
 
     Ok(nil())
 }
@@ -36,7 +40,7 @@ fn input(args: &[Value]) -> InterpretResult<Value> {
     Ok(Value::Str(GcRef::new(input)))
 }
 
-fn r#typeof(args: &[Value]) -> InterpretResult<Value> {
+fn r#type(args: &[Value]) -> InterpretResult<Value> {
     Ok(Value::Module(args[0].type_of()))
 }
 
@@ -107,10 +111,10 @@ pub fn prelude() -> EnvTable {
         };
     }
 
-    insert_fn!(@vm "println", println, 1);
-    insert_fn!(@vm "print", print, 1);
+    insert_fn!("println", println);
+    insert_fn!("print", print);
     insert_fn!("input", input);
-    insert_fn!("typeof", r#typeof);
+    insert_fn!("type", r#type);
     insert_fn!("inspect", inspect);
     insert_fn!("num", num);
     insert_fn!("exit", exit);
@@ -124,8 +128,7 @@ pub fn prelude() -> EnvTable {
     insert!("Sym", Value::Module(GcRef::new(YexModule::sym())));
     insert!("Fn", Value::Module(GcRef::new(YexModule::fun())));
     insert!("Tuple", Value::Module(GcRef::new(YexModule::tuple())));
-    insert!("File", Value::Module(GcRef::new(YexModule::file())));
+    insert!("Struct", Value::Module(GcRef::new(YexModule::struct_())));
 
-    insert!("Table", Value::Module(GcRef::new(YexModule::table())));
     prelude
 }

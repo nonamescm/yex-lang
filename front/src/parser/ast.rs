@@ -81,7 +81,7 @@ impl TryFrom<TokenType> for BinOp {
             TokenType::Sub => Ok(BinOp::Sub),
             TokenType::Mul => Ok(BinOp::Mul),
             TokenType::Div => Ok(BinOp::Div),
-            TokenType::Rem => Ok(BinOp::Rem),
+            TokenType::Mod => Ok(BinOp::Rem),
             TokenType::BitAnd => Ok(BinOp::BitAnd),
             TokenType::BitOr => Ok(BinOp::BitOr),
             TokenType::BitXor => Ok(BinOp::BitXor),
@@ -195,6 +195,11 @@ pub enum ExprKind {
     Let(Bind),
     Def(Bind),
 
+    Struct {
+        ty: Option<Symbol>,
+        fields: Vec<(Symbol, Box<Expr>)>,
+    },
+
     When {
         expr: Box<Expr>,
         arms: Vec<ArmType>,
@@ -241,6 +246,11 @@ pub enum ExprKind {
     },
 
     Tuple(Vec<Expr>),
+
+    Get {
+        obj: Box<Expr>,
+        field: Symbol,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -331,10 +341,18 @@ pub struct Def {
 }
 
 #[derive(Debug)]
+pub struct DefProto {
+    pub args: Vec<VarDecl>,
+    pub name: VarDecl,
+    pub body: Option<Expr>,
+}
+
+#[derive(Debug)]
 pub enum StmtKind {
     Def(Def),
     Let(Bind),
     Module { name: VarDecl, functions: Vec<Def> },
+    Trait { name: VarDecl, functions: Vec<DefProto> },
     Expr(Expr),
 }
 

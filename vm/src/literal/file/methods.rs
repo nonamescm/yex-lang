@@ -6,7 +6,7 @@ use std::{
 use crate::{
     error::InterpretResult,
     gc::GcRef,
-    literal::{instance::Instance, TryGet},
+    literal::{TryGet, table::YexStruct},
     EnvTable, Value, VirtualMachine, YexModule,
 };
 
@@ -18,8 +18,8 @@ pub fn create(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value
 }
 
 pub fn read(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    let arg: GcRef<Instance> = args[0].get()?;
-    let arg: String = arg.get_field("path").get()?;
+    let arg: YexStruct = args[0].get()?;
+    let arg: String = arg.get("path").get()?;
 
     let file = File::open(arg);
 

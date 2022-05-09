@@ -15,7 +15,6 @@ mod stack;
 use gc::GcRef;
 use literal::{
     fun::{FnArgs, NativeFn},
-    instance::Instance,
     tuple::Tuple,
     TryGet,
 };
@@ -28,6 +27,7 @@ pub use crate::{
         fun::{Fn, FnKind},
         list::List,
         symbol::Symbol,
+        table::YexStruct,
         yexmodule::YexModule,
         Value,
     },
@@ -72,7 +72,7 @@ type Stack = StackVec<Value, STACK_SIZE>;
 pub type Bytecode = Vec<OpCodeMetadata>;
 
 type BytecodeRef<'a> = &'a Bytecode;
-use std::{mem::swap, ops};
+use std::{mem::swap, ops, ptr};
 /// Implements the Yex virtual machine, which runs the [`crate::OpCode`] instructions in a stack
 /// model
 pub struct VirtualMachine {
@@ -198,6 +198,13 @@ impl VirtualMachine {
                 self.push(value);
             }
 
+            OpCode::Swap(a, b) => unsafe {
+                let a = self.stack.get_uninit_mut(a) as *mut _;
+                let b = self.stack.get_uninit_mut(b) as *mut _;
+
+                ptr::swap(a, b);
+            },
+
             OpCode::Rev => {
                 let (a, b) = self.pop_two();
                 self.push(b);
@@ -289,35 +296,32 @@ impl VirtualMachine {
             }
 
             OpCode::Get(field) => {
-                let obj: GcRef<Instance> = self.pop().get()?;
+                let obj: YexStruct = self.pop().get()?;
 
-                let value = obj.fields.get(&field).ok_or_else(|| {
-                    raise_err!(
-                        FieldError,
-                        "Undefined field '{}' for value '{}'",
-                        field,
-                        Value::Instance(obj)
-                    )
-                })?;
-
+                let value = obj.get(field);
                 self.push(value);
             }
 
             OpCode::Set(field) => unsafe {
                 let value = self.pop();
-                let mut obj: GcRef<Instance> = self
+                let obj = self
                     .stack
                     .get_uninit_mut(self.stack.len() - 1)
-                    .assume_init_mut()
-                    .get()?;
+                    .assume_init_mut();
 
-                obj.mut_ref().fields.insert(field, value);
+                let obj = match obj {
+                    Value::Struct(obj) => obj,
+                    _ => raise!(TypeError, "Expected a struct")?,
+                };
+
+                obj.items = obj.items.prepend(vec![field.into(), value].into());
             },
 
             OpCode::Type => {
                 let value = self.pop();
                 self.push(Value::Module(value.type_of()));
             }
+
             OpCode::Ref(method) => {
                 let ty: GcRef<YexModule> = self.pop().get()?;
 
@@ -343,6 +347,18 @@ impl VirtualMachine {
                 let tup: Tuple = self.pop().get()?;
                 let elem = tup.0.get(index).unwrap(); // this SHOULD be unreachable
                 self.push(elem.clone());
+            }
+
+            OpCode::Struct(name) => {
+                let ty: GcRef<YexModule> = if let Some(name) = name {
+                    self.get_global(name)
+                        .ok_or(raise_err!(NameError, "Undefined module '{}'", name))
+                        .and_then(|ty| ty.get())?
+                } else {
+                    GcRef::new(YexModule::struct_())
+                };
+
+                self.push(YexStruct::new(ty).into());
             }
 
             // these opcodes are handled by the run function, since they can manipulate the ip

@@ -17,7 +17,8 @@ pub enum TokenType {
     Def,
     Let,
     Fn,
-    Mod,
+    Module,
+    Trait,
     Do,
     End,
     When,
@@ -40,6 +41,7 @@ pub enum TokenType {
     Assign,
     Cons,
     Len,
+    Mod,
 
     // bitwise
     BitOr,
@@ -67,6 +69,7 @@ pub enum TokenType {
     Arrow,
     FatArrow,
     Dot,
+    Pipe,
 
     Eof,
 }
@@ -95,7 +98,8 @@ impl std::fmt::Display for TokenType {
             Self::Def => "def".into(),
             Self::Let => "let".into(),
             Self::Fn => "fn".into(),
-            Self::Mod => "mod".into(),
+            Self::Module => "module".into(),
+            Self::Trait => "trait".into(),
             Self::Do => "do".into(),
             Self::End => "end".into(),
             Self::When => "when".into(),
@@ -117,6 +121,7 @@ impl std::fmt::Display for TokenType {
             Self::Assign => '='.into(),
             Self::Cons => "::".into(),
             Self::Len => '#'.into(),
+            Self::Mod => "mod".into(),
 
             Self::BitAnd => "&&&".into(),
             Self::BitOr => "|||".into(),
@@ -141,6 +146,7 @@ impl std::fmt::Display for TokenType {
             Self::Arrow => "->".into(),
             Self::FatArrow => "=>".into(),
             Self::Dot => ".".into(),
+            Self::Pipe => "|>".into(),
 
             Self::Eof => "<eof>".into(),
         };
@@ -161,13 +167,15 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "false" => Some(TokenType::False),
         "nil" => Some(TokenType::Nil),
         "fn" => Some(TokenType::Fn),
-        "mod" => Some(TokenType::Mod),
+        "module" => Some(TokenType::Module),
+        "trait" => Some(TokenType::Trait),
         "do" => Some(TokenType::Do),
         "end" => Some(TokenType::End),
         "when" => Some(TokenType::When),
         "try" => Some(TokenType::Try),
         "rescue" => Some(TokenType::Rescue),
         "is" => Some(TokenType::Is),
+        "mod" => Some(TokenType::Mod),
         _ => None,
     }
 }

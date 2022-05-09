@@ -5,12 +5,12 @@ def assert(condition, message) do
 	end
 end
 
-let ops_tests = [
+let opsTests = [
 	1 + 2 == 3,
 	1 - 2 == -1,
 	1 * 2 == 2,
 	1 / 2 == 0.5,
-	3 % 2 == 1,
+	3 mod 2 == 1,
 	1 <<< 2 == 4,
 	1 >>> 2 == 0,
 	1 &&& 2 == 0,
@@ -26,25 +26,23 @@ let ops_tests = [
 	1 || 0,
 ]
 
-ops_tests:map(fn(test) do
+List#map(fn(test) do
 	assert(test, "Operator test failed")
-end)
+end, opsTests)
 
-class Person(name, age)
+module Person
 	def new(name, age) do
 		assert(name is Str, "Name must be a string")
 		assert(age is Num, "Age must be a number")
-		Person { name: name, age: age }
+		%Person{name: name, age: age}
 	end
 
 	def adult?(this): this.age >= 18
 end
 
 let p = Person#new("John", 18)
-assert(p:adult?(), "Person is not adult")
+assert(Person#adult?(p), "Person is not adult")
 assert(p is Person, "p is not a Person")
-
-assert(Person#adult?(p), "Static method Person#adult? failed")
 
 try
 	raise(@AssertionError, "should be rescued")
@@ -54,11 +52,11 @@ end
 
 assert(
 	[1, 2, 3]
-		:map(fn(i): i * 2)
-		:map(fn(i): i + 1)
-		:filter(fn(i): i != 3)
-		:fold(0, fn(acc, i): acc + i)
-			== 12,
+	|> List#map(fn(i): i * 2)
+	|> List#map(fn(i): i + 1)
+	|> List#filter(fn(i): i != 3)
+	|> List#fold(0, fn(acc, i): acc + i)
+	|> (fn(x): x == 12),
 	"List tests failed",
 )
 
@@ -82,8 +80,8 @@ let partialTest = [
 	partial(1, 2, 3)(4) == -10,
 ]
 
-partialTest:map(fn(test) do
+List#map(fn(test) do
 	assert(test, "Partial function test failed")
-end)
+end, partialTest)
 
 println("All tests passed")

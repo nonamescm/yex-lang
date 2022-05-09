@@ -21,6 +21,11 @@ pub enum OpCode {
     /// The stack layout after running it: [c, c]
     Dup,
 
+    /// Swaps two indexes on the stack
+    /// The stack layout before running this opcode: [c1, ..., c2]
+    /// The stack layout after running it: [c2, ..., c1]
+    Swap(usize, usize),
+
     /// Read a value from a variable, receives the index of the variable name in the constant table as
     /// argument
     /// The stack layout before running this opcode: []
@@ -203,6 +208,12 @@ pub enum OpCode {
     /// The stack layout before running this opcode: [tuple]
     /// The stack layout after running it: [tuple-element]
     TupGet(usize),
+
+
+    /// Create a new Struct, receives the struct name as argument (defaults to Table)
+    /// The stack layout before running this opcode: [...args]
+    /// The stack layout after running it: [struct]
+    Struct(Option<Symbol>),
 }
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,

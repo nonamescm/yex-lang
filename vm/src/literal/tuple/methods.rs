@@ -7,8 +7,8 @@ use crate::{
 use super::Tuple;
 
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    let tup: Tuple = args[0].get()?;
-    let idx: usize = args[1].get()?;
+    let tup: Tuple = args[1].get()?;
+    let idx: usize = args[0].get()?;
 
     Ok(tup.0.get(idx).cloned().unwrap_or_else(nil))
 }
