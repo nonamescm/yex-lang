@@ -91,7 +91,7 @@ pub fn prelude() -> EnvTable {
             )
         };
 
-        (@vm $name: expr, $fn: expr, $arity:expr) => {
+        (:vm $name: expr, $fn: expr, $arity:expr) => {
             prelude.insert(
                 $crate::Symbol::new($name),
                 Value::Fn(GcRef::new(crate::literal::fun::Fn {

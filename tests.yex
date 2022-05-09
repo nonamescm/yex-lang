@@ -1,6 +1,6 @@
 def assert(condition, message) do
 	if !condition then
-		raise(@AssertionError, message)
+		raise(:AssertionError, message)
 		exit(1)
 	end
 end
@@ -45,9 +45,9 @@ assert(Person#adult?(p), "Person is not adult")
 assert(p is Person, "p is not a Person")
 
 try
-	raise(@AssertionError, "should be rescued")
+	raise(:AssertionError, "should be rescued")
 rescue e
-	assert(e == @AssertionError, "Should be an assertion error")
+	assert(e == :AssertionError, "Should be an assertion error")
 end
 
 assert(
