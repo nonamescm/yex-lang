@@ -280,6 +280,9 @@ impl VirtualMachine {
             }
             OpCode::Savg(name) => {
                 let value = self.pop();
+                if self.globals.get(&name).is_some() {
+                    raise!(NameError, "Tried to reassign global variable '{}'", name)?;
+                }
                 self.set_global(name, value);
             }
 
@@ -383,9 +386,9 @@ impl VirtualMachine {
     pub fn debug_stack(&self, _: &OpCode) {}
 
     #[inline(always)]
-    fn call_args(&mut self, arity: usize, fun: &Fn) -> FnArgs {
+    fn call_args(&mut self, arity: usize, fun: &Fn) -> Option<FnArgs> {
         if fun.is_bytecode() && fun.args.is_empty() {
-            return stackvec![];
+            return None;
         }
 
         let mut args = stackvec![];
@@ -402,9 +405,10 @@ impl VirtualMachine {
             args.push(arg.clone());
         }
 
-        args
+        Some(args)
     }
 
+    #[inline(always)]
     pub(crate) fn call(&mut self, arity: usize) -> InterpretResult<()> {
         let fun: GcRef<Fn> = self.pop().get()?;
 
@@ -436,11 +440,18 @@ impl VirtualMachine {
     }
 
     #[inline(always)]
-    fn call_bytecode(&mut self, bytecode: BytecodeRef, args: FnArgs) -> InterpretResult<()> {
+    fn call_bytecode(
+        &mut self,
+        bytecode: BytecodeRef,
+        args: Option<FnArgs>,
+    ) -> InterpretResult<()> {
         self.used_locals += 1;
-        for arg in args {
-            self.push(arg);
-        }
+
+        args.map(|stack| {
+            for arg in stack {
+                self.push(arg)
+            }
+        });
 
         self.run(bytecode)?;
         self.used_locals -= 1;
@@ -448,8 +459,8 @@ impl VirtualMachine {
     }
 
     #[inline(always)]
-    fn call_native(&mut self, fp: NativeFn, args: FnArgs) -> InterpretResult<()> {
-        let args = args.reverse().into();
+    fn call_native(&mut self, fp: NativeFn, args: Option<FnArgs>) -> InterpretResult<()> {
+        let args = args.unwrap_or_else(FnArgs::new).reverse().into();
         let result = fp(self, args);
         self.try_push(result)
     }
