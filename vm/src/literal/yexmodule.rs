@@ -14,10 +14,7 @@ pub struct YexModule {
 impl YexModule {
     /// Creates a new Yex type.
     pub fn new(name: Symbol, fields: EnvTable) -> Self {
-        Self {
-            name,
-            fields,
-        }
+        Self { name, fields }
     }
 
     /// Creates a new List type.
@@ -84,6 +81,11 @@ impl YexModule {
             Value::Fn(GcRef::new(Fn::new_native(0, list::methods::new))),
         );
 
+        methods.insert(
+            Symbol::from("show"),
+            Value::Fn(GcRef::new(Fn::new_native(1, list::methods::show))),
+        );
+
         Self::new(Symbol::from("List"), methods)
     }
 
@@ -106,6 +108,11 @@ impl YexModule {
             Value::Fn(GcRef::new(Fn::new_native(0, table::methods::new))),
         );
 
+        methods.insert(
+            Symbol::from("show"),
+            Value::Fn(GcRef::new(Fn::new_native(1, table::methods::show))),
+        );
+
         Self::new(Symbol::from("Struct"), methods)
     }
 
@@ -123,18 +130,39 @@ impl YexModule {
             Value::Fn(GcRef::new(Fn::new_native(0, tuple::methods::new))),
         );
 
+        methods.insert(
+            Symbol::from("show"),
+            Value::Fn(GcRef::new(Fn::new_native(1, tuple::methods::show))),
+        );
+
         Self::new(Symbol::from("Tuple"), methods)
     }
 
     /// Creates a new Num type.
     pub fn num() -> Self {
-        let methods = EnvTable::new();
+        let mut methods = EnvTable::new();
+
+        methods.insert(
+            Symbol::from("show"),
+            Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
+                super::show(vm, x).map(|x| x.into())
+            }))),
+        );
+
         Self::new(Symbol::from("Num"), methods)
     }
 
     /// Creates a new Sym type.
     pub fn sym() -> Self {
-        let methods = EnvTable::new();
+        let mut methods = EnvTable::new();
+
+        methods.insert(
+            Symbol::from("show"),
+            Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
+                super::show(vm, x).map(|x| x.into())
+            }))),
+        );
+
         Self::new(Symbol::from("Sym"), methods)
     }
 
@@ -162,24 +190,55 @@ impl YexModule {
             Value::Fn(GcRef::new(Fn::new_native(0, str::methods::new))),
         );
 
+        methods.insert(
+            Symbol::from("show"),
+            Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
+                super::show(vm, x).map(|x| x.into())
+            }))),
+        );
+
         Self::new(Symbol::from("Str"), methods)
     }
 
     /// Creates a new Bool type.
     pub fn bool() -> Self {
-        let methods = EnvTable::new();
+        let mut methods = EnvTable::new();
+
+        methods.insert(
+            Symbol::from("show"),
+            Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
+                super::show(vm, x).map(|x| x.into())
+            }))),
+        );
+
         Self::new(Symbol::from("Bool"), methods)
     }
 
     /// Creates a new Fn type.
     pub fn fun() -> Self {
-        let methods = EnvTable::new();
+        let mut methods = EnvTable::new();
+
+        methods.insert(
+            Symbol::from("show"),
+            Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
+                super::show(vm, x).map(|x| x.into())
+            }))),
+        );
+
         Self::new(Symbol::from("Fn"), methods)
     }
 
     /// Creates a new Nil type.
     pub fn nil() -> Self {
-        let methods = EnvTable::new();
+        let mut methods = EnvTable::new();
+
+        methods.insert(
+            Symbol::from("show"),
+            Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
+                super::show(vm, x).map(|x| x.into())
+            }))),
+        );
+
         Self::new(Symbol::from("Nil"), methods)
     }
 }

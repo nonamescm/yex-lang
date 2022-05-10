@@ -2,26 +2,18 @@ use crate::{
     env::EnvTable,
     error::InterpretError,
     gc::GcRef,
-    literal::{fun::FnKind, nil, TryGet, Value},
-    raise_err, InterpretResult, Symbol, YexModule,
+    literal::{fun::FnKind, nil, TryGet, Value, show},
+    raise_err, InterpretResult, Symbol, YexModule, VirtualMachine,
 };
 use std::io::{self, Write};
 
-fn println(args: &[Value]) -> InterpretResult<Value> {
-    match &args[0] {
-        Value::Str(s) => println!("{}", **s),
-        other => println!("{}", other),
-    };
-
+fn println(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
+    println!("{}", show(vm, args.into())?);
     Ok(nil())
 }
 
-fn print(args: &[Value]) -> InterpretResult<Value> {
-    match &args[0] {
-        Value::Str(s) => print!("{}", **s),
-        other => print!("{}", other),
-    };
-
+fn print(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
+    print!("{}", show(vm, args.into())?);
     Ok(nil())
 }
 
@@ -111,8 +103,8 @@ pub fn prelude() -> EnvTable {
         };
     }
 
-    insert_fn!("println", println);
-    insert_fn!("print", print);
+    insert_fn!(:vm "println", println, 1);
+    insert_fn!(:vm "print", print, 1);
     insert_fn!("input", input);
     insert_fn!("type", r#type);
     insert_fn!("inspect", inspect);

@@ -13,14 +13,44 @@ pub mod table;
 pub mod tuple;
 pub mod yexmodule;
 
-use crate::{error::InterpretResult, gc::GcRef, raise};
+use crate::{error::InterpretResult, gc::GcRef, raise, VirtualMachine, raise_err};
 
 use fun::Fn;
 use list::List;
 use symbol::Symbol;
 use yexmodule::YexModule;
 
-use self::{table::YexStruct, tuple::Tuple, symbol::YexSymbol};
+use self::{symbol::YexSymbol, table::YexStruct, tuple::Tuple};
+
+pub fn show(vm: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
+    let vm = unsafe { &mut *vm };
+    match &x[0] {
+        Value::Sym(s) => Ok(s.to_string()),
+        Value::Str(s) => Ok(s.to_string()),
+        Value::List(l) => Ok(l.to_string()),
+        Value::Tuple(t) => Ok(t.to_string()),
+        Value::Num(n) => Ok(n.to_string()),
+        Value::Bool(b) => Ok(b.to_string()),
+        Value::Fn(f) => Ok(f.to_string()),
+        Value::Nil => Ok("nil".to_string()),
+        Value::Struct(s) => {
+            let show_fn = s.module.fields.get(&"show".into()).ok_or(raise_err!(
+                FieldError,
+                "Undefined method 'show' for type '{}'",
+                s.module.name.as_str()
+            ))?;
+
+            vm.push(show_fn);
+            vm.push(Value::Struct(s.clone()));
+            vm.call(1)?;
+
+            let s = vm.pop();
+
+            show(vm, vec![s])
+        }
+        Value::Module(m) => Ok(format!("module '{}'", m.name.as_str())),
+    }
+}
 
 pub fn nil() -> Value {
     Value::Nil
@@ -181,7 +211,7 @@ impl Value {
         match self {
             Module(t) => return t.clone(),
             Struct(YexStruct { module, .. }) => return module.clone(),
-            _ => {},
+            _ => {}
         };
 
         let ty = match self {

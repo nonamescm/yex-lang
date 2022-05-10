@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use crate::{
     error::InterpretResult,
     literal::{nil, TryGet},
@@ -11,6 +13,23 @@ pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let idx: usize = args[0].get()?;
 
     Ok(tup.0.get(idx).cloned().unwrap_or_else(nil))
+}
+
+pub fn show(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
+    let xs: Tuple = args[0].get()?;
+
+    let mut s = String::from('(');
+
+    for x in xs.0.iter() {
+        write!(s, "{}, ", super::super::show(vm, vec![x.clone()])?).unwrap();
+    }
+
+    s.pop();
+    s.pop();
+
+    s.push(')');
+
+    Ok(s.into())
 }
 
 pub fn new(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
