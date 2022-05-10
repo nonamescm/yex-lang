@@ -28,6 +28,11 @@ pub fn insert(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value
     Ok(Value::Struct(table.insert(key, value)))
 }
 
+pub fn to_list(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
+    let table: YexStruct = args[0].get()?;
+    Ok(Value::List(table.items))
+}
+
 pub fn show(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let table: YexStruct = args[0].get()?;
 

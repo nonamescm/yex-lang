@@ -113,6 +113,11 @@ impl YexModule {
             Value::Fn(GcRef::new(Fn::new_native(1, table::methods::show))),
         );
 
+        methods.insert(
+            Symbol::from("toList"),
+            Value::Fn(GcRef::new(Fn::new_native(1, table::methods::to_list))),
+        );
+
         Self::new(Symbol::from("Struct"), methods)
     }
 
@@ -181,7 +186,7 @@ impl YexModule {
         );
 
         methods.insert(
-            Symbol::new("chars"),
+            Symbol::new("toList"),
             Value::Fn(GcRef::new(Fn::new_native(1, str::methods::chars))),
         );
 
