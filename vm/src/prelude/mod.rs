@@ -2,8 +2,8 @@ use crate::{
     env::EnvTable,
     error::InterpretError,
     gc::GcRef,
-    literal::{fun::FnKind, nil, TryGet, Value, show},
-    raise_err, InterpretResult, Symbol, YexModule, VirtualMachine,
+    literal::{fun::FnKind, nil, show, TryGet, Value},
+    raise_err, InterpretResult, Symbol, VirtualMachine, YexModule,
 };
 use std::io::{self, Write};
 

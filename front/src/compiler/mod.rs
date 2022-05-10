@@ -477,8 +477,12 @@ impl Compiler {
             }
 
             // compiles a `module` declaration into an YexModule and save the module to a global name
-            StmtKind::Module { name, functions } => {
-                self.module(name, functions, &node.location);
+            StmtKind::Module {
+                name,
+                functions,
+                params,
+            } => {
+                self.module(name, functions, params.clone(), &node.location);
             }
 
             // compiles a `trait` declaration into an YexModule and save the trait to a global name
@@ -491,7 +495,13 @@ impl Compiler {
         }
     }
 
-    fn module(&mut self, decl: &VarDecl, methods: &[Def], loc: &Location) {
+    fn module(
+        &mut self,
+        decl: &VarDecl,
+        methods: &[Def],
+        params: Option<Vec<Symbol>>,
+        loc: &Location,
+    ) {
         let mut table = EnvTable::new();
         for m in methods {
             let func = match &m.value.kind {
@@ -502,7 +512,12 @@ impl Compiler {
             table.insert(m.bind.name, func);
         }
 
-        let ty = YexModule::new(decl.name, table);
+        let mut ty = YexModule::new(decl.name, table);
+
+        if let Some(params) = params {
+            ty.struct_fields = params;
+            ty.struct_ = true;
+        }
 
         self.emit_const(Value::Module(GcRef::new(ty)), loc);
         self.emit_op(OpCode::Savg(decl.name), loc);

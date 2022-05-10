@@ -48,8 +48,11 @@ pub fn show(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
         )
         .ok();
     }
-    str.pop();
-    str.pop();
+
+    if !table.items.is_empty() {
+        str.pop();
+        str.pop();
+    }
 
     str.push('}');
 

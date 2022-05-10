@@ -13,7 +13,7 @@ pub mod table;
 pub mod tuple;
 pub mod yexmodule;
 
-use crate::{error::InterpretResult, gc::GcRef, raise, VirtualMachine, raise_err};
+use crate::{error::InterpretResult, gc::GcRef, raise, raise_err, VirtualMachine};
 
 use fun::Fn;
 use list::List;
@@ -31,7 +31,7 @@ pub fn show(vm: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
         Value::Tuple(t) => Ok(t.to_string()),
         Value::Num(n) => Ok(n.to_string()),
         Value::Bool(b) => Ok(b.to_string()),
-        Value::Fn(f) => Ok(f.to_string()),
+        Value::Fn(f) => Ok(format!("fn({})", f.arity)),
         Value::Nil => Ok("nil".to_string()),
         Value::Struct(s) => {
             let show_fn = s.module.fields.get(&"show".into()).ok_or(raise_err!(
@@ -40,8 +40,8 @@ pub fn show(vm: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
                 s.module.name.as_str()
             ))?;
 
-            vm.push(show_fn);
             vm.push(Value::Struct(s.clone()));
+            vm.push(show_fn);
             vm.call(1)?;
 
             let s = vm.pop();
@@ -254,7 +254,7 @@ impl std::fmt::Display for Value {
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
-            Module(t) => format!("type({})", t.name),
+            Module(t) => format!("module '{}'", t.name),
             Struct(t) => format!("{t}"),
             Tuple(t) => format!("{t}"),
             Bool(b) => b.to_string(),
@@ -345,26 +345,26 @@ macro_rules! impl_get {
             fn get(&self) -> InterpretResult<$to> {
                 match self {
                     Self::$pattern(x) => Ok(x.clone()),
-                    _ => crate::raise!(TypeError, "Unexpected type '{}'", self.type_of().name),
+                    _ => crate::raise!(TypeError, "Unexpected type '{}', expected type was '{}'", self.type_of().name, stringify!($pattern)),
                 }
             }
         }
     };
-    ($to:ty: $pattern:pat => $parse_expr:expr) => {
+    ($to:ty: $pattern:ident($($tt: tt)*) => $parse_expr:expr) => {
         impl TryGet<$to> for Value {
             #[inline(always)]
             fn get(&self) -> InterpretResult<$to> {
                 use Value::*;
                 match self {
-                    $pattern => Ok($parse_expr),
-                    _ => crate::raise!(TypeError, "Unexpected type '{}'", self.type_of().name),
+                    $pattern($($tt)+) => Ok($parse_expr),
+                    _ => crate::raise!(TypeError, "Unexpected type '{}', expected type was '{}'", self.type_of().name, stringify!($pattern)),
                 }
             }
         }
     };
 }
 
-impl_get!(String: Str(s) => s.to_string());
+impl_get!(String: Str (s) => s.to_string());
 impl_get!(f64: Num);
 impl_get!(bool: Bool);
 impl_get!(GcRef<YexModule>: Module);

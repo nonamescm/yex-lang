@@ -1,6 +1,7 @@
 use std::{
-    fmt::{Formatter, self},
-    hash::{Hash, Hasher}, ops::Deref,
+    fmt::{self, Formatter},
+    hash::{Hash, Hasher},
+    ops::Deref,
 };
 
 /// Symbol struct, contains the symbol string and a pre-hashed value for faster comparison

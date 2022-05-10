@@ -143,8 +143,10 @@ pub fn show(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
         write!(s, "{}, ", super::super::show(vm, vec![x])?).unwrap();
     }
 
-    s.pop();
-    s.pop();
+    if !xs.is_empty() {
+        s.pop();
+        s.pop();
+    }
 
     s.push(']');
 

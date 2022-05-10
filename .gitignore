@@ -3,3 +3,4 @@ callgrind*
 perf.data*
 flamegraph.svg
 rust-toolchain
+.obsidian

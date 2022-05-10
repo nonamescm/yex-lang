@@ -351,8 +351,15 @@ pub struct DefProto {
 pub enum StmtKind {
     Def(Def),
     Let(Bind),
-    Module { name: VarDecl, functions: Vec<Def> },
-    Trait { name: VarDecl, functions: Vec<DefProto> },
+    Module {
+        name: VarDecl,
+        functions: Vec<Def>,
+        params: Option<Vec<Symbol>>,
+    },
+    Trait {
+        name: VarDecl,
+        functions: Vec<DefProto>,
+    },
     Expr(Expr),
 }
 

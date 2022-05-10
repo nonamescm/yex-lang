@@ -1,6 +1,6 @@
 use std::{fmt, io};
 
-use crate::{Symbol, raise_err};
+use crate::{raise_err, Symbol};
 
 #[derive(Debug)]
 pub struct InterpretError {
@@ -12,7 +12,11 @@ pub struct InterpretError {
 
 impl fmt::Display for InterpretError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}:{}] :{}\n  {}", self.line, self.column, self.err, self.msg)
+        write!(
+            f,
+            "[{}:{}] :{}\n  {}",
+            self.line, self.column, self.err, self.msg
+        )
     }
 }
 

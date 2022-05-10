@@ -24,8 +24,10 @@ pub fn show(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
         write!(s, "{}, ", super::super::show(vm, vec![x.clone()])?).unwrap();
     }
 
-    s.pop();
-    s.pop();
+    if xs.0.len() > 0 {
+        s.pop();
+        s.pop();
+    }
 
     s.push(')');
 

@@ -317,6 +317,17 @@ impl VirtualMachine {
                     _ => raise!(TypeError, "Expected a struct")?,
                 };
 
+                let struct_fields = &obj.module.struct_fields;
+
+                if !struct_fields.is_empty() && !struct_fields.contains(&field) {
+                    raise!(
+                        NameError,
+                        "Undefined field '{}' for struct '{}'",
+                        field,
+                        obj.module.name.as_str()
+                    )?;
+                }
+
                 obj.items = obj.items.prepend(vec![field.into(), value].into());
             },
 
@@ -356,7 +367,14 @@ impl VirtualMachine {
                 let ty: GcRef<YexModule> = if let Some(name) = name {
                     self.get_global(name)
                         .ok_or(raise_err!(NameError, "Undefined module '{}'", name))
-                        .and_then(|ty| ty.get())?
+                        .and_then(|ty| ty.get())
+                        .and_then(|ty: GcRef<YexModule>| {
+                            if ty.struct_ {
+                                Ok(ty)
+                            } else {
+                                raise!(TypeError, "Expected a struct")
+                            }
+                        })?
                 } else {
                     GcRef::new(YexModule::struct_())
                 };

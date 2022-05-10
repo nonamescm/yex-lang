@@ -108,6 +108,28 @@ impl Parser {
 
         let name = self.var_decl()?;
 
+        let params = if self.current.token == Tkt::Struct {
+            self.next()?;
+            self.expect(Tkt::Lbrack)?;
+
+            let mut fields = Vec::new();
+
+            while let Tkt::Sym(name) = self.current.token {
+                fields.push(name);
+                self.next()?;
+
+                if self.current.token != Tkt::Rbrack {
+                    self.expect_and_skip(Tkt::Comma)?;
+                }
+            }
+
+            self.expect(Tkt::Rbrack)?;
+
+            Some(fields)
+        } else {
+            None
+        };
+
         let mut functions = Vec::new();
 
         while self.current.token != Tkt::End {
@@ -120,7 +142,11 @@ impl Parser {
         self.next()?;
 
         Ok(Stmt::new(
-            StmtKind::Module { name, functions },
+            StmtKind::Module {
+                name,
+                functions,
+                params,
+            },
             line,
             column,
         ))
@@ -181,20 +207,7 @@ impl Parser {
     }
 
     fn expr(&mut self) -> ParseResult<Expr> {
-        match self.current.token {
-            Tkt::Let => self.let_(),
-            Tkt::Def => self.def_(),
-            Tkt::If => self.condition(),
-            Tkt::Fn => self.fn_(),
-            Tkt::Arrow => self.become_(),
-            Tkt::When => self.when_(),
-            Tkt::Do => {
-                self.expect(Tkt::Do)?;
-                self.block(Tkt::End)
-            }
-            Tkt::Try => self.try_(),
-            _ => self.pipe(),
-        }
+        self.pipe()
     }
 
     fn struct_(&mut self) -> ParseResult<Expr> {
@@ -225,6 +238,8 @@ impl Parser {
 
             fields.push((entry.name, Box::new(value)));
         }
+
+        self.expect(Tkt::Rbrace)?;
 
         Ok(Expr::new(ExprKind::Struct { ty, fields }, line, column))
     }
@@ -814,7 +829,6 @@ impl Parser {
 
     fn dot(&mut self) -> ParseResult<Expr> {
         let mut obj = self.primary()?;
-        self.next()?;
 
         while self.current.token == Tkt::Dot {
             self.next()?;
@@ -847,6 +861,8 @@ impl Parser {
             }
         }
 
+        self.expect(Tkt::Rbrack)?;
+
         Ok(Expr::new(ExprKind::List(exprs), line, column))
     }
 
@@ -866,6 +882,8 @@ impl Parser {
             }
         }
 
+        self.expect(Tkt::Rparen)?;
+
         if exprs.len() == 1 {
             Ok(exprs.pop().unwrap())
         } else {
@@ -878,16 +896,53 @@ impl Parser {
         let column = self.current.column;
 
         let obj = match self.current.token.clone() {
-            Tkt::Num(n) => Expr::new(ExprKind::Lit(Literal::Num(n)), line, column),
-            Tkt::Str(s) => Expr::new(ExprKind::Lit(Literal::Str(s)), line, column),
-            Tkt::True => Expr::new(ExprKind::Lit(Literal::Bool(true)), line, column),
-            Tkt::False => Expr::new(ExprKind::Lit(Literal::Bool(false)), line, column),
-            Tkt::Name(s) => Expr::new(ExprKind::Var(s), line, column),
-            Tkt::Sym(s) => Expr::new(ExprKind::Lit(Literal::Sym(s)), line, column),
+            // literals
+            Tkt::Num(n) => {
+                self.next()?;
+                Expr::new(ExprKind::Lit(Literal::Num(n)), line, column)
+            }
+            Tkt::Str(s) => {
+                self.next()?;
+                Expr::new(ExprKind::Lit(Literal::Str(s)), line, column)
+            }
+            Tkt::True => {
+                self.next()?;
+                Expr::new(ExprKind::Lit(Literal::Bool(true)), line, column)
+            }
+            Tkt::False => {
+                self.next()?;
+                Expr::new(ExprKind::Lit(Literal::Bool(false)), line, column)
+            }
+            Tkt::Name(s) => {
+                self.next()?;
+                Expr::new(ExprKind::Var(s), line, column)
+            }
+            Tkt::Sym(s) => {
+                self.next()?;
+                Expr::new(ExprKind::Lit(Literal::Sym(s)), line, column)
+            }
             Tkt::Lbrack => self.list()?,
             Tkt::Lparen => self.tuple()?,
             Tkt::Rem => self.struct_()?,
-            Tkt::Nil => Expr::new(ExprKind::Lit(Literal::Unit), line, column),
+            Tkt::Nil => {
+                self.next()?;
+                Expr::new(ExprKind::Lit(Literal::Unit), line, column)
+            }
+
+            // keywords
+            Tkt::Let => self.let_()?,
+            Tkt::Def => self.def_()?,
+            Tkt::If => self.condition()?,
+            Tkt::Fn => self.fn_()?,
+            Tkt::Arrow => self.become_()?,
+            Tkt::When => self.when_()?,
+            Tkt::Do => {
+                self.expect(Tkt::Do)?;
+                self.block(Tkt::End)?
+            }
+            Tkt::Try => self.try_()?,
+
+            // not supported
             other => self.throw(format!("unexpected token '{}'", other))?,
         };
 

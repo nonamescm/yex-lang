@@ -31,6 +31,7 @@ List#map(fn(test) do
 end, opsTests)
 
 module Person
+	struct [:name, :age]
 	def new(name, age) do
 		assert(name is Str, "Name must be a string")
 		assert(age is Num, "Age must be a number")

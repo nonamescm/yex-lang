@@ -9,12 +9,21 @@ pub struct YexModule {
     pub name: Symbol,
     /// Module functions.
     pub fields: EnvTable,
+    /// Is the module a struct?
+    pub struct_: bool,
+    /// if the module is a struct, the fields are the struct fields.
+    pub struct_fields: Vec<Symbol>,
 }
 
 impl YexModule {
     /// Creates a new Yex type.
     pub fn new(name: Symbol, fields: EnvTable) -> Self {
-        Self { name, fields }
+        Self {
+            name,
+            fields,
+            struct_: false,
+            struct_fields: vec![],
+        }
     }
 
     /// Creates a new List type.
@@ -118,7 +127,9 @@ impl YexModule {
             Value::Fn(GcRef::new(Fn::new_native(1, table::methods::to_list))),
         );
 
-        Self::new(Symbol::from("Struct"), methods)
+        let mut modu = Self::new(Symbol::from("Struct"), methods);
+        modu.struct_ = true;
+        modu
     }
 
     /// Creates a new Tuple type.

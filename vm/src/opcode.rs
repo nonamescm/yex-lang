@@ -209,7 +209,6 @@ pub enum OpCode {
     /// The stack layout after running it: [tuple-element]
     TupGet(usize),
 
-
     /// Create a new Struct, receives the struct name as argument (defaults to Table)
     /// The stack layout before running this opcode: [...args]
     /// The stack layout after running it: [struct]

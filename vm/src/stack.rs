@@ -1,4 +1,7 @@
-use std::{mem::{self, MaybeUninit}, ops::Deref};
+use std::{
+    mem::{self, MaybeUninit},
+    ops::Deref,
+};
 
 /// A wrapper around an array armazenated on the stack
 pub struct StackVec<T, const S: usize> {
