@@ -181,6 +181,11 @@ impl YexModule {
         );
 
         methods.insert(
+            Symbol::new("chars"),
+            Value::Fn(GcRef::new(Fn::new_native(1, str::methods::chars))),
+        );
+
+        methods.insert(
             Symbol::new("len"),
             Value::Fn(GcRef::new(Fn::new_native(1, str::methods::len))),
         );

@@ -35,6 +35,13 @@ pub fn len(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     Ok((str.len() as f64).into())
 }
 
+pub fn chars(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
+    let str: String = args[0].get()?;
+    let iter = str.chars().map(|c| c.to_string().into());
+
+    Ok(List::from_iter(iter.rev()).into())
+}
+
 pub fn new(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
     Ok(Value::Str(GcRef::new(String::from(""))))
 }
