@@ -42,9 +42,10 @@ impl YexStruct {
     #[must_use]
     /// Creates a new struct with the given field + the current ones.
     pub fn insert(self, key: Symbol, val: Value) -> Self {
-        Self::from_list(self.items.prepend(Value::List(
-            List::new().prepend(val).prepend(Value::Sym(key.into())),
-        )))
+        Self::from_list(
+            self.items
+                .prepend(Value::Tuple(vec![key.into(), val].into())),
+        )
     }
 
     #[inline]

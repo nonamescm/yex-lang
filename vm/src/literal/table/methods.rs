@@ -38,7 +38,7 @@ pub fn show(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
         write!(
             str,
             "{}: {}, ",
-            super::super::show(vm, vec![entry.0[0].clone()])?,
+            TryGet::<Symbol>::get(&entry.0[0])?.as_str(),
             super::super::show(vm, vec![entry.0[1].clone()])?
         )
         .ok();
