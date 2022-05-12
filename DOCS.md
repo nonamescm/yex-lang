@@ -20,23 +20,23 @@
 
 ## What is yex?
 
-Yex is a toy programming language, I use it as a playground to try out some new ideas and see how they interact with each other. Therefore, you should not expect any stability from it or rely on it anywhere. Please don't use this in an production envinronment.
+Yex is a toy programming language, I use it as a playground to try out some new ideas and see how they interact with each other. Therefore, you shouldn't expect any stability from it or rely on it anywhere. Don't run this in an production envinronment.
 
 ## Getting Started
 
-First, make sure both rust and git are installed, then run this command:
+First of all: you must have Rust installed. Afterward, run:
 
 ```bash
 cargo install --git https://github.com/nonamescm/yex-lang.git
 ```
 
-Yex is installed now, great!
+That’s it! Yex is installed now!
 
 ### Interactive Mode
 
 Let's start this tutorial with the REPL, type `yex` on your current terminal session, it will open a shell that evaluates any valid *expression*. So, type some basic code on it:
 
-```ocaml
+```scala
 yex> "Hello, " + "World!"
 "Hello, World!"
 yex> 1 + 1
@@ -49,7 +49,7 @@ When you're done, just press `C-c` or `C-d` to exit.
 
 Create a file called `hello.yex` and type the following code in it:
 
-```ocaml
+```scala
 println("Hello World!")
 ```
 
@@ -59,7 +59,7 @@ Run it with `yex hello.yex`
 
 Yex support a handful of types, some of them are:
 
-```ocaml
+```scala
 yex> 1.0         // Num (64 bit floating point number)
 yex> ""          // Str
 yex> []          // List (Cons List)
@@ -72,7 +72,7 @@ yex> fn() do end // Function
 
 Yex supports `true` and `false` as booleans:
 
-```ocaml
+```scala
 yex> true
 true
 yex> true == false
@@ -87,7 +87,7 @@ module 'Bool'
 
 A symbol is a string hashed at compile-time. They're often useful as a named alternative to strings and numbers in enumerations. You can declare them this way:
 
-```ocaml
+```scala
 yex> :haskell
 :haskell
 yex> :elixir
@@ -106,7 +106,7 @@ Sym
 
 In yex, strings are always double-quoted and UTF-8 encoded:
 
-```ocaml
+```scala
 yex> "ƒ"
 "ƒ"
 yex> "f" == "ƒ"
@@ -119,7 +119,7 @@ yex> "\x49" // the same as "\u0049" or "\U00000049"
 
 the `Str` module contains some useful functions for operating on strings:
 
-```ocaml
+```scala
 yex> Str#len("Hello")
 5
 yex> Str#split("Hello, World", ", ")
@@ -134,7 +134,7 @@ yex> Str#get(0, "hi")
 
 (Linked) Lists in yex are a data structure just like any other that holds a collection of values of any type.
 
-```ocaml
+```scala
 yex> [1, "hello", true, :apple, nil]
 [1, "hello", true, :apple, nil]
 yex> 4 :: [3, 2, 1]
@@ -143,7 +143,7 @@ yex> 4 :: [3, 2, 1]
 
 If you need functions that operate on lists, you can use the `List` module.
 
-```ocaml
+```scala
 yex> let xs = [1, 2, 3]
 yex> List#map(fn(x): x * 2, xs)
 [2, 4, 6]
@@ -169,7 +169,7 @@ yex> List#get(0, [1, 2, 3])
 
 Structs are data structures that store key-value pairs, you can create and use them like so:
 
-```ocaml
+```scala
 yex> let john = %Struct{name: "John", age: 20} // the `Struct` is optional
 nil
 yex> john
@@ -194,7 +194,7 @@ In yex, functions are impure, so they can have side effects and this is not enfo
 
 Named functions can be created with the `def` keyword, they work both at the module and the local scope. To declare one, open a file and type:
 
-```ocaml
+```scala
 def fibonacci(number) do
 	if n <= 1 then
 		n
@@ -218,7 +218,7 @@ Anonymous functions can be created with the `fn` keyword, they can be used in ex
 
 Open the repl and type:
 
-```ocaml
+```scala
 yex> let f = fn(x): x * 2
 nil
 yex> f
@@ -235,7 +235,7 @@ yex> f(2)
 
 As you've seen [here](#named), yex has an operator called `|>`, which takes the value on the left and apply it to the function on the right, so, you can think of it as a reverse function application operator, `expr |> func()` = `func(expr)`. Just some examples:
 
-```ocaml
+```scala
 yex> println("hello world!")
 hello world!
 nil
@@ -252,7 +252,7 @@ Modules and traits are two ways of achieving modularity and polymorfism, and the
 
 Modules are groups of functions that you consider to have something in common, like the datatype that they operate on, or their domain, you can create a module with the `module` keyword. On a file, type:
 
-```ocaml
+```scala
 module Person
 	struct [:name, :age]
 end
@@ -265,7 +265,7 @@ end
 
 Traits are a way of specifying the behaviour of any modules which implements it. You can define them the following way:
 
-```ocaml
+```scala
 trait Enum
 	// these methods should be implemented by the type
 	def toList(x)
