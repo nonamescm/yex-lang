@@ -15,6 +15,8 @@
 	- [Anonymous](#anonymous)
 	- [The pipe operator](#the-pipe-operator)
 - [Modules and traits](#modules-and-traits)
+	- [Modules](#modules)
+	- [Traits](#traits)
 
 ## What is yex?
 
@@ -244,11 +246,40 @@ nil
 
 ## Modules and traits
 
+Modules and traits are two ways of achieving modularity and polymorfism, and they can be used together.
+
+### Modules
+
 Modules are groups of functions that you consider to have something in common, like the datatype that they operate on, or their domain, you can create a module with the `module` keyword. On a file, type:
 
 ```ruby
 module Person
 	struct [:name, :age]
-	def adult?(p): p.age >= 18
 end
+
+%Person{name: "Maria", age: 17}
+|> println()
 ```
+
+### Traits
+
+Traits are a way of specifying the behaviour of any modules which implements it. You can define them the following way:
+
+```scala
+trait Enum
+	// this method should be implemented by the type
+	def toList(x)
+	
+	// this method is provided by the trait
+	def map(f, xs): List#map(f, Enum#toList(xs))
+	def reduce(f, xs) do
+		let xs = Enum#toList(xs)
+		List#fold(f, List#head(xs), List#tail(xs))
+	end
+end
+
+List
+|> Enum#reduce(fn(x): x)
+|> println()
+```
+

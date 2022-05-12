@@ -95,6 +95,11 @@ impl YexModule {
             Value::Fn(GcRef::new(Fn::new_native(1, list::methods::show))),
         );
 
+        methods.insert(
+            Symbol::from("toList"),
+            Value::Fn(GcRef::new(Fn::new_native(1, list::methods::to_list))),
+        );
+
         Self::new(Symbol::from("List"), methods)
     }
 

@@ -153,6 +153,10 @@ pub fn show(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
     Ok(s.into())
 }
 
+pub fn to_list(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
+    Ok(args[0].clone())
+}
+
 pub fn new(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
     Ok(List::new().into())
 }

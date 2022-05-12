@@ -13,7 +13,7 @@ pub mod table;
 pub mod tuple;
 pub mod yexmodule;
 
-use crate::{error::InterpretResult, gc::GcRef, raise, raise_err, VirtualMachine};
+use crate::{error::InterpretResult, gc::GcRef, raise, VirtualMachine};
 
 use fun::Fn;
 use list::List;
@@ -34,11 +34,11 @@ pub fn show(vm: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
         Value::Fn(f) => Ok(format!("fn({})", f.arity)),
         Value::Nil => Ok("nil".to_string()),
         Value::Struct(s) => {
-            let show_fn = s.module.fields.get(&"show".into()).ok_or(raise_err!(
-                FieldError,
-                "Undefined method 'show' for type '{}'",
-                s.module.name.as_str()
-            ))?;
+            let show_fn = s
+                .module
+                .fields
+                .get(&"show".into())
+                .unwrap_or_else(|| Fn::new_native(1, table::methods::show).into());
 
             vm.push(Value::Struct(s.clone()));
             vm.push(show_fn);
@@ -101,6 +101,12 @@ impl From<List> for Value {
 impl From<YexStruct> for Value {
     fn from(t: YexStruct) -> Self {
         Value::Struct(t)
+    }
+}
+
+impl From<Fn> for Value {
+    fn from(f: Fn) -> Self {
+        Value::Fn(GcRef::new(f))
     }
 }
 

@@ -36,7 +36,7 @@ pub fn to_list(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Valu
 pub fn show(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let table: YexStruct = args[0].get()?;
 
-    let mut str = String::from("%Struct{");
+    let mut str = format!("%{}{{", table.module.name.as_str());
 
     for entry in table.items.iter() {
         let entry: Tuple = entry.get()?;
