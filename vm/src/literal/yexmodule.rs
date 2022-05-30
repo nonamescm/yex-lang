@@ -217,6 +217,16 @@ impl YexModule {
         );
 
         methods.insert(
+            Symbol::new("ord"),
+            Value::Fn(GcRef::new(Fn::new_native(1, str::methods::ord)))
+        );
+
+        methods.insert(
+            Symbol::new("chr"),
+            Value::Fn(GcRef::new(Fn::new_native(1, str::methods::chr)))
+        );
+
+        methods.insert(
             Symbol::from("show"),
             Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
                 super::show(vm, x).map(|x| x.into())

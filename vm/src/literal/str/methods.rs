@@ -2,7 +2,7 @@ use crate::{
     error::InterpretResult,
     gc::GcRef,
     literal::{nil, TryGet},
-    List, Value, VirtualMachine,
+    raise, List, Value, VirtualMachine,
 };
 
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
@@ -42,6 +42,27 @@ pub fn chars(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
     Ok(List::from_iter(iter.rev()).into())
 }
 
+pub fn ord(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
+    let str: String = args[0].get()?;
+
+    if str.len() != 1 {
+        raise!(ValueError, "Expected a character for 'ord'")?;
+    }
+
+    Ok(Value::Num(str.bytes().nth(0).unwrap().into()))
+}
+
+pub fn chr(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
+    let char_code: usize = args[0].get()?;
+
+    let code = char_code.try_into().ok().and_then(char::from_u32);
+    let code = match code {
+        Some(ch) => ch.to_string(),
+        None => raise!(ValueError, "Can't convert the number to a char")?,
+    };
+
+    Ok(code.into())
+}
 pub fn new(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
     Ok(Value::Str(GcRef::new(String::from(""))))
 }
