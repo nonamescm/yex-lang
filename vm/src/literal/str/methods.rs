@@ -49,7 +49,7 @@ pub fn ord(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
         raise!(ValueError, "Expected a character for 'ord'")?;
     }
 
-    Ok(Value::Num(str.bytes().nth(0).unwrap().into()))
+    Ok(Value::Num(str.as_bytes()[0].into()))
 }
 
 pub fn chr(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
