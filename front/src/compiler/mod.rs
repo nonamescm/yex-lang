@@ -85,7 +85,7 @@ impl Compiler {
         self.emit_op(OpCode::Save(len), node);
     }
 
-    fn if_expr(&mut self, cond: &Expr, then: &Expr, else_: Option<&Expr>, loc: &Location) {
+    fn if_expr(&mut self, cond: &Expr, then: &Expr, else_: &Expr, loc: &Location) {
         // compiles the codition
         self.expr(cond);
 
@@ -103,10 +103,7 @@ impl Compiler {
         // fix the then jump offset
         self.scope_mut().opcodes[then_label].opcode = OpCode::Jmf(self.scope().opcodes.len());
 
-        match else_ {
-            Some(block) => self.expr(block),
-            None => self.emit_lit(&Literal::Unit, loc),
-        };
+        self.expr(else_);
 
         // fix the else jump offset
         self.scope_mut().opcodes[else_label].opcode = OpCode::Jmp(self.scope().opcodes.len());
@@ -297,11 +294,18 @@ impl Compiler {
                 }
             }
 
-            ExprKind::If { cond, then, else_ } => self.if_expr(cond, then, else_.as_deref(), loc),
+            ExprKind::If { cond, then, else_ } => self.if_expr(cond, then, else_, loc),
 
             ExprKind::When { expr, arms } => self.when_expr(expr, arms, loc),
 
-            ExprKind::Let(Bind { bind, value, .. }) | ExprKind::Def(Bind { bind, value, .. }) => {
+            ExprKind::Let {
+                bind: Bind { bind, value, .. },
+                body,
+            }
+            | ExprKind::Def {
+                bind: Bind { bind, value, .. },
+                body,
+            } => {
                 // compiles the value
                 self.expr(value);
 
@@ -309,7 +313,7 @@ impl Compiler {
                 self.emit_save(*bind, loc);
 
                 // emits a `nil` value, since everything should return something
-                self.emit_const(Value::Nil, loc);
+                self.expr(body);
             }
 
             ExprKind::Binary { left, op, right } if op == &BinOp::And => {
@@ -387,16 +391,6 @@ impl Compiler {
             ExprKind::UnOp(op, right) => {
                 self.expr(right);
                 self.emit_ops((*op).into(), loc);
-            }
-
-            ExprKind::Do(body) => {
-                for expr in body {
-                    self.expr(expr);
-                    self.emit_op(OpCode::Pop, loc);
-                }
-
-                // return the last expression
-                self.scope_mut().opcodes.pop();
             }
 
             // compiles a method reference access

@@ -5,6 +5,7 @@ use crate::tokens::{fetch_keyword, Token, TokenType};
 
 const EOF: char = '\0';
 
+#[derive(Clone)]
 pub struct Lexer {
     line: usize,
     column: usize,
@@ -23,6 +24,16 @@ impl Lexer {
             idx: 0,
         }
     }
+
+    pub fn state(&self) -> (usize, usize, usize) {
+        (self.line, self.column, self.idx)
+    }
+
+    pub fn set_state(&mut self, (line, column, idx): (usize, usize, usize)) {
+        self.line = line;
+        self.column = column;
+        self.idx = idx;
+    } 
 
     fn throw<A, T: Into<String>>(&self, str: T) -> Result<A, ParseError> {
         ParseError::throw(self.line, self.column, str.into())

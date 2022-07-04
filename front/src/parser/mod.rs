@@ -1,5 +1,3 @@
-use std::{iter::Peekable, mem::take};
-
 use crate::{
     error::{ParseError, ParseResult},
     lexer::Lexer,
@@ -14,14 +12,14 @@ use self::ast::{
 pub mod ast;
 
 pub struct Parser {
-    lexer: Peekable<Lexer>,
+    lexer: Lexer,
     current: Token,
 }
 
 impl Parser {
     pub fn new(lexer: Lexer) -> ParseResult<Self> {
         let mut this = Parser {
-            lexer: lexer.peekable(),
+            lexer,
             current: Token::default(),
         };
         this.next()?;
@@ -31,6 +29,8 @@ impl Parser {
     pub fn parse(mut self) -> ParseResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
         while self.current.token != Tkt::Eof {
+            println!("{}", self.current.token);
+
             match self.current.token {
                 Tkt::Module => {
                     stmts.push(self.module()?);
@@ -43,7 +43,7 @@ impl Parser {
                 Tkt::Def => stmts.push(self.def_global()?),
                 Tkt::Let => stmts.push(self.let_global()?),
 
-                _ => stmts.push(self.expr()?.into()),
+                ref other => self.throw(format!("Unexpected token '{other}'"))?,
             }
         }
 
@@ -201,9 +201,13 @@ impl Parser {
         self.skip(tokens)
     }
 
-    #[allow(dead_code)]
-    fn peek(&mut self) -> ParseResult<&Token> {
-        self.lexer.peek().unwrap().as_ref().map_err(|e| *e)
+    fn state(&self) -> (Token, (usize, usize, usize)) {
+        (self.current.clone(), self.lexer.state())
+    }
+
+    fn set_state(&mut self, (current, state): (Token, (usize, usize, usize))) {
+        self.current = current;
+        self.lexer.set_state(state);
     }
 
     fn expr(&mut self) -> ParseResult<Expr> {
@@ -245,7 +249,7 @@ impl Parser {
     }
 
     fn condition(&mut self) -> ParseResult<Expr> {
-        self.assert(Tkt::If).or_else(|_| self.assert(Tkt::ElseIf))?;
+        self.assert(Tkt::If)?;
 
         self.next()?;
 
@@ -256,27 +260,21 @@ impl Parser {
 
         self.expect(Tkt::Then)?;
 
-        let then = self.block_any(&[Tkt::End, Tkt::ElseIf, Tkt::Else])?;
+        let then = self.expr()?;
 
         let else_ = match self.current.token {
             Tkt::Else => {
                 self.next()?;
-                Some(self.block(Tkt::End)?)
+                self.expr()?
             }
-            Tkt::ElseIf => Some(self.condition()?),
-            Tkt::End => {
-                self.next()?;
-                None
-            }
-
-            _ => unreachable!(),
+            _ => self.throw("Expected 'else' after 'if'")?,
         };
 
         Ok(Expr::new(
             ExprKind::If {
                 cond: Box::new(cond),
                 then: Box::new(then),
-                else_: else_.map(Box::new),
+                else_: Box::new(else_),
             },
             line,
             column,
@@ -284,21 +282,10 @@ impl Parser {
     }
 
     fn args(&mut self) -> ParseResult<Vec<VarDecl>> {
-        self.assert(Tkt::Lparen)?;
-
         let mut args = vec![];
-
-        self.next()?;
-        while self.current.token != Tkt::Rparen {
-            let var = self.var_decl()?;
-            args.push(var);
-
-            if self.current.token != Tkt::Rparen {
-                self.expect_and_skip(Tkt::Comma)?;
-            }
+        while self.current.token != Tkt::Assign {
+            args.push(self.var_decl()?);
         }
-        self.next()?;
-
         Ok(args)
     }
 
@@ -336,18 +323,12 @@ impl Parser {
 
         let mut arms = vec![];
 
-        while self.current.token != Tkt::End {
-            if self.current.token == Tkt::Else {
-                arms.push(ArmType::Else(self.when_else()?));
-                continue;
-            }
-
-            let arm = self.when_arm()?;
-
-            arms.push(ArmType::Arm(arm));
+        let mut last_state = self.state();
+        while let Ok(arm) = self.when_arm() {
+            arms.push(arm);
+            last_state = self.state();
         }
-
-        self.expect(Tkt::End)?;
+        self.set_state(last_state);
 
         Ok(Expr::new(ExprKind::When { expr, arms }, line, column))
     }
@@ -374,9 +355,13 @@ impl Parser {
         Ok(WhenElse::new(ident, body, guard, line, column))
     }
 
-    fn when_arm(&mut self) -> ParseResult<WhenArm> {
+    fn when_arm(&mut self) -> ParseResult<ArmType> {
         let line = self.current.line;
         let column = self.current.column;
+
+        if self.current.token == Tkt::Else {
+            return self.when_else().map(ArmType::Else);
+        }
 
         let cond = self.expr()?;
 
@@ -391,7 +376,7 @@ impl Parser {
 
         let body = self.expr()?;
 
-        Ok(WhenArm::new(cond, body, guard, line, column))
+        Ok(ArmType::Arm(WhenArm::new(cond, body, guard, line, column)))
     }
 
     fn try_(&mut self) -> ParseResult<Expr> {
@@ -400,11 +385,13 @@ impl Parser {
         let line = self.current.line;
         let column = self.current.column;
 
-        let body = Box::new(self.block(Tkt::Rescue)?);
+        let body = Box::new(self.expr()?);
+
+        self.expect(Tkt::Rescue)?;
 
         let bind = self.var_decl()?;
 
-        let rescue = Box::new(self.block(Tkt::End)?);
+        let rescue = Box::new(self.expr()?);
 
         Ok(Expr::new(
             ExprKind::Try { body, bind, rescue },
@@ -437,37 +424,12 @@ impl Parser {
     }
 
     fn fn_body(&mut self) -> ParseResult<Expr> {
-        if self.current.token == Tkt::Colon {
-            self.next()?;
-            Ok(self.expr()?)
-        } else {
-            self.expect(Tkt::Do)?;
-            self.block(Tkt::End)
-        }
-    }
-
-    fn block(&mut self, end: Tkt) -> ParseResult<Expr> {
-        let expr = self.block_any(&[end])?;
-        self.next()?;
-        Ok(expr)
-    }
-
-    fn block_any(&mut self, possible_ends: &[Tkt]) -> ParseResult<Expr> {
-        let line = self.current.line;
-        let column = self.current.column;
-
-        let mut body = vec![];
-
-        while !possible_ends.contains(&self.current.token) {
-            let expr = self.expr()?;
-            body.push(expr);
-        }
-
-        Ok(Expr::new(ExprKind::Do(body), line, column))
+        self.expect(Tkt::Assign)?;
+        self.expr()
     }
 
     fn var_decl(&mut self) -> ParseResult<VarDecl> {
-        let name = match take(&mut self.current.token) {
+        let name = match self.current.token.clone() {
             Tkt::Name(id) => id,
             other => self.throw(format!("Expected name, found '{}'", other))?,
         };
@@ -489,8 +451,15 @@ impl Parser {
 
         let value = self.expr()?;
 
+        self.expect(Tkt::In)?;
+
+        let body = self.expr()?;
+
         Ok(Expr::new(
-            ExprKind::Let(Bind::new(bind, Box::new(value), line, column)),
+            ExprKind::Let {
+                bind: Bind::new(bind, Box::new(value), line, column),
+                body: Box::new(body),
+            },
             line,
             column,
         ))
@@ -505,8 +474,15 @@ impl Parser {
         let name = self.var_decl()?;
         let value = self.function()?;
 
+        self.expect(Tkt::In)?;
+
+        let body = self.expr()?;
+
         Ok(Expr::new(
-            ExprKind::Def(Bind::new(name, Box::new(value), line, column)),
+            ExprKind::Def {
+                bind: Bind::new(name, Box::new(value), line, column),
+                body: Box::new(body),
+            },
             line,
             column,
         ))
@@ -524,7 +500,7 @@ impl Parser {
             left = Expr::new(
                 ExprKind::App {
                     args: vec![left],
-                    callee: Box::new(self.method_or_call()?),
+                    callee: Box::new(self.logic_or()?),
                     tail: false,
                 },
                 line,
@@ -539,7 +515,7 @@ impl Parser {
         let mut left = self.logic_and()?;
 
         while let Tkt::Or = self.current.token {
-            let op = take(&mut self.current.token).try_into().unwrap();
+            let op: ast::BinOp = self.current.token.clone().try_into().unwrap();
 
             self.next()?;
             let right = self.logic_and()?;
@@ -565,7 +541,7 @@ impl Parser {
         let mut left = self.is()?;
 
         while let Tkt::And = self.current.token {
-            let op = take(&mut self.current.token).try_into().unwrap();
+            let op = self.current.token.clone().try_into().unwrap();
 
             self.next()?;
             let right = self.is()?;
@@ -615,7 +591,7 @@ impl Parser {
         let mut left = self.cmp()?;
 
         while let Tkt::Eq | Tkt::Ne = self.current.token {
-            let op = take(&mut self.current);
+            let op = self.current.clone();
             self.next()?;
             let right = self.cmp()?;
 
@@ -637,7 +613,7 @@ impl Parser {
         let mut left = self.cons()?;
 
         while let Tkt::Less | Tkt::LessEq | Tkt::Greater | Tkt::GreaterEq = self.current.token {
-            let op = take(&mut self.current);
+            let op = self.current.clone();
             self.next()?;
             let right = self.cons()?;
 
@@ -659,7 +635,7 @@ impl Parser {
         let mut left = self.bitwise()?;
 
         while let Tkt::Cons = self.current.token {
-            let op = take(&mut self.current);
+            let op = self.current.clone();
             self.next()?;
             let right = self.cons()?;
 
@@ -681,7 +657,7 @@ impl Parser {
 
         while let Tkt::BitOr | Tkt::BitAnd | Tkt::BitXor | Tkt::Shr | Tkt::Shl = self.current.token
         {
-            let op = take(&mut self.current);
+            let op = self.current.clone();
             self.next()?;
             let right = self.term()?;
 
@@ -703,7 +679,7 @@ impl Parser {
         let mut left = self.fact()?;
 
         while let Tkt::Add | Tkt::Sub = self.current.token {
-            let op = take(&mut self.current);
+            let op = self.current.clone();
             self.next()?;
             let right = self.fact()?;
 
@@ -725,7 +701,7 @@ impl Parser {
         let mut left = self.prefix()?;
 
         while let Tkt::Mul | Tkt::Div | Tkt::Mod = self.current.token {
-            let op = take(&mut self.current);
+            let op = self.current.clone();
             self.next()?;
             let right = self.prefix()?;
 
@@ -745,7 +721,7 @@ impl Parser {
 
     fn prefix(&mut self) -> ParseResult<Expr> {
         if let Tkt::Sub | Tkt::Not = &self.current.token {
-            let op = take(&mut self.current);
+            let op = self.current.clone();
             self.next()?;
             let right = self.prefix()?;
             Ok(Expr::new(
@@ -754,62 +730,47 @@ impl Parser {
                 op.column,
             ))
         } else {
-            self.method_or_call()
+            self.call()
         }
     }
 
-    fn call_args(&mut self) -> ParseResult<Vec<Expr>> {
+    fn call(&mut self) -> ParseResult<Expr> {
+        let callee = self.method_ref()?;
+
+        let line = self.current.line;
+        let column = self.current.column;
+
+        let mut last_state = self.state();
+        println!("{last_state:?}");
         let mut args = vec![];
 
-        self.next()?;
-        while self.current.token != Tkt::Rparen {
-            args.push(self.expr()?);
-
-            if self.current.token != Tkt::Rparen {
-                self.expect_and_skip(Tkt::Comma)?;
-            }
-        }
-        self.next()?;
-
-        Ok(args)
-    }
-
-    fn method_or_call(&mut self) -> ParseResult<Expr> {
-        let mut expr = self.dot()?;
-
-        while let Tkt::Len | Tkt::Lparen = self.current.token {
-            if self.current.token == Tkt::Len {
-                expr = self.method_ref(expr)?;
-            } else {
-                expr = self.call(expr)?;
-            }
+        while let Ok(arg) = self.method_ref() {
+            args.push(arg);
+            last_state = self.state();
+            println!("{last_state:?}");
         }
 
-        Ok(expr)
-    }
+        self.set_state(last_state);
 
-    fn call(&mut self, mut callee: Expr) -> ParseResult<Expr> {
-        while self.current.token == Tkt::Lparen {
-            let args = self.call_args()?;
+        println!("{}", self.current.token);
 
-            let line = callee.line();
-            let column = callee.column();
+        if args.is_empty() {
+            Ok(callee)
+        } else {
+            let tail = false;
+            let callee = Box::new(callee);
 
-            callee = Expr::new(
-                ExprKind::App {
-                    callee: Box::new(callee),
-                    tail: false,
-                    args,
-                },
+            Ok(Expr::new(
+                ExprKind::App { callee, args, tail },
                 line,
                 column,
-            )
+            ))
         }
-
-        Ok(callee)
     }
 
-    fn method_ref(&mut self, mut ty: Expr) -> ParseResult<Expr> {
+    fn method_ref(&mut self) -> ParseResult<Expr> {
+        let mut ty = self.dot()?;
+
         while self.current.token == Tkt::Len {
             self.next()?;
             let method = self.var_decl()?;
@@ -936,10 +897,6 @@ impl Parser {
             Tkt::Fn => self.fn_()?,
             Tkt::Arrow => self.become_()?,
             Tkt::When => self.when_()?,
-            Tkt::Do => {
-                self.expect(Tkt::Do)?;
-                self.block(Tkt::End)?
-            }
             Tkt::Try => self.try_()?,
 
             // not supported

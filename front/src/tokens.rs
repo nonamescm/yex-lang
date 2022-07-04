@@ -11,11 +11,11 @@ pub enum TokenType {
 
     // Keywords
     If,
-    ElseIf,
     Else,
     Then,
     Def,
     Let,
+    In,
     Fn,
     Module,
     Struct,
@@ -93,11 +93,11 @@ impl std::fmt::Display for TokenType {
             Self::Nil => "nil".into(),
 
             Self::If => "if".into(),
-            Self::ElseIf => "elseif".into(),
             Self::Else => "else".into(),
             Self::Then => "then".into(),
             Self::Def => "def".into(),
             Self::Let => "let".into(),
+            Self::In => "in".into(),
             Self::Fn => "fn".into(),
             Self::Module => "module".into(),
             Self::Struct => "struct".into(),
@@ -160,11 +160,11 @@ impl std::fmt::Display for TokenType {
 pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
     match word.as_ref() {
         "if" => Some(TokenType::If),
-        "elseif" => Some(TokenType::ElseIf),
         "else" => Some(TokenType::Else),
         "then" => Some(TokenType::Then),
         "def" => Some(TokenType::Def),
         "let" => Some(TokenType::Let),
+        "in" => Some(TokenType::In),
         "true" => Some(TokenType::True),
         "false" => Some(TokenType::False),
         "nil" => Some(TokenType::Nil),
@@ -183,7 +183,7 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
     pub line: usize,
     pub column: usize,

@@ -189,11 +189,11 @@ pub enum ExprKind {
     If {
         cond: Box<Expr>,
         then: Box<Expr>,
-        else_: Option<Box<Expr>>,
+        else_: Box<Expr>,
     },
 
-    Let(Bind),
-    Def(Bind),
+    Let { bind: Bind, body: Box<Expr> },
+    Def { bind: Bind, body: Box<Expr> },
 
     Struct {
         ty: Option<Symbol>,
@@ -234,8 +234,6 @@ pub enum ExprKind {
         head: Box<Expr>,
         tail: Box<Expr>,
     },
-
-    Do(Vec<Expr>),
 
     UnOp(UnOp, Box<Expr>),
 
