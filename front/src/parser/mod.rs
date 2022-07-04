@@ -5,8 +5,7 @@ use crate::{
 };
 
 use self::ast::{
-    ArmType, Bind, Def, DefProto, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm,
-    WhenElse,
+    ArmType, Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm, WhenElse,
 };
 
 pub mod ast;
@@ -29,15 +28,9 @@ impl Parser {
     pub fn parse(mut self) -> ParseResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
         while self.current.token != Tkt::Eof {
-            println!("{}", self.current.token);
-
             match self.current.token {
-                Tkt::Module => {
-                    stmts.push(self.module()?);
-                }
-
-                Tkt::Trait => {
-                    stmts.push(self.trait_()?);
+                Tkt::Type => {
+                    stmts.push(self.type_()?);
                 }
 
                 Tkt::Def => stmts.push(self.def_global()?),
@@ -73,79 +66,50 @@ impl Parser {
         self.expr()
     }
 
-    fn trait_(&mut self) -> ParseResult<Stmt> {
-        self.expect(Tkt::Trait)?;
+    fn type_(&mut self) -> ParseResult<Stmt> {
+        self.expect(Tkt::Type)?;
         let line = self.current.line;
         let column = self.current.column;
 
         let name = self.var_decl()?;
 
-        let mut functions = Vec::new();
+        self.expect(Tkt::Assign)?;
 
-        while self.current.token != Tkt::End {
-            self.expect(Tkt::Def)?;
+        let mut variants = vec![];
+
+        while self.current.token != Tkt::With {
             let name = self.var_decl()?;
-            let args = self.args()?;
 
-            let body = if matches!(self.current.token, Tkt::Colon | Tkt::Do) {
-                Some(self.fn_body()?)
-            } else {
-                None
-            };
-
-            functions.push(DefProto { name, args, body });
-        }
-
-        self.expect(Tkt::End)?;
-
-        Ok(Stmt::new(StmtKind::Trait { name, functions }, line, column))
-    }
-
-    fn module(&mut self) -> ParseResult<Stmt> {
-        self.expect(Tkt::Module)?;
-        let line = self.current.line;
-        let column = self.current.column;
-
-        let name = self.var_decl()?;
-
-        let params = if self.current.token == Tkt::Struct {
-            self.next()?;
-            self.expect(Tkt::Lbrack)?;
-
-            let mut fields = Vec::new();
-
-            while let Tkt::Sym(name) = self.current.token {
-                fields.push(name);
+            let mut args = vec![];
+            while let Tkt::Name(name) = self.current.token {
+                args.push(VarDecl { name });
                 self.next()?;
-
-                if self.current.token != Tkt::Rbrack {
-                    self.expect_and_skip(Tkt::Comma)?;
-                }
             }
 
-            self.expect(Tkt::Rbrack)?;
+            variants.push((name, args));
 
-            Some(fields)
-        } else {
-            None
-        };
-
-        let mut functions = Vec::new();
-
-        while self.current.token != Tkt::End {
-            let def = match self.def_global()?.kind {
-                StmtKind::Def(def) => def,
-                _ => unreachable!(),
-            };
-            functions.push(def);
+            if self.current.token != Tkt::With {
+                self.expect_and_skip(Tkt::Bar)?;
+            }
         }
-        self.next()?;
+
+        self.expect(Tkt::With)?;
+
+        let mut members = vec![];
+
+        while self.current.token == Tkt::Member {
+            self.next()?;
+            let bind = self.var_decl()?;
+            let value = self.function()?;
+
+            members.push(Def { bind, value })
+        }
 
         Ok(Stmt::new(
-            StmtKind::Module {
+            StmtKind::Type {
                 name,
-                functions,
-                params,
+                variants,
+                members,
             },
             line,
             column,
@@ -312,14 +276,14 @@ impl Parser {
     }
 
     fn when_(&mut self) -> ParseResult<Expr> {
-        self.expect(Tkt::When)?;
+        self.expect(Tkt::Match)?;
 
         let line = self.current.line;
         let column = self.current.column;
 
         let expr = Box::new(self.expr()?);
 
-        self.expect(Tkt::Do)?;
+        self.expect(Tkt::With)?;
 
         let mut arms = vec![];
 
@@ -358,6 +322,7 @@ impl Parser {
     fn when_arm(&mut self) -> ParseResult<ArmType> {
         let line = self.current.line;
         let column = self.current.column;
+        self.expect(Tkt::Bar)?;
 
         if self.current.token == Tkt::Else {
             return self.when_else().map(ArmType::Else);
@@ -741,18 +706,14 @@ impl Parser {
         let column = self.current.column;
 
         let mut last_state = self.state();
-        println!("{last_state:?}");
         let mut args = vec![];
 
         while let Ok(arg) = self.method_ref() {
             args.push(arg);
             last_state = self.state();
-            println!("{last_state:?}");
         }
 
         self.set_state(last_state);
-
-        println!("{}", self.current.token);
 
         if args.is_empty() {
             Ok(callee)
@@ -896,7 +857,7 @@ impl Parser {
             Tkt::If => self.condition()?,
             Tkt::Fn => self.fn_()?,
             Tkt::Arrow => self.become_()?,
-            Tkt::When => self.when_()?,
+            Tkt::Match => self.when_()?,
             Tkt::Try => self.try_()?,
 
             // not supported

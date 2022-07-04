@@ -283,6 +283,7 @@ impl Lexer {
                 self.next();
                 TokenType::Pipe
             }
+            '|' => TokenType::Bar,
 
             EOF => TokenType::Eof,
 

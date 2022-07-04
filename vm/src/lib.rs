@@ -382,6 +382,13 @@ impl VirtualMachine {
                 self.push(YexStruct::new(ty).into());
             }
 
+            OpCode::Tag(tag) => {
+                let module: GcRef<YexModule> = self.pop().get()?;
+                let tup: Tuple = self.pop().get()?;
+
+                self.push(Value::Tagged(module, tag, tup))
+            }
+
             // these opcodes are handled by the run function, since they can manipulate the ip
             OpCode::Try(..)
             | OpCode::EndTry

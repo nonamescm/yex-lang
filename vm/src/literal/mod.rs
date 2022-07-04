@@ -29,6 +29,7 @@ pub fn show(vm: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
         Value::Str(s) => Ok(s.to_string()),
         Value::List(l) => Ok(l.to_string()),
         Value::Tuple(t) => Ok(t.to_string()),
+        tag @ Value::Tagged(..) => Ok(tag.to_string()),
         Value::Num(n) => Ok(n.to_string()),
         Value::Bool(b) => Ok(b.to_string()),
         Value::Fn(f) => Ok(format!("fn({})", f.arity)),
@@ -131,6 +132,8 @@ pub enum Value {
     Module(GcRef<YexModule>),
     /// Tuples
     Tuple(Tuple),
+    /// Tagged tuples
+    Tagged(GcRef<YexModule>, Symbol, Tuple),
     /// null
     Nil,
 }
@@ -149,6 +152,7 @@ impl Clone for Value {
             Module(t) => Module(t.clone()),
             Struct(t) => Struct(t.clone()),
             Tuple(t) => Tuple(t.clone()),
+            Tagged(m, s, t) => Tagged(m.clone(), *s, t.clone()),
             Nil => Nil,
         }
     }
@@ -173,6 +177,7 @@ impl Value {
             Value::Module(t) => mem::size_of_val(&t),
             Value::Struct(t) => t.items.len(),
             Value::Tuple(t) => t.len(),
+            Value::Tagged(_, _, t) => t.len(),
             Value::Nil => 4,
         }
     }
@@ -207,6 +212,7 @@ impl Value {
             Module(_) => true,
             Struct(_) => true,
             Tuple(_) => true,
+            Tagged(..) => true,
         }
     }
 
@@ -215,7 +221,7 @@ impl Value {
         use Value::*;
 
         match self {
-            Module(t) => return t.clone(),
+            Module(t) | Tagged(t, _, _) => return t.clone(),
             Struct(YexStruct { module, .. }) => return module.clone(),
             _ => {}
         };
@@ -229,7 +235,7 @@ impl Value {
             Nil => YexModule::nil(),
             Sym(_) => YexModule::sym(),
             Tuple(_) => YexModule::tuple(),
-            Module(_) | Struct(_) => unreachable!(),
+            Module(_) | Struct(_) | Tagged(..) => unreachable!(),
         };
 
         GcRef::new(ty)
@@ -263,6 +269,13 @@ impl std::fmt::Display for Value {
             Module(t) => format!("module '{}'", t.name),
             Struct(t) => format!("{t}"),
             Tuple(t) => format!("{t}"),
+            Tagged(_, tag, value) => {
+                write!(f, "{}", tag.as_str())?;
+                for item in value.0.iter() {
+                    write!(f, " {item}")?;
+                }
+                return Ok(())
+            }
             Bool(b) => b.to_string(),
         };
         write!(f, "{}", tk)

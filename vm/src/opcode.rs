@@ -213,6 +213,11 @@ pub enum OpCode {
     /// The stack layout before running this opcode: [...args]
     /// The stack layout after running it: [struct]
     Struct(Option<Symbol>),
+
+    /// Creates a Tagged value, receives the tag name as an argument
+    /// The stack layout before running this opcode: [module, tuple]
+    /// The stack layout after running it: [tagged]
+    Tag(Symbol),
 }
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,

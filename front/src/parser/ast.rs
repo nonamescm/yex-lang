@@ -192,8 +192,14 @@ pub enum ExprKind {
         else_: Box<Expr>,
     },
 
-    Let { bind: Bind, body: Box<Expr> },
-    Def { bind: Bind, body: Box<Expr> },
+    Let {
+        bind: Bind,
+        body: Box<Expr>,
+    },
+    Def {
+        bind: Bind,
+        body: Box<Expr>,
+    },
 
     Struct {
         ty: Option<Symbol>,
@@ -339,33 +345,12 @@ pub struct Def {
 }
 
 #[derive(Debug)]
-pub struct DefProto {
-    pub args: Vec<VarDecl>,
-    pub name: VarDecl,
-    pub body: Option<Expr>,
-}
-
-#[derive(Debug)]
 pub enum StmtKind {
     Def(Def),
     Let(Bind),
-    Module {
+    Type {
         name: VarDecl,
-        functions: Vec<Def>,
-        params: Option<Vec<Symbol>>,
+        variants: Vec<(VarDecl, Vec<VarDecl>)>,
+        members: Vec<Def>,
     },
-    Trait {
-        name: VarDecl,
-        functions: Vec<DefProto>,
-    },
-    Expr(Expr),
-}
-
-impl From<Expr> for Stmt {
-    fn from(expr: Expr) -> Self {
-        Stmt {
-            location: expr.location,
-            kind: StmtKind::Expr(expr),
-        }
-    }
 }
