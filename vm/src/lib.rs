@@ -27,7 +27,6 @@ pub use crate::{
         fun::{Fn, FnKind},
         list::List,
         symbol::Symbol,
-        table::YexStruct,
         yexmodule::YexModule,
         Value,
     },
@@ -298,39 +297,6 @@ impl VirtualMachine {
                 todo!()
             }
 
-            OpCode::Get(field) => {
-                let obj: YexStruct = self.pop().get()?;
-
-                let value = obj.get(field);
-                self.push(value);
-            }
-
-            OpCode::Set(field) => unsafe {
-                let value = self.pop();
-                let obj = self
-                    .stack
-                    .get_uninit_mut(self.stack.len() - 1)
-                    .assume_init_mut();
-
-                let obj = match obj {
-                    Value::Struct(obj) => obj,
-                    _ => raise!(TypeError, "Expected a struct")?,
-                };
-
-                let struct_fields = &obj.module.struct_fields;
-
-                if !struct_fields.is_empty() && !struct_fields.contains(&field) {
-                    raise!(
-                        NameError,
-                        "Undefined field '{}' for struct '{}'",
-                        field,
-                        obj.module.name.as_str()
-                    )?;
-                }
-
-                obj.items = obj.items.prepend(vec![field.into(), value].into());
-            },
-
             OpCode::Type => {
                 let value = self.pop();
                 self.push(Value::Module(value.type_of()));
@@ -361,25 +327,6 @@ impl VirtualMachine {
                 let tup: Tuple = self.pop().get()?;
                 let elem = tup.0.get(index).unwrap(); // this SHOULD be unreachable
                 self.push(elem.clone());
-            }
-
-            OpCode::Struct(name) => {
-                let ty: GcRef<YexModule> = if let Some(name) = name {
-                    self.get_global(name)
-                        .ok_or(raise_err!(NameError, "Undefined module '{}'", name))
-                        .and_then(|ty| ty.get())
-                        .and_then(|ty: GcRef<YexModule>| {
-                            if ty.struct_ {
-                                Ok(ty)
-                            } else {
-                                raise!(TypeError, "Expected a struct")
-                            }
-                        })?
-                } else {
-                    GcRef::new(YexModule::struct_())
-                };
-
-                self.push(YexStruct::new(ty).into());
             }
 
             OpCode::Tag(tag) => {

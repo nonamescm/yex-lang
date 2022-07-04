@@ -442,20 +442,6 @@ impl Compiler {
 
                 self.emit_op(OpCode::Tup(xs.len()), loc);
             }
-
-            ExprKind::Struct { ty, fields } => {
-                self.emit_op(OpCode::Struct(*ty), loc);
-
-                for (name, value) in fields {
-                    self.expr(value);
-                    self.emit_op(OpCode::Set(*name), loc);
-                }
-            }
-
-            ExprKind::Get { field, obj } => {
-                self.expr(obj);
-                self.emit_op(OpCode::Get(*field), loc);
-            }
         }
     }
 

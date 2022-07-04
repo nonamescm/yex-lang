@@ -9,7 +9,6 @@ pub mod fun;
 pub mod list;
 pub mod str;
 pub mod symbol;
-pub mod table;
 pub mod tuple;
 pub mod yexmodule;
 
@@ -20,10 +19,9 @@ use list::List;
 use symbol::Symbol;
 use yexmodule::YexModule;
 
-use self::{symbol::YexSymbol, table::YexStruct, tuple::Tuple};
+use self::{symbol::YexSymbol, tuple::Tuple};
 
-pub fn show(vm: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
-    let vm = unsafe { &mut *vm };
+pub fn show(_: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
     match &x[0] {
         Value::Sym(s) => Ok(s.to_string()),
         Value::Str(s) => Ok(s.to_string()),
@@ -34,21 +32,6 @@ pub fn show(vm: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
         Value::Bool(b) => Ok(b.to_string()),
         Value::Fn(f) => Ok(format!("fn({})", f.arity)),
         Value::Nil => Ok("nil".to_string()),
-        Value::Struct(s) => {
-            let show_fn = s
-                .module
-                .fields
-                .get(&"show".into())
-                .unwrap_or_else(|| Fn::new_native(1, table::methods::show).into());
-
-            vm.push(Value::Struct(s.clone()));
-            vm.push(show_fn);
-            vm.call(1)?;
-
-            let s = vm.pop();
-
-            show(vm, vec![s])
-        }
         Value::Module(m) => Ok(format!("module '{}'", m.name.as_str())),
     }
 }
@@ -99,12 +82,6 @@ impl From<List> for Value {
     }
 }
 
-impl From<YexStruct> for Value {
-    fn from(t: YexStruct) -> Self {
-        Value::Struct(t)
-    }
-}
-
 impl From<Fn> for Value {
     fn from(f: Fn) -> Self {
         Value::Fn(GcRef::new(f))
@@ -124,8 +101,6 @@ pub enum Value {
     Bool(bool),
     /// Fnctions
     Fn(GcRef<Fn>),
-    /// Tables
-    Struct(YexStruct),
     /// Yex lists
     List(List),
     /// Yex user-defined types
@@ -150,7 +125,6 @@ impl Clone for Value {
             Num(n) => Num(*n),
             Sym(s) => Sym(*s),
             Module(t) => Module(t.clone()),
-            Struct(t) => Struct(t.clone()),
             Tuple(t) => Tuple(t.clone()),
             Tagged(m, s, t) => Tagged(m.clone(), *s, t.clone()),
             Nil => Nil,
@@ -175,7 +149,6 @@ impl Value {
             Value::Fn(f) => mem::size_of_val(&f),
             Value::Bool(_) => mem::size_of::<bool>(),
             Value::Module(t) => mem::size_of_val(&t),
-            Value::Struct(t) => t.items.len(),
             Value::Tuple(t) => t.len(),
             Value::Tagged(_, _, t) => t.len(),
             Value::Nil => 4,
@@ -210,7 +183,6 @@ impl Value {
             List(xs) => !xs.is_empty(),
             Fn(_) => true,
             Module(_) => true,
-            Struct(_) => true,
             Tuple(_) => true,
             Tagged(..) => true,
         }
@@ -222,7 +194,6 @@ impl Value {
 
         match self {
             Module(t) | Tagged(t, _, _) => return t.clone(),
-            Struct(YexStruct { module, .. }) => return module.clone(),
             _ => {}
         };
 
@@ -235,7 +206,7 @@ impl Value {
             Nil => YexModule::nil(),
             Sym(_) => YexModule::sym(),
             Tuple(_) => YexModule::tuple(),
-            Module(_) | Struct(_) | Tagged(..) => unreachable!(),
+            Module(_) | Tagged(..) => unreachable!(),
         };
 
         GcRef::new(ty)
@@ -267,14 +238,15 @@ impl std::fmt::Display for Value {
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
             Module(t) => format!("module '{}'", t.name),
-            Struct(t) => format!("{t}"),
             Tuple(t) => format!("{t}"),
             Tagged(_, tag, value) => {
-                write!(f, "{}", tag.as_str())?;
+                write!(f, "({}", tag.as_str())?;
                 for item in value.0.iter() {
                     write!(f, " {item}")?;
                 }
-                return Ok(())
+                write!(f, ")")?;
+
+                return Ok(());
             }
             Bool(b) => b.to_string(),
         };
@@ -388,7 +360,6 @@ impl_get!(f64: Num);
 impl_get!(bool: Bool);
 impl_get!(GcRef<YexModule>: Module);
 impl_get!(GcRef<Fn>: Fn);
-impl_get!(YexStruct: Struct);
 impl_get!(Symbol: Sym(s) => s.0);
 impl_get!(List: List);
 impl_get!(Tuple: Tuple);

@@ -167,16 +167,6 @@ pub enum OpCode {
     /// The stack layout after running it: [object]
     New,
 
-    /// Access a field of a instance
-    /// The stack layout before running this opcode: [instance]
-    /// The stack layout after running it: [field-value]
-    Get(Symbol),
-
-    /// Sets a field of a instance
-    /// The stack layout before running this opcode: [instance, value]
-    /// The stack layout after running it: [instance]
-    Set(Symbol),
-
     /// Get the type of the value on the top of the stack
     /// The stack layout before running this opcode: [instance]
     /// The stack layout after running it: [type]
@@ -208,11 +198,6 @@ pub enum OpCode {
     /// The stack layout before running this opcode: [tuple]
     /// The stack layout after running it: [tuple-element]
     TupGet(usize),
-
-    /// Create a new Struct, receives the struct name as argument (defaults to Table)
-    /// The stack layout before running this opcode: [...args]
-    /// The stack layout after running it: [struct]
-    Struct(Option<Symbol>),
 
     /// Creates a Tagged value, receives the tag name as an argument
     /// The stack layout before running this opcode: [module, tuple]

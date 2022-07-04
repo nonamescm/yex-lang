@@ -1,6 +1,6 @@
 use crate::{env::EnvTable, gc::GcRef, Symbol, Value};
 
-use super::{fun::Fn, list, str, table, tuple};
+use super::{fun::Fn, list, str, tuple};
 
 #[derive(Debug, PartialEq)]
 /// A Yex user-defined type.
@@ -9,21 +9,12 @@ pub struct YexModule {
     pub name: Symbol,
     /// Module functions.
     pub fields: EnvTable,
-    /// Is the module a struct?
-    pub struct_: bool,
-    /// if the module is a struct, the fields are the struct fields.
-    pub struct_fields: Vec<Symbol>,
 }
 
 impl YexModule {
     /// Creates a new Yex type.
     pub fn new(name: Symbol, fields: EnvTable) -> Self {
-        Self {
-            name,
-            fields,
-            struct_: false,
-            struct_fields: vec![],
-        }
+        Self { name, fields }
     }
 
     /// Creates a new List type.
@@ -101,40 +92,6 @@ impl YexModule {
         );
 
         Self::new(Symbol::from("List"), methods)
-    }
-
-    /// Creates a new Table type.
-    pub fn struct_() -> Self {
-        let mut methods = EnvTable::new();
-
-        methods.insert(
-            Symbol::from("get"),
-            Value::Fn(GcRef::new(Fn::new_native(2, table::methods::get))),
-        );
-
-        methods.insert(
-            Symbol::from("insert"),
-            Value::Fn(GcRef::new(Fn::new_native(3, table::methods::insert))),
-        );
-
-        methods.insert(
-            Symbol::from("new"),
-            Value::Fn(GcRef::new(Fn::new_native(0, table::methods::new))),
-        );
-
-        methods.insert(
-            Symbol::from("show"),
-            Value::Fn(GcRef::new(Fn::new_native(1, table::methods::show))),
-        );
-
-        methods.insert(
-            Symbol::from("toList"),
-            Value::Fn(GcRef::new(Fn::new_native(1, table::methods::to_list))),
-        );
-
-        let mut modu = Self::new(Symbol::from("Struct"), methods);
-        modu.struct_ = true;
-        modu
     }
 
     /// Creates a new Tuple type.
@@ -218,12 +175,12 @@ impl YexModule {
 
         methods.insert(
             Symbol::new("ord"),
-            Value::Fn(GcRef::new(Fn::new_native(1, str::methods::ord)))
+            Value::Fn(GcRef::new(Fn::new_native(1, str::methods::ord))),
         );
 
         methods.insert(
             Symbol::new("chr"),
-            Value::Fn(GcRef::new(Fn::new_native(1, str::methods::chr)))
+            Value::Fn(GcRef::new(Fn::new_native(1, str::methods::chr))),
         );
 
         methods.insert(

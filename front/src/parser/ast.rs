@@ -81,7 +81,7 @@ impl TryFrom<TokenType> for BinOp {
             TokenType::Sub => Ok(BinOp::Sub),
             TokenType::Mul => Ok(BinOp::Mul),
             TokenType::Div => Ok(BinOp::Div),
-            TokenType::Mod => Ok(BinOp::Rem),
+            TokenType::Rem => Ok(BinOp::Rem),
             TokenType::BitAnd => Ok(BinOp::BitAnd),
             TokenType::BitOr => Ok(BinOp::BitOr),
             TokenType::BitXor => Ok(BinOp::BitXor),
@@ -201,11 +201,6 @@ pub enum ExprKind {
         body: Box<Expr>,
     },
 
-    Struct {
-        ty: Option<Symbol>,
-        fields: Vec<(Symbol, Box<Expr>)>,
-    },
-
     When {
         expr: Box<Expr>,
         arms: Vec<ArmType>,
@@ -250,11 +245,6 @@ pub enum ExprKind {
     },
 
     Tuple(Vec<Expr>),
-
-    Get {
-        obj: Box<Expr>,
-        field: Symbol,
-    },
 }
 
 #[derive(Debug, Clone)]

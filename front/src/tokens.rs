@@ -40,7 +40,6 @@ pub enum TokenType {
     Assign,
     Cons,
     Len,
-    Mod,
 
     // bitwise
     BitOr,
@@ -120,7 +119,6 @@ impl std::fmt::Display for TokenType {
             Self::Assign => '='.into(),
             Self::Cons => "::".into(),
             Self::Len => '#'.into(),
-            Self::Mod => "mod".into(),
 
             Self::BitAnd => "&&&".into(),
             Self::BitOr => "|||".into(),
@@ -174,7 +172,6 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
         "try" => Some(TokenType::Try),
         "rescue" => Some(TokenType::Rescue),
         "is" => Some(TokenType::Is),
-        "mod" => Some(TokenType::Mod),
         _ => None,
     }
 }
