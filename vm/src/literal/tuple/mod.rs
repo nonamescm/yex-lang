@@ -3,6 +3,7 @@ pub mod methods;
 use crate::{gc::GcRef, Value};
 
 #[derive(Debug, PartialEq, Clone)]
+/// A yex tuple
 pub struct Tuple(pub GcRef<Box<[Value]>>);
 
 impl From<Vec<Value>> for Tuple {
@@ -12,8 +13,14 @@ impl From<Vec<Value>> for Tuple {
 }
 
 impl Tuple {
+    /// Returns the length of the tuple
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    /// checks if self is `unit` (a.k.a. empty tuple)
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 

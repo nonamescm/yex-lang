@@ -15,7 +15,6 @@ mod stack;
 use gc::GcRef;
 use literal::{
     fun::{FnArgs, NativeFn},
-    tuple::Tuple,
     TryGet,
 };
 
@@ -27,6 +26,7 @@ pub use crate::{
         fun::{Fn, FnKind},
         list::List,
         symbol::Symbol,
+        tuple::Tuple,
         yexmodule::YexModule,
         Value,
     },

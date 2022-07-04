@@ -2,7 +2,7 @@ use crate::{env::EnvTable, gc::GcRef, Symbol, Value};
 
 use super::{fun::Fn, list, str, tuple};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 /// A Yex user-defined type.
 pub struct YexModule {
     /// Module name.

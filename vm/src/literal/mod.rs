@@ -32,7 +32,7 @@ pub fn show(_: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
         Value::Bool(b) => Ok(b.to_string()),
         Value::Fn(f) => Ok(format!("fn({})", f.arity)),
         Value::Nil => Ok("nil".to_string()),
-        Value::Module(m) => Ok(format!("module '{}'", m.name.as_str())),
+        Value::Module(m) => Ok(format!("type '{}'", m.name.as_str())),
     }
 }
 
@@ -237,7 +237,7 @@ impl std::fmt::Display for Value {
             Str(s) => "\"".to_owned() + s + "\"",
             Sym(s) => format!("{}", s),
             Num(n) => n.to_string(),
-            Module(t) => format!("module '{}'", t.name),
+            Module(t) => format!("type '{}'", t.name),
             Tuple(t) => format!("{t}"),
             Tagged(_, tag, value) => {
                 write!(f, "({}", tag.as_str())?;

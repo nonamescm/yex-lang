@@ -70,15 +70,17 @@ impl Compiler {
     }
 
     fn emit_const(&mut self, const_: Value, node: &Location) -> usize {
-        if let Some(idx) = self.constants.iter().position(|c| c == &const_) {
-            self.emit_op(OpCode::Push(idx), node);
-            idx
-        } else {
-            let pos = self.constants.len();
-            self.constants.push(const_.clone());
-            self.emit_op(OpCode::Push(pos), node);
-            pos
+        if !matches!(const_, Value::Module(_)) {
+            if let Some(idx) = self.constants.iter().position(|c| c == &const_) {
+                self.emit_op(OpCode::Push(idx), node);
+                return idx;
+            }
         }
+
+        let pos = self.constants.len();
+        self.constants.push(const_);
+        self.emit_op(OpCode::Push(pos), node);
+        pos
     }
 
     fn emit_save(&mut self, bind: VarDecl, node: &Location) {
@@ -487,13 +489,17 @@ impl Compiler {
             table.insert(m.bind.name, func);
         }
 
-        let ty = YexModule::new(decl.name, table);
-        let ty = Value::Module(GcRef::new(ty));
+        let index = self.emit_const(YexModule::default().into(), loc); // place-holder, since I'm still building the type I can't emit it yet.
+        println!("{}", self.constants[index]);
 
-        let index = self.emit_const(ty, loc);
-        self.emit_op(OpCode::Savg(decl.name), loc);
+        let mut patch_list = vec![];
 
         for (name, args) in variants {
+            if args.is_empty() {
+                patch_list.push(name.name);
+                continue;
+            }
+
             let scope = Scope::new();
             self.scope_stack.push(scope);
 
@@ -509,9 +515,20 @@ impl Compiler {
                 args: stackvec![],
             };
 
-            self.emit_const(constructor.into(), loc);
-            self.emit_save(*name, loc);
+            table.insert(name.name, constructor.into());
         }
+
+        let mut type_ = GcRef::new(YexModule::new(decl.name, table));
+        for entry in patch_list {
+            unsafe {
+                let clone = type_.clone();
+                type_.mut_ref().fields.insert(entry, Value::Tagged(clone, entry, vec![].into()));
+            }
+        }
+
+        self.constants[index] = Value::Module(type_);
+        self.emit_op(OpCode::Push(index), loc);
+        self.emit_op(OpCode::Savg(decl.name), loc);
     }
 
     pub fn compile_stmts(mut self, stmts: &[Stmt]) -> (Vec<OpCodeMetadata>, Vec<Value>) {

@@ -5,7 +5,7 @@ use std::{
 };
 
 /// Symbol struct, contains the symbol string and a pre-hashed value for faster comparison
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Symbol {
     string: &'static str,
     pub(crate) hash: usize,
