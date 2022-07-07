@@ -82,6 +82,11 @@ pub enum OpCode {
     /// The stack layout after running it: [b, a]
     Rev,
 
+    /// Reverse the order of the first N elements on the top of the stack
+    /// The stack layout before running this opcode: [a¹, a², ..., a']
+    /// The stack layout after running it: [b, a]
+    RevN(usize),
+
     /// Add the two values on the stack top
     /// The stack layout before running this opcode: [const1, const2]
     /// The stack layout after running it: [result]

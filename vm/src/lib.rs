@@ -210,6 +210,16 @@ impl VirtualMachine {
                 self.push(a);
             }
 
+            OpCode::RevN(n) => {
+                let mut vec = vec![];
+                for _ in 0..n {
+                    vec.push(self.pop());
+                }
+                for elem in vec.into_iter() {
+                    self.push(elem);
+                }
+            }
+
             // function calls
             OpCode::Call(arity) => self.call(arity)?,
 

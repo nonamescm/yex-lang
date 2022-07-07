@@ -337,9 +337,11 @@ impl Compiler {
             ExprKind::App { callee, args, tail } => {
                 // iterate over the arguments
                 // pushing them onto the stack
-                for arg in args.iter().rev() {
+                for arg in args.iter() {
                     self.expr(arg);
                 }
+
+                self.emit_op(OpCode::RevN(args.len()), loc);
 
                 // compiles the caller
                 self.expr(callee);
