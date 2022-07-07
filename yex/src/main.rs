@@ -1,6 +1,6 @@
 use rustyline::Editor;
-use std::{env::args, fs, process::exit};
-use vm::VirtualMachine;
+use std::{env::args, fs::{self, File}, process::exit};
+use vm::{OpCode, OpCodeMetadata, VirtualMachine};
 
 fn eval_file(file: &str) {
     let file = match fs::read_to_string(file) {
@@ -28,8 +28,22 @@ fn eval_file(file: &str) {
     }
 }
 
+fn patch_bytecode(ops: &mut Vec<OpCodeMetadata>, old_len: usize) {
+    for op in ops.iter_mut() {
+        if let OpCode::Push(idx) = &mut op.opcode {
+            *idx += old_len;
+        }
+    }
+}
+
 fn start(args: Vec<String>) -> i32 {
     let mut repl = Editor::<()>::new();
+
+    let path = format!("{}/.yex_history", std::env::var("HOME").unwrap());
+    if repl.load_history(&path).is_err() {
+        File::create(&path).ok();
+        repl.load_history(&path).ok();
+    }
 
     if args.len() > 1 {
         for args in args.iter().skip(1) {
@@ -41,21 +55,25 @@ fn start(args: Vec<String>) -> i32 {
     let mut vm = VirtualMachine::default();
 
     loop {
-        let line = match repl.readline("yex> ").map(|it| it.trim().to_string()) {
-            Ok(str) => {
-                repl.add_history_entry(&str);
-                str
+        let line = match repl.readline("yex> ") {
+            Ok(str) => str.trim().to_string(),
+            Err(_) => {
+                repl.save_history(&path).ok();
+                return 0;
             }
-            Err(_) => return 0,
         };
-        if line.is_empty() {
+
+        if line.is_empty() || line.starts_with("//") {
             continue;
         }
 
+        repl.add_history_entry(&line);
+
         if line.starts_with("def") || line.starts_with("let") || line.starts_with("type") {
             match front::parse(line) {
-                Ok((bt, ct)) => {
-                    vm.set_consts(ct);
+                Ok((mut bt, ct)) => {
+                    patch_bytecode(&mut bt, vm.constants.len());
+                    vm.constants.extend(ct);
                     vm.run(&bt).unwrap_or_else(|e| println!("{}", e));
                     println!("{}", vm.pop_last());
                 }
@@ -65,8 +83,9 @@ fn start(args: Vec<String>) -> i32 {
             }
         } else {
             match front::parse_expr(line) {
-                Ok((bt, ct)) => {
-                    vm.set_consts(ct);
+                Ok((mut bt, ct)) => {
+                    patch_bytecode(&mut bt, vm.constants.len());
+                    vm.constants.extend(ct);
                     vm.run(&bt).unwrap_or_else(|e| println!("{}", e));
                     println!("{}", vm.pop_last());
                 }
