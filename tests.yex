@@ -1,88 +1,85 @@
-def assert(condition, message) do
+def assert message condition =
 	if !condition then
-		raise(:AssertionError, message)
-		exit(1)
-	end
-end
+		raise :AssertionError message
+	else
+		nil
 
-let opsTests = [
-	1 + 2 == 3,
-	1 - 2 == -1,
-	1 * 2 == 2,
-	1 / 2 == 0.5,
-	3 mod 2 == 1,
-	1 <<< 2 == 4,
-	1 >>> 2 == 0,
-	1 &&& 2 == 0,
-	1 ||| 2 == 3,
-	1 ^^^ 2 == 3,
-	1 == 1,
-	1 != 2,
-	1 < 2,
-	1 <= 1,
-	3 > 2,
-	3 >= 3,
-	1 && 2,
-	1 || 0,
-]
 
-List#map(fn(test) do
-	assert(test, "Operator test failed")
-end, opsTests)
+let ops_test = 
+	let tests = [
+		1 + 2 == 3,
+		1 - 2 == -1,
+		1 * 2 == 2,
+		1 / 2 == 0.5,
+		3 % 2 == 1,
+		1 <<< 2 == 4,
+		1 >>> 2 == 0,
+		1 &&& 2 == 0,
+		1 ||| 2 == 3,
+		1 ^^^ 2 == 3,
+		1 == 1,
+		1 != 2,
+		1 < 2,
+		1 <= 1,
+		3 > 2,
+		3 >= 3,
+		1 && 2,
+		1 || 0,
+	]
+	in List.map (assert "Operator test failed") tests
 
-module Person
-	struct [:name, :age]
-	def new(name, age) do
-		assert(name is Str, "Name must be a string")
-		assert(age is Num, "Age must be a number")
-		%Person{name: name, age: age}
-	end
+type
+	Person = p name age
+with
+	member adult? p =
+		match p with
+		| (Person.p _ age) if age >= 18 -> true
+		| _ -> false
 
-	def adult?(this): this.age >= 18
-end
+let type_test =
+	let p = Person.p "John" 18
+	in (
+		assert "Person is not adult" (Person.adult? p),
+		assert "p is not a Person" (p is Person),
+	)
 
-let p = Person#new("John", 18)
-assert(Person#adult?(p), "Person is not adult")
-assert(p is Person, "p is not a Person")
+let exception_test =
+	try
+		raise :AssertionError "should be rescued"
+	rescue e
+		assert "Should be an assertion error" (e == :AssertionError)
 
-try
-	raise(:AssertionError, "should be rescued")
-rescue e
-	assert(e == :AssertionError, "Should be an assertion error")
-end
+let list_test =
+	assert
+		"List tests failed"
+		(
+			[1, 2, 3]
+			|> List.map (fn i = i * 2)
+			|> List.map (fn i = i + 1)
+			|> List.filter (fn i = i != 3)
+			|> List.fold (fn acc x = acc + x) 0
+			|> (fn x = x == 12)
+		)
 
-assert(
-	[1, 2, 3]
-	|> List#map(fn(i): i * 2)
-	|> List#map(fn(i): i + 1)
-	|> List#filter(fn(i): i != 3)
-	|> List#fold(fn(acc, x): acc + x, 0)
-	|> (fn(x): x == 12),
-	"List tests failed",
-)
+def tailcall counter _ =
+	match counter with
+	| _ if counter > 0 -> =>tailcall (counter - 1) nil
+	| _ -> "Done"
 
-def tailcall(counter, _) do
-	when counter do
-		else _ if counter > 0 =>
-			->tailcall(counter - 1, _)
-		0 => "Done"
-	end
-end
+assert "Tailcall test failed" (tailcall 10 nil == "Done")
 
-assert(tailcall(10, nil) == "Done", "Tailcall test failed")
+def partial a b c d = a * b - c * d
 
-def partial(a, b, c, d): a * b - c * d
+let ops_tests =
+	let tests = [
+		partial 1 2 3 4 == -10,
+		(partial 1) 2 3 4 == -10,
+		(partial 1 2) 3 4 == -10,
+		(partial 1 2 3) 4 == -10,
+		((partial 1) 2 3) 4 == -10,
+		(((partial 1) 2) 3) 4 == -10,
+		((partial 1) 2 3) 4 == -10,
+	]
+	in List.map (assert "Partial function test failed") tests
 
-let partialTest = [
-	partial(1, 2, 3, 4) == -10,
-	partial(1)(2, 3, 4) == -10,
-	partial(1)(2, 3)(4) == -10,
-	partial(1, 2)(3, 4) == -10,
-	partial(1, 2, 3)(4) == -10,
-]
-
-List#map(fn(test) do
-	assert(test, "Partial function test failed")
-end, partialTest)
-
-println("All tests passed")
+let _ = println "Everything is alright!"

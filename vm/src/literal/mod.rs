@@ -46,6 +46,12 @@ impl From<Vec<Value>> for Value {
     }
 }
 
+impl From<Tuple> for Value {
+    fn from(tup: Tuple) -> Self {
+        Value::Tuple(tup)
+    }
+}
+
 impl From<bool> for Value {
     fn from(b: bool) -> Self {
         Value::Bool(b)
@@ -363,6 +369,7 @@ impl_get!(GcRef<Fn>: Fn);
 impl_get!(Symbol: Sym(s) => s.0);
 impl_get!(List: List);
 impl_get!(Tuple: Tuple);
+impl_get!((GcRef<YexModule>, Symbol, Tuple): Tagged(m, s, t) => (m.clone(), *s, t.clone()));
 impl_get!(usize: Num(n) => {
     if n.fract() != 0.0 || n.is_nan() || n.is_infinite() || *n < 0.0 {
         return crate::raise!(ValueError, "Expected a positive integer, got '{}'", n);

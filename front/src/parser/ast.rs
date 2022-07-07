@@ -8,15 +8,15 @@ pub struct Location {
 
 use crate::tokens::TokenType;
 
-#[derive(Debug, Clone, Copy)]
-pub struct VarDecl {
-    pub name: Symbol,
-}
+pub type VarDecl = Symbol;
 
-impl VarDecl {
-    pub fn new(name: Symbol) -> Self {
-        Self { name }
-    }
+pub type Path = Vec<Symbol>;
+
+#[derive(Debug, Clone)]
+pub enum Pattern {
+    Id(VarDecl),
+    Lit(Literal),
+    Variant(Path, Vec<Pattern>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -141,47 +141,22 @@ impl Bind {
 }
 
 #[derive(Debug)]
-pub struct WhenArm {
-    pub cond: Box<Expr>,
+pub struct MatchArm {
+    pub cond: Pattern,
     pub body: Box<Expr>,
     pub guard: Option<Box<Expr>>,
     pub location: Location,
 }
 
-impl WhenArm {
-    pub fn new(cond: Expr, body: Expr, guard: Option<Expr>, line: usize, column: usize) -> Self {
+impl MatchArm {
+    pub fn new(cond: Pattern, body: Expr, guard: Option<Expr>, line: usize, column: usize) -> Self {
         Self {
-            cond: Box::new(cond),
+            cond,
             body: Box::new(body),
             guard: guard.map(Box::new),
             location: Location { line, column },
         }
     }
-}
-
-#[derive(Debug)]
-pub struct WhenElse {
-    pub bind: VarDecl,
-    pub body: Box<Expr>,
-    pub guard: Option<Box<Expr>>,
-    pub location: Location,
-}
-
-impl WhenElse {
-    pub fn new(bind: VarDecl, body: Expr, guard: Option<Expr>, line: usize, column: usize) -> Self {
-        Self {
-            bind,
-            body: Box::new(body),
-            location: Location { line, column },
-            guard: guard.map(Box::new),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum ArmType {
-    Arm(WhenArm),
-    Else(WhenElse),
 }
 
 #[derive(Debug)]
@@ -201,9 +176,9 @@ pub enum ExprKind {
         body: Box<Expr>,
     },
 
-    When {
+    Match {
         expr: Box<Expr>,
-        arms: Vec<ArmType>,
+        arms: Vec<MatchArm>,
     },
 
     Lambda {

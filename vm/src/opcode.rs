@@ -203,6 +203,16 @@ pub enum OpCode {
     /// The stack layout before running this opcode: [module, tuple]
     /// The stack layout after running it: [tagged]
     Tag(Symbol),
+
+    /// Gets the tag from a tagged value, returns a symbol
+    /// The stack layout before running this opcode: [tagged]
+    /// The stack layout after running it: [tag]
+    TagOf,
+
+    /// Gets the inner tuple from a tagged value
+    /// The stack layout before running this opcode: [tagged]
+    /// The stack layout after running it: [tuple]
+    TagTup,
 }
 
 /// Stocks the [`crate::OpCode`] with the line and the column of it on the original source code,

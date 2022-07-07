@@ -110,7 +110,7 @@ impl VirtualMachine {
 
     /// Executes a given set of bytecode instructions
     pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<()> {
-        let bytecode = &*bytecode;
+        let bytecode = bytecode;
         let mut try_stack = vec![];
 
         let mut ip = 0;
@@ -336,6 +336,18 @@ impl VirtualMachine {
                 self.push(Value::Tagged(module, tag, tup))
             }
 
+            OpCode::TagOf => {
+                match self.pop() {
+                    Value::Tagged(_, tag, _) => self.push(tag.into()),
+                    _ => self.push(NIL),
+                }
+            }
+
+            OpCode::TagTup => {
+                let (_, _, tup) = self.pop().get()?;
+                self.push(tup.into());
+            }
+
             // these opcodes are handled by the run function, since they can manipulate the ip
             OpCode::Try(..)
             | OpCode::EndTry
@@ -350,7 +362,7 @@ impl VirtualMachine {
     #[cfg(debug_assertions)]
     /// Debug the values on the stack and in the bytecode
     pub fn debug_stack(&self, instruction: &OpCode) {
-        eprintln!("Stack: {:?} ({instruction:?})", self.stack);
+        eprintln!("Stack: {:#?} ({instruction:?})", self.stack);
     }
 
     #[cfg(not(debug_assertions))]

@@ -39,7 +39,6 @@ pub enum TokenType {
     LessEq,
     Assign,
     Cons,
-    Len,
 
     // bitwise
     BitOr,
@@ -118,7 +117,7 @@ impl std::fmt::Display for TokenType {
             Self::LessEq => "<=".into(),
             Self::Assign => '='.into(),
             Self::Cons => "::".into(),
-            Self::Len => '#'.into(),
+            Self::Dot => '#'.into(),
 
             Self::BitAnd => "&&&".into(),
             Self::BitOr => "|||".into(),
@@ -142,7 +141,6 @@ impl std::fmt::Display for TokenType {
             Self::Seq => ">>".into(),
             Self::Arrow => "->".into(),
             Self::FatArrow => "=>".into(),
-            Self::Dot => ".".into(),
             Self::Pipe => "|>".into(),
             Self::Bar => '|'.into(),
 

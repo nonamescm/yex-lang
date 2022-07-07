@@ -128,11 +128,17 @@ impl<T, const S: usize> StackVec<T, S> {
 
 impl<T: std::fmt::Debug, const S: usize> std::fmt::Debug for StackVec<T, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[")?;
-        for (index, value) in self.iter().enumerate() {
-            write!(f, "{:?}", value)?;
-            if index < self.len - 1 {
-                write!(f, ", ")?;
+        writeln!(f, "[")?;
+        for value in self.iter() {
+            let fmt = format!("{value:#?}");
+            let count = fmt.lines().count();
+
+            for (index, line) in fmt.lines().enumerate() {
+                if index < count - 1 {
+                    writeln!(f, "    {}", line)?;
+                } else {
+                    writeln!(f, "    {},", line)?;
+                }
             }
         }
         write!(f, "]")

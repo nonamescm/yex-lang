@@ -4,9 +4,7 @@ use crate::{
     tokens::{Token, TokenType as Tkt},
 };
 
-use self::ast::{
-    ArmType, Bind, Def, Expr, ExprKind, Literal, Stmt, StmtKind, VarDecl, WhenArm, WhenElse,
-};
+use self::ast::{Bind, Def, Expr, ExprKind, Literal, MatchArm, Pattern, Stmt, StmtKind, VarDecl};
 
 pub mod ast;
 
@@ -78,15 +76,17 @@ impl Parser {
         let mut variants = vec![];
 
         while self.current.token != Tkt::With {
-            let name = self.var_decl()?;
+            let mut variant = self.var_decl()?.as_str().to_string();
+            variant.insert(0, '.');
+            variant.insert_str(0, name.as_str());
 
             let mut args = vec![];
             while let Tkt::Name(name) = self.current.token {
-                args.push(VarDecl { name });
+                args.push(name);
                 self.next()?;
             }
 
-            variants.push((name, args));
+            variants.push((variant.into(), args));
 
             if self.current.token != Tkt::With {
                 self.expect_and_skip(Tkt::Bar)?;
@@ -212,7 +212,7 @@ impl Parser {
     }
 
     fn args(&mut self) -> ParseResult<Vec<VarDecl>> {
-        let mut args = vec![];
+        let mut args = vec![self.var_decl()?];
         while self.current.token != Tkt::Assign {
             args.push(self.var_decl()?);
         }
@@ -220,7 +220,7 @@ impl Parser {
     }
 
     fn become_(&mut self) -> ParseResult<Expr> {
-        self.expect(Tkt::Arrow)?;
+        self.expect(Tkt::FatArrow)?;
 
         let line = self.current.line;
         let column = self.current.column;
@@ -237,11 +237,11 @@ impl Parser {
                 line,
                 column,
             )),
-            _ => self.throw("'->' can only be used on function calls"),
+            _ => self.throw("'=>' can only be used on function calls"),
         }
     }
 
-    fn when_(&mut self) -> ParseResult<Expr> {
+    fn match_(&mut self) -> ParseResult<Expr> {
         self.expect(Tkt::Match)?;
 
         let line = self.current.line;
@@ -254,47 +254,21 @@ impl Parser {
         let mut arms = vec![];
 
         let mut last_state = self.state();
-        while let Ok(arm) = self.when_arm() {
+        while let Ok(arm) = self.match_arm() {
             arms.push(arm);
             last_state = self.state();
         }
         self.set_state(last_state);
 
-        Ok(Expr::new(ExprKind::When { expr, arms }, line, column))
+        Ok(Expr::new(ExprKind::Match { expr, arms }, line, column))
     }
 
-    fn when_else(&mut self) -> ParseResult<WhenElse> {
-        self.expect(Tkt::Else)?;
-
-        let line = self.current.line;
-        let column = self.current.column;
-
-        let ident = self.var_decl()?;
-
-        let guard = if self.current.token == Tkt::If {
-            self.next()?;
-            Some(self.expr()?)
-        } else {
-            None
-        };
-
-        self.expect(Tkt::Arrow)?;
-
-        let body = self.expr()?;
-
-        Ok(WhenElse::new(ident, body, guard, line, column))
-    }
-
-    fn when_arm(&mut self) -> ParseResult<ArmType> {
+    fn match_arm(&mut self) -> ParseResult<MatchArm> {
         let line = self.current.line;
         let column = self.current.column;
         self.expect(Tkt::Bar)?;
 
-        if self.current.token == Tkt::Else {
-            return self.when_else().map(ArmType::Else);
-        }
-
-        let cond = self.expr()?;
+        let cond = self.pattern()?;
 
         let guard = if self.current.token == Tkt::If {
             self.next()?;
@@ -307,7 +281,7 @@ impl Parser {
 
         let body = self.expr()?;
 
-        Ok(ArmType::Arm(WhenArm::new(cond, body, guard, line, column)))
+        Ok(MatchArm::new(cond, body, guard, line, column))
     }
 
     fn try_(&mut self) -> ParseResult<Expr> {
@@ -360,14 +334,48 @@ impl Parser {
     }
 
     fn var_decl(&mut self) -> ParseResult<VarDecl> {
-        let name = match self.current.token.clone() {
+        let name = match self.current.token {
             Tkt::Name(id) => id,
-            other => self.throw(format!("Expected name, found '{}'", other))?,
+            ref other => self.throw(format!("Expected name, found '{}'", other))?,
         };
 
         self.next()?;
 
-        Ok(VarDecl::new(name))
+        Ok(name)
+    }
+
+    fn pattern(&mut self) -> ParseResult<Pattern> {
+        let pat = match self.current.token {
+            Tkt::Num(n) => Pattern::Lit(Literal::Num(n)),
+            Tkt::Str(ref s) => Pattern::Lit(Literal::Str(s.to_string())),
+            Tkt::Nil => Pattern::Lit(Literal::Unit),
+            Tkt::True => Pattern::Lit(Literal::Bool(true)),
+            Tkt::False => Pattern::Lit(Literal::Bool(false)),
+            Tkt::Name(id) => Pattern::Id(id),
+
+            Tkt::Lparen => {
+                self.next()?;
+
+                let mut path = vec![self.var_decl()?];
+                while self.current.token == Tkt::Dot {
+                    self.next()?;
+                    path.push(self.var_decl()?);
+                }
+
+                let mut pats = vec![];
+                while self.current.token != Tkt::Rparen {
+                    pats.push(self.pattern()?);
+                }
+
+                Pattern::Variant(path, pats)
+            }
+
+            ref other => self.throw(format!("Expected pattern, found '{other}'"))?,
+        };
+
+        self.next()?;
+
+        Ok(pat)
     }
 
     fn let_(&mut self) -> ParseResult<Expr> {
@@ -698,7 +706,7 @@ impl Parser {
     fn method_ref(&mut self) -> ParseResult<Expr> {
         let mut ty = self.primary()?;
 
-        while self.current.token == Tkt::Len {
+        while self.current.token == Tkt::Dot {
             self.next()?;
             let method = self.var_decl()?;
 
@@ -802,8 +810,8 @@ impl Parser {
             Tkt::Def => self.def_()?,
             Tkt::If => self.condition()?,
             Tkt::Fn => self.fn_()?,
-            Tkt::Arrow => self.become_()?,
-            Tkt::Match => self.when_()?,
+            Tkt::FatArrow => self.become_()?,
+            Tkt::Match => self.match_()?,
             Tkt::Try => self.try_()?,
 
             // not supported

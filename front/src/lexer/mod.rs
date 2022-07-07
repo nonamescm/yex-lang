@@ -148,7 +148,6 @@ impl Lexer {
             }
 
             '+' => TokenType::Add,
-            '#' => TokenType::Len,
             '-' if self.peek_at(1) == '>' => {
                 self.next();
                 TokenType::Arrow
