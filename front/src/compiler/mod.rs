@@ -630,7 +630,7 @@ impl Compiler {
 
         for (name, args) in variants {
             if args.is_empty() {
-                patch_list.push(*name);
+                patch_list.push(name.as_str().split('.').last().unwrap().into());
                 continue;
             }
 
