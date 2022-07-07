@@ -129,7 +129,7 @@ pub fn find(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
 }
 
 pub fn len(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
-    let xs: List = args[1].get()?;
+    let xs: List = args[0].get()?;
 
     Ok((xs.len() as f64).into())
 }
