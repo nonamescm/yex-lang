@@ -97,13 +97,15 @@ impl Parser {
 
         let mut members = vec![];
 
-        while self.current.token == Tkt::Member {
-            self.next()?;
+        while self.current.token != Tkt::End {
+            self.expect(Tkt::Def)?;
             let bind = self.var_decl()?;
             let value = self.function()?;
 
             members.push(Def { bind, value })
         }
+
+        self.expect(Tkt::End)?;
 
         Ok(Stmt::new(
             StmtKind::Type {

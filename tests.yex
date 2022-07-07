@@ -28,13 +28,12 @@ let ops_test =
 	]
 	in List.map (assert "Operator test failed") tests
 
-type
-	Person = p name age
-with
-	member adult? p =
+type Person = p name age with
+	def adult? p =
 		match p with
 		| (Person.p _ age) if age >= 18 -> true
 		| _ -> false
+end
 
 let type_test =
 	let p = Person.p "John" 18
