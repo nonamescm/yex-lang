@@ -48,7 +48,7 @@ impl YexModule {
 
         methods.insert(
             Symbol::from("rev"),
-            Value::Fn(GcRef::new(Fn::new_native(2, list::methods::rev))),
+            Value::Fn(GcRef::new(Fn::new_native(1, list::methods::rev))),
         );
 
         methods.insert(

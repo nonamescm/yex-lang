@@ -116,7 +116,7 @@ impl Compiler {
 
     fn match_arm(&mut self, arm: &MatchArm, loc: &Location) -> usize {
         // creates a stack of jmp indexes to be fixed later
-        let (should_pop, fix_stack) = self.match_pattern(&arm.cond, true, loc);
+        let (should_pop, fix_stack) = self.match_pattern(&arm.cond, true, false, loc);
 
         // the arm may request more than one pop after matching to clean up the stack
         if should_pop {
@@ -166,12 +166,13 @@ impl Compiler {
     fn match_pattern(
         &mut self,
         pattern: &Pattern,
-        dup: bool,
+        duplicate: bool,
+        global: bool,
         loc: &Location,
     ) -> (bool, Vec<usize>) {
         // all top-level checks needs to duplicate the value on the stack in case it doesn't match
         // so the next arm can check against it again
-        if dup {
+        if duplicate {
             self.emit_op(OpCode::Dup, loc);
         }
 
@@ -188,7 +189,11 @@ impl Compiler {
                 (false, vec![label])
             }
             Pattern::Id(id) => {
-                self.emit_save(*id, loc);
+                if global {
+                    self.emit_op(OpCode::Savg(*id), loc);
+                } else {
+                    self.emit_save(*id, loc);
+                }
                 (false, vec![])
             }
             Pattern::Variant(path, args) => {
@@ -230,7 +235,7 @@ impl Compiler {
                     self.emit_op(OpCode::Dup, loc);
                     self.emit_op(OpCode::TupGet(idx), loc);
 
-                    let (should_pop, offsets) = self.match_pattern(arg, false, loc);
+                    let (should_pop, offsets) = self.match_pattern(arg, false, false, loc);
                     if should_pop {
                         self.emit_op(OpCode::Pop, loc);
                     }
@@ -271,7 +276,7 @@ impl Compiler {
         // emit all the patterns, most of them are probably just variable assignments, but some of
         // them may be complex patterns, so we still need to check for the should_pop value
         for arg in args.iter() {
-            let (should_pop, fixes) = self.match_pattern(arg, true, loc);
+            let (should_pop, fixes) = self.match_pattern(arg, true, false, loc);
 
             // pop any extra values that were left on the stack
             if should_pop {
@@ -370,7 +375,7 @@ impl Compiler {
                 self.expr(value);
 
                 // try to match against the value
-                let (should_pop, fix_stack) = self.match_pattern(bind, true, loc);
+                let (should_pop, fix_stack) = self.match_pattern(bind, true, false, loc);
 
                 if should_pop {
                     self.emit_op(OpCode::Pop, loc);
@@ -484,8 +489,8 @@ impl Compiler {
             }
 
             ExprKind::Cons { head, tail } => {
-                self.expr(tail);
                 self.expr(head);
+                self.expr(tail);
 
                 // prepend the head to the tail
                 self.emit_op(OpCode::Prep, loc);
@@ -561,7 +566,7 @@ impl Compiler {
                 self.expr(value);
 
                 // try to match against the value
-                let (should_pop, fix_stack) = self.match_pattern(bind, true, loc);
+                let (should_pop, fix_stack) = self.match_pattern(bind, true, true, loc);
 
                 if should_pop {
                     self.emit_op(OpCode::Pop, loc);
