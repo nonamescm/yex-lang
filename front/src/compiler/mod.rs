@@ -262,26 +262,45 @@ impl Compiler {
         }
     }
 
-    fn lambda_expr(&mut self, args: &[VarDecl], body: &Expr, loc: &Location) -> GcRef<Fn> {
+    fn lambda_expr(&mut self, args: &[Pattern], body: &Expr, loc: &Location) -> GcRef<Fn> {
         // creates the lambda scope
-        let mut scope = Scope {
-            opcodes: Vec::new(),
-            locals: HashMap::new(),
-        };
+        self.scope_stack.push(Scope::new());
 
-        for (idx, arg) in args.iter().enumerate() {
-            // insert the argument into the scope
-            scope.locals.insert(*arg, idx);
+        let mut fix_stack = vec![];
 
-            // pushes the opcode to save the argument
-            let op = OpCodeMetadata::new(loc.line, loc.column, OpCode::Save(idx));
-            scope.opcodes.push(op);
+        // emit all the patterns, most of them are probably just variable assignments, but some of
+        // them may be complex patterns, so we still need to check for the should_pop value
+        for arg in args.iter() {
+            let (should_pop, fixes) = self.match_pattern(arg, true, loc);
+
+            // pop any extra values that were left on the stack
+            if should_pop {
+                self.emit_op(OpCode::Pop, loc);
+            }
+            self.emit_op(OpCode::Pop, loc);
+
+            fix_stack.extend(fixes);
         }
-
-        self.scope_stack.push(scope);
 
         // compiles the body
         self.expr(body);
+
+        // emit a jump to ignore the
+        let jmp_label = self.scope().opcodes.len();
+        self.emit_op(OpCode::Jmp(0), loc);
+
+        for offset in fix_stack {
+            self.scope_mut().opcodes[offset].opcode = OpCode::Jmf(self.scope().opcodes.len());
+        }
+
+        // emit the call to raise
+        self.emit_const("No match of rhs value".to_string().into(), loc);
+        self.emit_const(Symbol::from("MatchError").into(), loc);
+        self.emit_op(OpCode::Loag("raise".into()), loc);
+        self.emit_op(OpCode::Call(2), loc);
+
+        // patch the jump to the end
+        self.scope_mut().opcodes[jmp_label].opcode = OpCode::Jmp(self.scope().opcodes.len());
 
         // pops the lambda scope
         let Scope { opcodes, .. } = self.scope_stack.pop().unwrap();
@@ -346,11 +365,47 @@ impl Compiler {
 
             ExprKind::Match { expr, arms } => self.match_expr(expr, arms, loc),
 
-            ExprKind::Let {
-                bind: Bind { bind, value, .. },
-                body,
+            ExprKind::Let { bind, value, body } => {
+                // compiles the value and pushes it on the stack
+                self.expr(value);
+
+                // try to match against the value
+                let (should_pop, fix_stack) = self.match_pattern(bind, true, loc);
+
+                if should_pop {
+                    self.emit_op(OpCode::Pop, loc);
+                }
+
+                // pops the extra value that is left on the stack
+                self.emit_op(OpCode::Pop, loc);
+
+                self.expr(body);
+
+                // emit a jump to ignore the
+                let jmp_label = self.scope().opcodes.len();
+                self.emit_op(OpCode::Jmp(0), loc);
+
+                for offset in fix_stack {
+                    self.scope_mut().opcodes[offset].opcode =
+                        OpCode::Jmf(self.scope().opcodes.len());
+                }
+
+                // emit a pop if necessary
+                if should_pop {
+                    self.emit_op(OpCode::Pop, loc);
+                }
+
+                // emit the call to raise
+                self.emit_const("No match of rhs value".to_string().into(), loc);
+                self.emit_const(Symbol::from("MatchError").into(), loc);
+                self.emit_op(OpCode::Loag("raise".into()), loc);
+                self.emit_op(OpCode::Call(2), loc);
+
+                // patch the jump to the end
+                self.scope_mut().opcodes[jmp_label].opcode =
+                    OpCode::Jmp(self.scope().opcodes.len());
             }
-            | ExprKind::Def {
+            ExprKind::Def {
                 bind: Bind { bind, value, .. },
                 body,
             } => {
@@ -491,6 +546,8 @@ impl Compiler {
     }
 
     fn stmt(&mut self, node: &Stmt) {
+        let loc = &node.location;
+
         match &node.kind {
             // compiles a `def` statement into a `Savg` instruction
             StmtKind::Def(Def { bind, value, .. }) => {
@@ -499,9 +556,43 @@ impl Compiler {
             }
 
             // compiles a `let` statement into a `Savg` instruction
-            StmtKind::Let(Bind { bind, value, .. }) => {
+            StmtKind::Let { bind, value } => {
+                // compiles the value and pushes it on the stack
                 self.expr(value);
-                self.emit_op(OpCode::Savg(*bind), &node.location);
+
+                // try to match against the value
+                let (should_pop, fix_stack) = self.match_pattern(bind, true, loc);
+
+                if should_pop {
+                    self.emit_op(OpCode::Pop, loc);
+                }
+
+                // pops the extra value that is left on the stack
+                self.emit_op(OpCode::Pop, loc);
+
+                // emit a jump to ignore the
+                let jmp_label = self.scope().opcodes.len();
+                self.emit_op(OpCode::Jmp(0), loc);
+
+                for offset in fix_stack {
+                    self.scope_mut().opcodes[offset].opcode =
+                        OpCode::Jmf(self.scope().opcodes.len());
+                }
+
+                // emit a pop if necessary
+                if should_pop {
+                    self.emit_op(OpCode::Pop, loc);
+                }
+
+                // emit the call to raise
+                self.emit_const("No match of rhs value".to_string().into(), loc);
+                self.emit_const(Symbol::from("MatchError").into(), loc);
+                self.emit_op(OpCode::Loag("raise".into()), loc);
+                self.emit_op(OpCode::Call(2), loc);
+
+                // patch the jump to the end
+                self.scope_mut().opcodes[jmp_label].opcode =
+                    OpCode::Jmp(self.scope().opcodes.len());
             }
 
             // compiles a `module` declaration into an YexModule and save the module to a global name

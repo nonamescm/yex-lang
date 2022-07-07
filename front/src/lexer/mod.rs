@@ -33,7 +33,7 @@ impl Lexer {
         self.line = line;
         self.column = column;
         self.idx = idx;
-    } 
+    }
 
     fn throw<A, T: Into<String>>(&self, str: T) -> Result<A, ParseError> {
         ParseError::throw(self.line, self.column, str.into())

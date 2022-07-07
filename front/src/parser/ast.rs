@@ -168,7 +168,8 @@ pub enum ExprKind {
     },
 
     Let {
-        bind: Bind,
+        bind: Pattern,
+        value: Box<Expr>,
         body: Box<Expr>,
     },
     Def {
@@ -182,7 +183,7 @@ pub enum ExprKind {
     },
 
     Lambda {
-        args: Vec<VarDecl>, // specifies the arguments name and types
+        args: Vec<Pattern>, // specifies the arguments name and types
         body: Box<Expr>,    // the function body
     },
 
@@ -312,7 +313,10 @@ pub struct Def {
 #[derive(Debug)]
 pub enum StmtKind {
     Def(Def),
-    Let(Bind),
+    Let {
+        bind: Pattern,
+        value: Expr,
+    },
     Type {
         name: VarDecl,
         variants: Vec<(VarDecl, Vec<VarDecl>)>,

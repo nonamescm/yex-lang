@@ -336,12 +336,10 @@ impl VirtualMachine {
                 self.push(Value::Tagged(module, tag, tup))
             }
 
-            OpCode::TagOf => {
-                match self.pop() {
-                    Value::Tagged(_, tag, _) => self.push(tag.into()),
-                    _ => self.push(NIL),
-                }
-            }
+            OpCode::TagOf => match self.pop() {
+                Value::Tagged(_, tag, _) => self.push(tag.into()),
+                _ => self.push(NIL),
+            },
 
             OpCode::TagTup => {
                 let (_, _, tup) = self.pop().get()?;

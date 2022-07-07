@@ -47,17 +47,13 @@ impl Parser {
 
         self.expect(Tkt::Let)?;
 
-        let bind = self.var_decl()?;
+        let bind = self.pattern()?;
 
         self.expect(Tkt::Assign)?;
 
-        let value = Box::new(self.expr()?);
+        let value = self.expr()?;
 
-        Ok(Stmt::new(
-            StmtKind::Let(Bind::new(bind, value, line, column)),
-            line,
-            column,
-        ))
+        Ok(Stmt::new(StmtKind::Let { bind, value }, line, column))
     }
 
     pub fn parse_expr(mut self) -> ParseResult<Expr> {
@@ -213,10 +209,10 @@ impl Parser {
         ))
     }
 
-    fn args(&mut self) -> ParseResult<Vec<VarDecl>> {
-        let mut args = vec![self.var_decl()?];
+    fn args(&mut self) -> ParseResult<Vec<Pattern>> {
+        let mut args = vec![self.pattern()?];
         while self.current.token != Tkt::Assign {
-            args.push(self.var_decl()?);
+            args.push(self.pattern()?);
         }
         Ok(args)
     }
@@ -386,7 +382,7 @@ impl Parser {
 
         self.expect(Tkt::Let)?;
 
-        let bind = self.var_decl()?;
+        let bind = self.pattern()?;
 
         self.expect(Tkt::Assign)?;
 
@@ -398,7 +394,8 @@ impl Parser {
 
         Ok(Expr::new(
             ExprKind::Let {
-                bind: Bind::new(bind, Box::new(value), line, column),
+                bind,
+                value: Box::new(value),
                 body: Box::new(body),
             },
             line,

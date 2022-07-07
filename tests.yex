@@ -29,17 +29,21 @@ let ops_test =
 	in List.map (assert "Operator test failed") tests
 
 type Person = p name age with
-	def adult? p =
-		match p with
-		| (Person.p _ age) if age >= 18 -> true
-		| _ -> false
+	def adult? (Person.p "John" age) =
+		age >= 18
+
+	def older (Person.p name age) (Person.p name' age') =
+		if age >= age' then name else name'
 end
+
+let (Person.p "John" 18) = Person.p "John" 18
 
 let type_test =
 	let p = Person.p "John" 18
 	in (
 		assert "Person is not adult" (Person.adult? p),
 		assert "p is not a Person" (p is Person),
+		assert "John should be older" ((Person.older (Person.p "Martin" 14) p) == "John"),
 	)
 
 let exception_test =
