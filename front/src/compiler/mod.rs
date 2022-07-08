@@ -197,7 +197,10 @@ impl Compiler {
                 }
                 (vec![*id], vec![])
             }
-            Pattern::Id(_) => <_>::default(),
+            Pattern::Id(_) => {
+                self.emit_op(OpCode::Pop, loc);
+                <_>::default()
+            }
 
             Pattern::Variant(path, args) => {
                 // gets the tag of the value
@@ -561,7 +564,7 @@ impl Compiler {
     fn stmt(&mut self, node: &Stmt) {
         let loc = &node.location;
 
-        let stmt = match &node.kind {
+        match &node.kind {
             // compiles a `def` statement into a `Savg` instruction
             StmtKind::Def(Def { bind, value, .. }) => {
                 self.expr(value);
@@ -607,8 +610,6 @@ impl Compiler {
         };
 
         self.unique_counter = 0;
-
-        stmt
     }
 
     fn type_(

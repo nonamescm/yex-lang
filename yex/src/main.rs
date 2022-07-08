@@ -28,7 +28,7 @@ fn eval_file(file: &str) {
     }
 }
 
-fn patch_bytecode(ops: &mut Vec<OpCodeMetadata>, old_len: usize) {
+fn patch_bytecode(ops: &mut [OpCodeMetadata], old_len: usize) {
     for op in ops.iter_mut() {
         if let OpCode::Push(idx) = &mut op.opcode {
             *idx += old_len;
