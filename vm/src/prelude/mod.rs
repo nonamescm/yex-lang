@@ -17,6 +17,11 @@ fn print(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
     Ok(nil())
 }
 
+fn debug_stack(vm: &mut VirtualMachine, _args: &[Value]) -> InterpretResult<Value> {
+    println!("{:#?}", vm.stack);
+    Ok(nil())
+}
+
 fn input(args: &[Value]) -> InterpretResult<Value> {
     let prompt: String = args[0].get()?;
     print!("{}", prompt);
@@ -105,6 +110,7 @@ pub fn prelude() -> EnvTable {
 
     insert_fn!(:vm "println", println, 1);
     insert_fn!(:vm "print", print, 1);
+    insert_fn!(:vm "print_stack!", debug_stack, 1);
     insert_fn!("input", input);
     insert_fn!("type", r#type);
     insert_fn!("inspect", inspect);

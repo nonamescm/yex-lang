@@ -78,7 +78,8 @@ pub struct VirtualMachine {
     stack: Stack,
     locals: [Value; 1024],
     used_locals: usize,
-    constants: Vec<Value>,
+    /// the constants of the bytecode
+    pub constants: Vec<Value>,
     globals: EnvTable,
 }
 

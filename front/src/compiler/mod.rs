@@ -25,6 +25,7 @@ impl Scope {
 pub struct Compiler {
     scope_stack: Vec<Scope>,
     constants: Vec<Value>,
+    unique_counter: usize,
 }
 
 impl Compiler {
@@ -86,8 +87,25 @@ impl Compiler {
     fn emit_save(&mut self, bind: VarDecl, node: &Location) {
         let len = self.scope().locals.len();
 
-        self.scope_mut().locals.insert(bind, len);
-        self.emit_op(OpCode::Save(len), node);
+        let index = *self.scope_mut().locals.entry(bind).or_insert(len);
+        self.emit_op(OpCode::Save(index), node);
+    }
+
+    fn emit_unique(&mut self, loc: &Location) -> Symbol {
+        self.unique_counter += 1;
+
+        let unique = format!("#{}", self.unique_counter).into();
+        self.emit_save(unique, loc);
+
+        unique
+    }
+
+    fn emit_load(&mut self, bind: &VarDecl, loc: &Location) {
+        if let Some(offset) = self.scope().locals.get(bind) {
+            self.emit_op(OpCode::Load(*offset), loc);
+        } else {
+            self.emit_op(OpCode::Loag(*bind), loc);
+        }
     }
 
     fn if_expr(&mut self, cond: &Expr, then: &Expr, else_: &Expr, loc: &Location) {
@@ -116,12 +134,7 @@ impl Compiler {
 
     fn match_arm(&mut self, arm: &MatchArm, loc: &Location) -> usize {
         // creates a stack of jmp indexes to be fixed later
-        let (should_pop, fix_stack) = self.match_pattern(&arm.cond, true, false, loc);
-
-        // the arm may request more than one pop after matching to clean up the stack
-        if should_pop {
-            self.emit_op(OpCode::Pop, loc);
-        }
+        let (declarations, fix_stack) = self.match_pattern(&arm.cond, false, loc);
 
         // emits the guard check if it exists
         let guard_label = if let Some(guard) = &arm.guard {
@@ -133,10 +146,12 @@ impl Compiler {
             None
         };
 
-        // emits an extra pop, since we Dup'd the condition
-        self.emit_op(OpCode::Pop, loc);
-
         self.expr(&arm.body);
+
+        // remove all the declarations from the local scope
+        for decl in declarations {
+            self.scope_mut().locals.remove(&decl);
+        }
 
         // emit a new jump, since we need to jump to the end of the when if the condition was
         // met
@@ -152,30 +167,15 @@ impl Compiler {
             self.scope_mut().opcodes[label].opcode = OpCode::Jmf(self.scope().opcodes.len());
         });
 
-        // sometimes the arm needs to pop if it returned false, so, we check for this case here
-        if should_pop {
-            self.emit_op(OpCode::Pop, loc);
-        }
-
         jmp_label
     }
 
-    // the return type of this function is a tuple, where the first element mark how many extra
-    // pops should be emitted after the function ends, and the second one is the index of the jumps
-    // that were emitted and need to be patched.
     fn match_pattern(
         &mut self,
         pattern: &Pattern,
-        duplicate: bool,
         global: bool,
         loc: &Location,
-    ) -> (bool, Vec<usize>) {
-        // all top-level checks needs to duplicate the value on the stack in case it doesn't match
-        // so the next arm can check against it again
-        if duplicate {
-            self.emit_op(OpCode::Dup, loc);
-        }
-
+    ) -> (Vec<VarDecl>, Vec<usize>) {
         match pattern {
             Pattern::Lit(ref lt) => {
                 // compares the value against the literal
@@ -186,16 +186,19 @@ impl Compiler {
                 let label = self.scope().opcodes.len();
                 self.emit_op(OpCode::Jmf(0), loc);
 
-                (false, vec![label])
+                (vec![], vec![label])
             }
-            Pattern::Id(id) => {
+
+            Pattern::Id(id) if id.as_str() != "_" => {
                 if global {
                     self.emit_op(OpCode::Savg(*id), loc);
                 } else {
                     self.emit_save(*id, loc);
                 }
-                (false, vec![])
+                (vec![*id], vec![])
             }
+            Pattern::Id(_) => <_>::default(),
+
             Pattern::Variant(path, args) => {
                 // gets the tag of the value
                 let name = path
@@ -205,60 +208,74 @@ impl Compiler {
                     .collect::<Vec<String>>()
                     .join(".");
 
-                // Dups the condition again
                 self.emit_op(OpCode::Dup, loc);
+
+                let local = self.emit_unique(loc);
 
                 // compares it with the tag of the value on the top of the stack
                 self.emit_op(OpCode::TagOf, loc);
                 self.emit_const(Symbol::from(name).into(), loc);
                 self.emit_op(OpCode::Eq, loc);
 
+                let mut declarations = vec![];
+
                 // emits the jump instruction that will jump to the next clause if it doesn't match
                 let mut labels = vec![self.scope().opcodes.len()];
                 self.emit_op(OpCode::Jmf(0), loc);
 
                 // gets the inner tuple from the tagged value
+                self.emit_load(&local, loc);
                 self.emit_op(OpCode::TagTup, loc);
 
                 // checks if the two "tuples" have the same length
-                self.emit_op(OpCode::Dup, loc);
                 self.emit_op(OpCode::Len, loc);
                 self.emit_lit(&Literal::Num(args.len() as f64), loc);
                 self.emit_op(OpCode::Eq, loc);
 
                 // emit the jump place-holder
                 labels.push(self.scope().opcodes.len());
-
                 self.emit_op(OpCode::Jmf(0), loc);
 
                 for (idx, arg) in args.iter().enumerate() {
-                    self.emit_op(OpCode::Dup, loc);
+                    self.emit_load(&local, loc);
+                    self.emit_op(OpCode::TagTup, loc);
                     self.emit_op(OpCode::TupGet(idx), loc);
 
-                    let (should_pop, offsets) = self.match_pattern(arg, false, false, loc);
-                    if should_pop {
-                        self.emit_op(OpCode::Pop, loc);
-                    }
-                    offsets.iter().for_each(|it| labels.push(*it));
+                    let (decls, offsets) = self.match_pattern(arg, global, loc);
+                    labels.extend(offsets);
+                    declarations.extend(decls);
                 }
 
-                (true, labels)
+                (declarations, labels)
             }
         }
     }
 
-    fn match_expr(&mut self, cond: &Expr, arms: &[MatchArm], _loc: &Location) {
+    fn match_expr(&mut self, cond: &Expr, arms: &[MatchArm], loc: &Location) {
         // compiles the condition
-        // TODO: this is a bit hacky, but it works for now
         self.expr(cond);
+
+        let local = self.emit_unique(loc);
 
         // keep track of all the jump offsets
         let mut jmps = vec![];
 
+        self.emit_const("Starting match".to_string().into(), loc);
+        self.emit_op(OpCode::Pop, loc);
+
         for arm in arms {
+            self.emit_load(&local, loc);
             let jmp = self.match_arm(arm, &arm.location);
             jmps.push(jmp);
         }
+
+        // this section is ignored by any arm, since they jump to the next section in the end,
+        // thus, if anything here is executed, it's a sign that the match couldn't match anything,
+        // which is probably a bug, so it will just raise a new exception
+        self.emit_const("Couldn't match any clause".to_string().into(), loc);
+        self.emit_const(Symbol::from("MatchError").into(), loc);
+        self.emit_op(OpCode::Loag("raise".into()), loc);
+        self.emit_op(OpCode::Call(2), loc);
 
         // fix all the jump offsets
         let ip = self.scope().opcodes.len();
@@ -276,13 +293,7 @@ impl Compiler {
         // emit all the patterns, most of them are probably just variable assignments, but some of
         // them may be complex patterns, so we still need to check for the should_pop value
         for arg in args.iter() {
-            let (should_pop, fixes) = self.match_pattern(arg, true, false, loc);
-
-            // pop any extra values that were left on the stack
-            if should_pop {
-                self.emit_op(OpCode::Pop, loc);
-            }
-            self.emit_op(OpCode::Pop, loc);
+            let (_, fixes) = self.match_pattern(arg, false, loc);
 
             fix_stack.extend(fixes);
         }
@@ -341,7 +352,9 @@ impl Compiler {
                     self.expr(arg);
                 }
 
-                self.emit_op(OpCode::RevN(args.len()), loc);
+                if args.len() > 1 {
+                    self.emit_op(OpCode::RevN(args.len()), loc);
+                }
 
                 // compiles the caller
                 self.expr(callee);
@@ -377,16 +390,14 @@ impl Compiler {
                 self.expr(value);
 
                 // try to match against the value
-                let (should_pop, fix_stack) = self.match_pattern(bind, true, false, loc);
-
-                if should_pop {
-                    self.emit_op(OpCode::Pop, loc);
-                }
-
-                // pops the extra value that is left on the stack
-                self.emit_op(OpCode::Pop, loc);
+                let (declarations, fix_stack) = self.match_pattern(bind, false, loc);
 
                 self.expr(body);
+
+                // remove all the declarations from the local scope
+                for decl in declarations {
+                    self.scope_mut().locals.remove(&decl);
+                }
 
                 // emit a jump to ignore the
                 let jmp_label = self.scope().opcodes.len();
@@ -395,11 +406,6 @@ impl Compiler {
                 for offset in fix_stack {
                     self.scope_mut().opcodes[offset].opcode =
                         OpCode::Jmf(self.scope().opcodes.len());
-                }
-
-                // emit a pop if necessary
-                if should_pop {
-                    self.emit_op(OpCode::Pop, loc);
                 }
 
                 // emit the call to raise
@@ -555,7 +561,7 @@ impl Compiler {
     fn stmt(&mut self, node: &Stmt) {
         let loc = &node.location;
 
-        match &node.kind {
+        let stmt = match &node.kind {
             // compiles a `def` statement into a `Savg` instruction
             StmtKind::Def(Def { bind, value, .. }) => {
                 self.expr(value);
@@ -568,14 +574,7 @@ impl Compiler {
                 self.expr(value);
 
                 // try to match against the value
-                let (should_pop, fix_stack) = self.match_pattern(bind, true, true, loc);
-
-                if should_pop {
-                    self.emit_op(OpCode::Pop, loc);
-                }
-
-                // pops the extra value that is left on the stack
-                self.emit_op(OpCode::Pop, loc);
+                let (_, fix_stack) = self.match_pattern(bind, true, loc);
 
                 // emit a jump to ignore the
                 let jmp_label = self.scope().opcodes.len();
@@ -584,11 +583,6 @@ impl Compiler {
                 for offset in fix_stack {
                     self.scope_mut().opcodes[offset].opcode =
                         OpCode::Jmf(self.scope().opcodes.len());
-                }
-
-                // emit a pop if necessary
-                if should_pop {
-                    self.emit_op(OpCode::Pop, loc);
                 }
 
                 // emit the call to raise
@@ -610,7 +604,11 @@ impl Compiler {
             } => {
                 self.type_(name, variants, members, &node.location);
             }
-        }
+        };
+
+        self.unique_counter = 0;
+
+        stmt
     }
 
     fn type_(
@@ -637,7 +635,7 @@ impl Compiler {
 
         for (name, args) in variants {
             if args.is_empty() {
-                patch_list.push(name.as_str().split('.').last().unwrap().into());
+                patch_list.push((name, name.as_str().split('.').last().unwrap().into()));
                 continue;
             }
 
@@ -663,13 +661,13 @@ impl Compiler {
         }
 
         let mut type_ = GcRef::new(YexModule::new(*decl, table));
-        for entry in patch_list {
+        for (path, entry) in patch_list {
             unsafe {
                 let clone = type_.clone();
                 type_
                     .mut_ref()
                     .fields
-                    .insert(entry, Value::Tagged(clone, entry, vec![].into()));
+                    .insert(entry, Value::Tagged(clone, *path, vec![].into()));
             }
         }
 

@@ -1,3 +1,7 @@
+use std::{collections::HashSet, mem::take};
+
+use vm::Symbol;
+
 use crate::{
     error::{ParseError, ParseResult},
     lexer::Lexer,
@@ -11,6 +15,7 @@ pub mod ast;
 pub struct Parser {
     lexer: Lexer,
     current: Token,
+    locals: HashSet<Symbol>,
 }
 
 impl Parser {
@@ -18,6 +23,7 @@ impl Parser {
         let mut this = Parser {
             lexer,
             current: Token::default(),
+            locals: HashSet::new(),
         };
         this.next()?;
         Ok(this)
@@ -47,7 +53,9 @@ impl Parser {
 
         self.expect(Tkt::Let)?;
 
-        let bind = self.pattern()?;
+        self.locals = HashSet::new();
+
+        let (_, bind) = self.pattern()?;
 
         self.expect(Tkt::Assign)?;
 
@@ -140,6 +148,14 @@ impl Parser {
         self.next()
     }
 
+    fn check_unused(&self, name: &Symbol) -> ParseResult<()> {
+        if self.locals.contains(name) && name.as_str() != "_" {
+            self.throw(format!("Can't shadow name '{}'", name.as_str()))?;
+        }
+
+        Ok(())
+    }
+
     fn assert(&mut self, expected: Tkt) -> ParseResult<()> {
         if self.current.token == expected {
             Ok(())
@@ -209,7 +225,7 @@ impl Parser {
         ))
     }
 
-    fn args(&mut self) -> ParseResult<Vec<Pattern>> {
+    fn args(&mut self) -> ParseResult<Vec<(Vec<Symbol>, Pattern)>> {
         let mut args = vec![self.pattern()?];
         while self.current.token != Tkt::Assign {
             args.push(self.pattern()?);
@@ -258,6 +274,11 @@ impl Parser {
         }
         self.set_state(last_state);
 
+        // this throws all errors and exit
+        if self.current.token == Tkt::Bar {
+            self.match_arm()?;
+        }
+
         Ok(Expr::new(ExprKind::Match { expr, arms }, line, column))
     }
 
@@ -266,7 +287,7 @@ impl Parser {
         let column = self.current.column;
         self.expect(Tkt::Bar)?;
 
-        let cond = self.pattern()?;
+        let (ids, cond) = self.pattern()?;
 
         let guard = if self.current.token == Tkt::If {
             self.next()?;
@@ -278,6 +299,10 @@ impl Parser {
         self.expect(Tkt::Arrow)?;
 
         let body = self.expr()?;
+
+        for id in ids {
+            self.locals.remove(&id);
+        }
 
         Ok(MatchArm::new(cond, body, guard, line, column))
     }
@@ -312,9 +337,25 @@ impl Parser {
         let line = self.current.line;
         let column = self.current.column;
 
-        let args = self.args()?;
+        let locals = take(&mut self.locals);
+
+        let mut ids = vec![];
+        let mut args = vec![];
+
+        let pats = self.args()?;
+
+        for (names, arg) in pats {
+            ids.extend(names);
+            args.push(arg);
+        }
 
         let body = self.fn_body()?;
+
+        for id in ids {
+            self.locals.remove(&id);
+        }
+
+        self.locals = locals;
 
         Ok(Expr::new(
             ExprKind::Lambda {
@@ -342,14 +383,19 @@ impl Parser {
         Ok(name)
     }
 
-    fn pattern(&mut self) -> ParseResult<Pattern> {
+    fn pattern(&mut self) -> ParseResult<(Vec<Symbol>, Pattern)> {
         let pat = match self.current.token {
             Tkt::Num(n) => Pattern::Lit(Literal::Num(n)),
             Tkt::Str(ref s) => Pattern::Lit(Literal::Str(s.to_string())),
             Tkt::Nil => Pattern::Lit(Literal::Unit),
             Tkt::True => Pattern::Lit(Literal::Bool(true)),
             Tkt::False => Pattern::Lit(Literal::Bool(false)),
-            Tkt::Name(id) => Pattern::Id(id),
+            Tkt::Name(id) => {
+                self.check_unused(&id)?;
+                self.locals.insert(id);
+                self.next()?;
+                return Ok((vec![id], Pattern::Id(id)));
+            }
 
             Tkt::Lparen => {
                 self.next()?;
@@ -361,11 +407,16 @@ impl Parser {
                 }
 
                 let mut pats = vec![];
+                let mut ids = vec![];
                 while self.current.token != Tkt::Rparen {
-                    pats.push(self.pattern()?);
+                    let (names, pat) = self.pattern()?;
+                    ids.extend(names);
+                    pats.push(pat);
                 }
 
-                Pattern::Variant(path, pats)
+                self.next()?;
+
+                return Ok((ids, Pattern::Variant(path, pats)));
             }
 
             ref other => self.throw(format!("Expected pattern, found '{other}'"))?,
@@ -373,7 +424,7 @@ impl Parser {
 
         self.next()?;
 
-        Ok(pat)
+        Ok((vec![], pat))
     }
 
     fn let_(&mut self) -> ParseResult<Expr> {
@@ -382,7 +433,7 @@ impl Parser {
 
         self.expect(Tkt::Let)?;
 
-        let bind = self.pattern()?;
+        let (ids, bind) = self.pattern()?;
 
         self.expect(Tkt::Assign)?;
 
@@ -391,6 +442,10 @@ impl Parser {
         self.expect(Tkt::In)?;
 
         let body = self.expr()?;
+
+        for id in ids {
+            self.locals.remove(&id);
+        }
 
         Ok(Expr::new(
             ExprKind::Let {
@@ -410,11 +465,17 @@ impl Parser {
         let column = self.current.column;
 
         let name = self.var_decl()?;
+
+        self.check_unused(&name)?;
+        self.locals.insert(name);
+
         let value = self.function()?;
 
         self.expect(Tkt::In)?;
 
         let body = self.expr()?;
+
+        self.locals.remove(&name);
 
         Ok(Expr::new(
             ExprKind::Def {
@@ -789,7 +850,7 @@ impl Parser {
                 self.next()?;
                 Expr::new(ExprKind::Lit(Literal::Bool(false)), line, column)
             }
-            Tkt::Name(s) => {
+            Tkt::Name(s) if s.as_str() != "_" => {
                 self.next()?;
                 Expr::new(ExprKind::Var(s), line, column)
             }
