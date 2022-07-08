@@ -139,6 +139,15 @@ impl Parser {
         Ok(())
     }
 
+    fn peek(&mut self) -> ParseResult<Token> {
+        let state = self.state();
+        self.next()?;
+        let token = self.current.clone();
+        self.set_state(state);
+
+        Ok(token)
+    }
+
     fn throw<T>(&self, err: impl Into<String>) -> ParseResult<T> {
         ParseError::throw(self.current.line, self.current.column, err.into())
     }
@@ -226,9 +235,9 @@ impl Parser {
     }
 
     fn args(&mut self) -> ParseResult<Vec<(Vec<Symbol>, Pattern)>> {
-        let mut args = vec![self.pattern()?];
+        let mut args = vec![self.primary_pat()?];
         while self.current.token != Tkt::Assign {
-            args.push(self.pattern()?);
+            args.push(self.primary_pat()?);
         }
         Ok(args)
     }
@@ -384,41 +393,98 @@ impl Parser {
     }
 
     fn pattern(&mut self) -> ParseResult<(Vec<Symbol>, Pattern)> {
+        self.list_pat()
+    }
+
+    fn list_pat(&mut self) -> ParseResult<(Vec<Symbol>, Pattern)> {
+        let (mut identifiers, lhs) = self.sum_pat()?;
+        let rhs = if self.current.token == Tkt::Cons {
+            self.next()?;
+
+            let (ids, pat) = self.list_pat()?;
+            identifiers.extend(ids);
+
+            Some(pat)
+        } else {
+            None
+        };
+
+        match rhs {
+            Some(rhs) => Ok((identifiers, Pattern::List(Box::new(lhs), Box::new(rhs)))),
+            None => Ok((identifiers, lhs)),
+        }
+    }
+
+    fn sum_pat(&mut self) -> ParseResult<(Vec<Symbol>, Pattern)> {
+        if !matches!(self.current.token, Tkt::Name(_)) {
+            return self.primary_pat();
+        }
+
+        let mut path = vec![self.var_decl()?];
+        while let Tkt::Dot = self.current.token {
+            self.next()?;
+            path.push(self.var_decl()?);
+        }
+
+        let mut last_state = self.state();
+        let mut patterns = vec![];
+        let mut identifiers = vec![];
+
+        while let Ok((ids, pat)) = self.primary_pat() {
+            patterns.push(pat);
+            identifiers.extend(ids);
+
+            last_state = self.state();
+        }
+
+        self.set_state(last_state);
+
+        if path.len() == 1 && patterns.is_empty() {
+            Ok((vec![], Pattern::Id(path.pop().unwrap())))
+        } else {
+            Ok((identifiers, Pattern::Variant(path, patterns)))
+        }
+    }
+
+    fn primary_pat(&mut self) -> ParseResult<(Vec<Symbol>, Pattern)> {
+        let peek = self.peek()?.token;
+
         let pat = match self.current.token {
             Tkt::Num(n) => Pattern::Lit(Literal::Num(n)),
             Tkt::Str(ref s) => Pattern::Lit(Literal::Str(s.to_string())),
             Tkt::Nil => Pattern::Lit(Literal::Unit),
             Tkt::True => Pattern::Lit(Literal::Bool(true)),
             Tkt::False => Pattern::Lit(Literal::Bool(false)),
-            Tkt::Name(id) => {
-                self.check_unused(&id)?;
-                self.locals.insert(id);
-                self.next()?;
-                return Ok((vec![id], Pattern::Id(id)));
-            }
-
+            Tkt::Name(name) if peek != Tkt::Dot => Pattern::Id(name),
             Tkt::Lparen => {
                 self.next()?;
 
-                let mut path = vec![self.var_decl()?];
-                while self.current.token == Tkt::Dot {
-                    self.next()?;
-                    path.push(self.var_decl()?);
-                }
-
                 let mut pats = vec![];
-                let mut ids = vec![];
+                let mut identifiers = vec![];
+
                 while self.current.token != Tkt::Rparen {
-                    let (names, pat) = self.pattern()?;
-                    ids.extend(names);
-                    pats.push(pat);
+                    let (ids, pat) = self.pattern()?;
+                    identifiers.extend(ids);
+                    pats.push(pat); // compiles the argument
+
+                    if self.current.token != Tkt::Rparen {
+                        self.expect_and_skip(Tkt::Comma)?;
+                    }
                 }
 
-                self.next()?;
+                self.expect(Tkt::Rparen)?;
 
-                return Ok((ids, Pattern::Variant(path, pats)));
+                if pats.len() == 1 {
+                    return Ok((identifiers, pats.pop().unwrap()));
+                } else {
+                    return Ok((identifiers, Pattern::Tuple(pats)));
+                }
             }
-
+            Tkt::Lbrack => {
+                self.next()?;
+                self.assert(Tkt::Rbrack)?;
+                Pattern::EmptyList
+            }
             ref other => self.throw(format!("Expected pattern, found '{other}'"))?,
         };
 

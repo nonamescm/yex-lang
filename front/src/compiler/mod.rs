@@ -251,6 +251,71 @@ impl Compiler {
 
                 (declarations, labels)
             }
+
+            Pattern::Tuple(args) => {
+                let local = self.emit_unique(loc);
+                let mut labels = vec![];
+                let mut declarations = vec![];
+
+                self.emit_load(&local, loc);
+                self.emit_op(OpCode::Len, loc);
+                self.emit_const((args.len() as f64).into(), loc);
+                self.emit_op(OpCode::Eq, loc);
+
+                // emit the jump place-holder
+                labels.push(self.scope().opcodes.len());
+                self.emit_op(OpCode::Jmf(0), loc);
+
+                for (index, arg) in args.iter().enumerate() {
+                    self.emit_load(&local, loc);
+                    self.emit_op(OpCode::TupGet(index), loc);
+
+                    let (decls, offsets) = self.match_pattern(arg, global, loc);
+                    labels.extend(offsets);
+                    declarations.extend(decls);
+                }
+
+                (declarations, labels)
+            }
+
+            Pattern::List(head, tail) => {
+                let local = self.emit_unique(loc);
+                let mut labels = vec![];
+                let mut declarations = vec![];
+
+                self.emit_load(&local, loc);
+                self.emit_op(OpCode::Loag("List".into()), loc);
+                self.emit_op(OpCode::Ref("head".into()), loc);
+                self.emit_op(OpCode::Call(1), loc);
+
+                let (ids, offsets) = self.match_pattern(head, global, loc);
+
+                labels.extend(offsets);
+                declarations.extend(ids);
+
+                self.emit_load(&local, loc);
+                self.emit_op(OpCode::Loag("List".into()), loc);
+                self.emit_op(OpCode::Ref("tail".into()), loc);
+                self.emit_op(OpCode::Call(1), loc);
+
+                let (ids, offsets) = self.match_pattern(tail, global, loc);
+
+                labels.extend(offsets);
+                declarations.extend(ids);
+
+                (declarations, labels)
+            }
+
+            Pattern::EmptyList => {
+                self.emit_const(List::new().into(), loc);
+                self.emit_op(OpCode::Eq, loc);
+
+                let offset = self.scope().opcodes.len();
+
+                self.emit_op(OpCode::Jmf(0), loc);
+
+                (vec![], vec![offset])
+            }
         }
     }
 

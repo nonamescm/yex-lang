@@ -117,7 +117,7 @@ impl std::fmt::Display for TokenType {
             Self::LessEq => "<=".into(),
             Self::Assign => '='.into(),
             Self::Cons => "::".into(),
-            Self::Dot => '#'.into(),
+            Self::Dot => '.'.into(),
 
             Self::BitAnd => "&&&".into(),
             Self::BitOr => "|||".into(),

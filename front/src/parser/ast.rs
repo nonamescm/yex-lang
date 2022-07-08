@@ -17,6 +17,9 @@ pub enum Pattern {
     Id(VarDecl),
     Lit(Literal),
     Variant(Path, Vec<Pattern>),
+    Tuple(Vec<Pattern>),
+    List(Box<Self>, Box<Self>),
+    EmptyList,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
