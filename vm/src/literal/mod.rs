@@ -7,6 +7,7 @@ use std::{
 //pub mod file;
 pub mod fun;
 pub mod list;
+pub mod result;
 pub mod str;
 pub mod symbol;
 pub mod tuple;
