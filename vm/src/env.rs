@@ -133,6 +133,7 @@ impl EnvTable {
 
     /// Indexes an item in the table
     pub fn get(&self, key: &Symbol) -> Option<Value> {
+        println!("{}", self);
         unsafe {
             let (entry, init) = Self::find_entry(self.entries, self.capacity, key);
             if init {
@@ -155,9 +156,9 @@ impl EnvTable {
     }
 
     /// Iterates over the table
-    fn iter(&self) -> impl Iterator<Item = (Key, Value)> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = (Key, Value)> {
         unsafe {
-            slice::from_raw_parts(self.entries, self.count)
+            slice::from_raw_parts(self.entries, self.capacity)
                 .iter()
                 .filter(|it| it.key.is_some())
                 .map(|it| (it.key.unwrap(), it.value.clone()))
@@ -168,11 +169,11 @@ impl EnvTable {
 impl std::fmt::Display for EnvTable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{")?;
-        for (len, (key, value)) in self.iter().enumerate() {
-            if len != self.len() - 1 {
-                write!(f, "{} = {}, ", key, value)?;
+        for (index, (key, value)) in self.iter().enumerate() {
+            if index == self.len() - 1 {
+                write!(f, "{key} = {value}")?;
             } else {
-                write!(f, "{} = {}", key, value)?;
+                write!(f, "{key} = {value}, ")?;
             }
         }
         write!(f, "}}")
