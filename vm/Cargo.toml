@@ -9,4 +9,3 @@ edition = "2021"
 dlopen = "0.1.8"
 dlopen_derive = "0.1.4"
 libc = "0.2"
-smallvec = { version = "1.7.0", features = ["const_new"] }
