@@ -133,7 +133,6 @@ impl EnvTable {
 
     /// Indexes an item in the table
     pub fn get(&self, key: &Symbol) -> Option<Value> {
-        println!("{}", self);
         unsafe {
             let (entry, init) = Self::find_entry(self.entries, self.capacity, key);
             if init {

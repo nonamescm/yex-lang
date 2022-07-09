@@ -85,4 +85,107 @@ let ops_tests =
 	]
 	in List.map (assert "Partial function test failed") tests
 
+
+let collect =
+	List.fold (fn a b = a + b) ""
+
+def numeric? chr =
+	Str.ord chr >= 48 && Str.ord chr <= 57 || chr == "."
+
+type Token
+	= add
+	| sub
+	| mul
+	| div
+	| lpr
+	| rpr
+	| num n
+with
+	def fromCharList str =
+		match str with
+		| "+" :: rest -> (Token.add, rest)
+		| "-" :: rest -> (Token.sub, rest)
+		| "*" :: rest -> (Token.mul, rest)
+		| "/" :: rest -> (Token.div, rest)
+		| "(" :: rest -> (Token.lpr, rest)
+		| ")" :: rest -> (Token.rpr, rest)
+		| chr :: _ if numeric? chr ->
+			def reducer (cond, number) chr =
+				if cond && numeric? chr
+				then (cond, (chr :: number))
+				else (false, number)
+			in
+			let (_, number) = List.fold reducer (true, []) str
+			in (Token.num (num (collect (List.rev number))), List.drop (List.len number) str)
+
+		| chr :: rest if chr == "\n" || chr == "\t" || chr == " " ->
+			Token.fromCharList rest
+end
+
+def lex input =
+	let (token, rest) = Token.fromCharList input
+	in if rest == [] then token::[] else token::(lex rest)
+
+type Ast
+	= add l r
+	| sub l r
+	| mul l r
+	| div l r
+	| lit x
+with
+	def parse xs =
+		let (expr, _) = Ast.expr xs
+		in expr
+
+	def expr xs = Ast.term xs
+
+	def term xs =
+		let (left, rest) = Ast.fact xs
+		in match rest with
+		| Token.add :: rest' ->
+			let (right, rest'') = Ast.term rest'
+			in (Ast.add left right, rest'')
+		| Token.sub :: rest' ->
+			let (right, rest'') = Ast.term rest'
+			in (Ast.sub left right, rest'')
+		| _ -> (left, rest)
+
+	def fact xs =
+		let (left, rest) = Ast.prim xs
+		in match rest with
+		| Token.mul :: rest' ->
+			let (right, rest'') = Ast.fact rest'
+			in (Ast.mul left right, rest'')
+		| Token.div :: rest' ->
+			let (right, rest'') = Ast.fact rest'
+			in (Ast.div left right, rest'')
+		| _ -> (left, rest)
+
+	def prim xs =
+		match xs with
+		| Token.num num :: xs' -> (Ast.lit num, xs')
+		| Token.lpr :: xs' ->
+			let (body, rest) = Ast.expr xs'
+			in let Token.rpr :: rest' = rest
+			in (body, rest')
+		| Token.sub :: xs' ->
+			let (num, rest) = Ast.prim xs'
+			in (Ast.mul (Ast.lit (-1)) num, rest)
+end
+
+def eval expr =
+	match expr with
+	| Ast.add l r -> eval l + eval r
+	| Ast.sub l r -> eval l - eval r
+	| Ast.mul l r -> eval l * eval r
+	| Ast.div l r -> eval l / eval r
+	| Ast.lit n -> n
+
+let _ =
+	Str.toList "-1 + 2 * 3 - 4 / 5"
+	|> lex
+	|> Ast.parse
+	|> eval
+	|> fn result = assert "Calculator test failed" (result == 4.2)
+
 let _ = println "Everything is alright!"
