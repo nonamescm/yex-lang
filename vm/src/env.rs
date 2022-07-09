@@ -18,6 +18,7 @@ struct Entry {
 }
 
 #[derive(Debug, Clone)]
+#[repr(C)]
 /// A table of key-value pairs
 pub struct EnvTable {
     capacity: usize,

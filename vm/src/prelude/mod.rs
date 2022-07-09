@@ -6,6 +6,43 @@ use crate::{
     raise_err, InterpretResult, Symbol, VirtualMachine, YexModule,
 };
 use std::io::{self, Write};
+#[macro_export]
+/// Insert a function into a `EnvTable`
+macro_rules! insert_fn {
+    ($table:ident, $name: expr, $fn: expr) => {
+        insert_fn!($table, $name, $fn, 1)
+    };
+    ($table:ident, $name: expr, $fn: expr, $arity:expr) => {
+        $table.insert(
+            $crate::Symbol::new($name),
+            Value::Fn(GcRef::new($crate::literal::fun::Fn {
+                arity: $arity,
+                body: GcRef::new(FnKind::Native(|_, it| $fn(&*it))),
+                args: $crate::StackVec::new(),
+            })),
+        )
+    };
+
+    (:vm $table:ident, $name: expr, $fn: expr, $arity:expr) => {
+        $table.insert(
+            $crate::Symbol::new($name),
+            Value::Fn(GcRef::new($crate::literal::fun::Fn {
+                arity: $arity,
+                body: GcRef::new(FnKind::Native(|vm, it| {
+                    $fn(unsafe { vm.as_mut().unwrap() }, &*it)
+                })),
+                args: $crate::StackVec::new(),
+            })),
+        )
+    };
+}
+#[macro_export]
+/// Insert a thing to `EnvTable`
+macro_rules! insert {
+    ($table:ident, $name: expr, $value: expr) => {
+        $table.insert($crate::Symbol::new($name), $value)
+    };
+}
 
 fn println(vm: &mut VirtualMachine, args: &[Value]) -> InterpretResult<Value> {
     println!("{}", show(vm, args.into())?);
@@ -73,59 +110,42 @@ fn raise(args: &[Value]) -> InterpretResult<Value> {
 
 pub fn prelude() -> EnvTable {
     let mut prelude = EnvTable::with_capacity(64);
-    macro_rules! insert_fn {
-        ($name: expr, $fn: expr) => {
-            insert_fn!($name, $fn, 1)
-        };
-        ($name: expr, $fn: expr, $arity:expr) => {
-            prelude.insert(
-                $crate::Symbol::new($name),
-                Value::Fn(GcRef::new(crate::literal::fun::Fn {
-                    arity: $arity,
-                    body: GcRef::new(FnKind::Native(|_, it| $fn(&*it))),
-                    args: $crate::StackVec::new(),
-                })),
-            )
-        };
+    insert_fn!(:vm prelude, "println", println, 1);
+    insert_fn!(:vm prelude, "print", print, 1);
+    insert_fn!(:vm prelude, "print_stack!", debug_stack, 1);
+    insert_fn!(prelude, "input", input);
+    insert_fn!(prelude, "type", r#type);
+    insert_fn!(prelude, "inspect", inspect);
+    insert_fn!(prelude, "num", num);
+    insert_fn!(prelude, "exit", exit);
+    insert_fn!(prelude, "raise", raise, 2);
 
-        (:vm $name: expr, $fn: expr, $arity:expr) => {
-            prelude.insert(
-                $crate::Symbol::new($name),
-                Value::Fn(GcRef::new(crate::literal::fun::Fn {
-                    arity: $arity,
-                    body: GcRef::new(FnKind::Native(|vm, it| {
-                        $fn(unsafe { vm.as_mut().unwrap() }, &*it)
-                    })),
-                    args: $crate::StackVec::new(),
-                })),
-            )
-        };
-    }
+    insert!(prelude, "Nil", Value::Module(GcRef::new(YexModule::nil())));
+    insert!(
+        prelude,
+        "Bool",
+        Value::Module(GcRef::new(YexModule::bool()))
+    );
+    insert!(prelude, "Num", Value::Module(GcRef::new(YexModule::num())));
+    insert!(prelude, "Str", Value::Module(GcRef::new(YexModule::str())));
+    insert!(
+        prelude,
+        "List",
+        Value::Module(GcRef::new(YexModule::list()))
+    );
+    insert!(prelude, "Sym", Value::Module(GcRef::new(YexModule::sym())));
+    insert!(prelude, "Fn", Value::Module(GcRef::new(YexModule::fun())));
+    insert!(
+        prelude,
+        "Tuple",
+        Value::Module(GcRef::new(YexModule::tuple()))
+    );
+    insert!(
+        prelude,
+        "Result",
+        Value::Module(GcRef::new(YexModule::result()))
+    );
+    insert!(prelude, "FFI", Value::Module(GcRef::new(YexModule::ffi())));
 
-    macro_rules! insert {
-        ($name: expr, $value: expr) => {
-            prelude.insert($crate::Symbol::new($name), $value)
-        };
-    }
-
-    insert_fn!(:vm "println", println, 1);
-    insert_fn!(:vm "print", print, 1);
-    insert_fn!(:vm "print_stack!", debug_stack, 1);
-    insert_fn!("input", input);
-    insert_fn!("type", r#type);
-    insert_fn!("inspect", inspect);
-    insert_fn!("num", num);
-    insert_fn!("exit", exit);
-    insert_fn!("raise", raise, 2);
-
-    insert!("Nil", Value::Module(GcRef::new(YexModule::nil())));
-    insert!("Bool", Value::Module(GcRef::new(YexModule::bool())));
-    insert!("Num", Value::Module(GcRef::new(YexModule::num())));
-    insert!("Str", Value::Module(GcRef::new(YexModule::str())));
-    insert!("List", Value::Module(GcRef::new(YexModule::list())));
-    insert!("Sym", Value::Module(GcRef::new(YexModule::sym())));
-    insert!("Fn", Value::Module(GcRef::new(YexModule::fun())));
-    insert!("Tuple", Value::Module(GcRef::new(YexModule::tuple())));
-    insert!("Result", Value::Module(GcRef::new(YexModule::result())));
     prelude
 }
