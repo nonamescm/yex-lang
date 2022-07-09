@@ -313,6 +313,7 @@ name = "vm"
 version = "0.1.0"
 dependencies = [
  "dlopen",
+ "dlopen_derive",
  "libc",
  "smallvec",
 ]

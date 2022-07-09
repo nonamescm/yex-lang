@@ -10,6 +10,8 @@ pub struct YexModule {
     /// Module functions.
     pub fields: EnvTable,
 }
+#[macro_export]
+/// Add Fields/Methods to a `YexModule`
 macro_rules! fields {
     ($sname:expr => {
         $(
@@ -264,6 +266,15 @@ impl YexModule {
             }))),
         );
         Self::new(Symbol::from("Result"), methods)
+    }
+    /// Generates a new FFI type
+    pub fn ffi() -> Self {
+        let mut methods = EnvTable::new();
+        fields!(FFI => {
+            open @ literal::ffi::methods::open => 1,
+            get  @ literal::ffi::methods::get => 2,
+        }, methods);
+        Self::new(Symbol::from("FFI"), methods)
     }
     /// Creates a new Nil type.
     pub fn nil() -> Self {

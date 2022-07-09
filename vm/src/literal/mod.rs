@@ -5,6 +5,7 @@ use std::{
 };
 
 //pub mod file;
+pub mod ffi;
 pub mod fun;
 pub mod list;
 pub mod result;
@@ -20,7 +21,7 @@ use list::List;
 use symbol::Symbol;
 use yexmodule::YexModule;
 
-use self::{symbol::YexSymbol, tuple::Tuple};
+use self::{ffi::FFI, symbol::YexSymbol, tuple::Tuple};
 
 pub fn show(_: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
     match &x[0] {
@@ -31,6 +32,7 @@ pub fn show(_: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
         tag @ Value::Tagged(..) => Ok(tag.to_string()),
         Value::Num(n) => Ok(n.to_string()),
         Value::Bool(b) => Ok(b.to_string()),
+        Value::FFI(f) => Ok(f.to_string()),
         Value::Fn(f) => Ok(format!("fn({})", f.arity)),
         Value::Nil => Ok("nil".to_string()),
         Value::Module(m) => Ok(format!("type '{}'", m.name.as_str())),
@@ -116,6 +118,8 @@ pub enum Value {
     Tuple(Tuple),
     /// Tagged tuples
     Tagged(GcRef<YexModule>, Symbol, Tuple),
+    /// External Libraries
+    FFI(FFI),
     /// null
     Nil,
 }
@@ -133,6 +137,7 @@ impl Clone for Value {
             Sym(s) => Sym(*s),
             Module(t) => Module(t.clone()),
             Tuple(t) => Tuple(t.clone()),
+            FFI(f) => FFI(f.clone()),
             Tagged(m, s, t) => Tagged(m.clone(), *s, t.clone()),
             Nil => Nil,
         }
@@ -157,6 +162,7 @@ impl Value {
             Value::Bool(_) => mem::size_of::<bool>(),
             Value::Module(t) => mem::size_of_val(&t),
             Value::Tuple(t) => t.len(),
+            Value::FFI(f) => mem::size_of_val(f),
             Value::Tagged(_, _, t) => t.len(),
             Value::Nil => 4,
         }
@@ -189,6 +195,7 @@ impl Value {
             Nil => false,
             List(xs) => !xs.is_empty(),
             Fn(_) => true,
+            FFI(_) => true,
             Module(_) => true,
             Tuple(_) => true,
             Tagged(..) => true,
@@ -213,6 +220,7 @@ impl Value {
             Nil => YexModule::nil(),
             Sym(_) => YexModule::sym(),
             Tuple(_) => YexModule::tuple(),
+            FFI(_) => YexModule::ffi(),
             Module(_) | Tagged(..) => unreachable!(),
         };
 
@@ -246,6 +254,7 @@ impl std::fmt::Display for Value {
             Num(n) => n.to_string(),
             Module(t) => format!("type '{}'", t.name),
             Tuple(t) => format!("{t}"),
+            FFI(f) => f.to_string(),
             Tagged(_, tag, value) => {
                 write!(f, "({}", tag.as_str())?;
                 for item in value.0.iter() {
@@ -369,6 +378,7 @@ impl_get!(GcRef<YexModule>: Module);
 impl_get!(GcRef<Fn>: Fn);
 impl_get!(Symbol: Sym(s) => s.0);
 impl_get!(List: List);
+impl_get!(FFI: FFI);
 impl_get!(Tuple: Tuple);
 impl_get!((GcRef<YexModule>, Symbol, Tuple): Tagged(m, s, t) => (m.clone(), *s, t.clone()));
 impl_get!(usize: Num(n) => {

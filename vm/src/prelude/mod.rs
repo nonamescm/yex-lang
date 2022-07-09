@@ -127,5 +127,7 @@ pub fn prelude() -> EnvTable {
     insert!("Fn", Value::Module(GcRef::new(YexModule::fun())));
     insert!("Tuple", Value::Module(GcRef::new(YexModule::tuple())));
     insert!("Result", Value::Module(GcRef::new(YexModule::result())));
+    insert!("FFI", Value::Module(GcRef::new(YexModule::ffi())));
+
     prelude
 }
