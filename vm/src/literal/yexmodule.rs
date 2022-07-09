@@ -1,4 +1,4 @@
-use crate::{env::EnvTable, gc::GcRef, Symbol, Value};
+use crate::{env::EnvTable, gc::GcRef, Symbol, Tuple, Value};
 
 use super::{fun::Fn, list, str, tuple};
 
@@ -9,6 +9,25 @@ pub struct YexModule {
     pub name: Symbol,
     /// Module functions.
     pub fields: EnvTable,
+}
+macro_rules! fields {
+    ($sname:expr => {
+            $(
+                $name:expr => $arg_count:expr$(,)?
+            ),*
+        }, $methods:ident) => {
+        $(
+            $methods.insert(
+                Symbol::from(stringify!($name)),
+                Value::Fn(GcRef::new(Fn::new_native($arg_count, |_, args| {
+                    let this: GcRef<Self> = GcRef::new(Self::default());
+                    let tup = Tuple(GcRef::new(args.into_boxed_slice()));
+                    let value = Value::Tagged(this, Symbol::from(concat!(stringify!($sname), ".", stringify!($name))), tup);
+                    Ok(value)
+                }))),
+            );
+         )*
+    };
 }
 
 impl YexModule {
@@ -220,7 +239,21 @@ impl YexModule {
 
         Self::new(Symbol::from("Fn"), methods)
     }
-
+    /// Creates a new Result type
+    pub fn result() -> Self {
+        let mut methods = EnvTable::new();
+        fields!(Result => {
+            ok => 1,
+            fail => 1,
+        }, methods);
+        methods.insert(
+            Symbol::from("show"),
+            Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
+                super::show(vm, x).map(|x| x.into())
+            }))),
+        );
+        Self::new(Symbol::from("Result"), methods)
+    }
     /// Creates a new Nil type.
     pub fn nil() -> Self {
         let mut methods = EnvTable::new();

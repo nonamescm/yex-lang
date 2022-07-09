@@ -126,6 +126,6 @@ pub fn prelude() -> EnvTable {
     insert!("Sym", Value::Module(GcRef::new(YexModule::sym())));
     insert!("Fn", Value::Module(GcRef::new(YexModule::fun())));
     insert!("Tuple", Value::Module(GcRef::new(YexModule::tuple())));
-
+    insert!("Result", Value::Module(GcRef::new(YexModule::result())));
     prelude
 }
