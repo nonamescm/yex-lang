@@ -1,4 +1,4 @@
-use crate::{env::EnvTable, gc::GcRef, Symbol, Tuple, Value};
+use crate::{env::EnvTable, gc::GcRef, literal, Symbol, Value};
 
 use super::{fun::Fn, list, str, tuple};
 
@@ -12,10 +12,10 @@ pub struct YexModule {
 }
 macro_rules! fields {
     ($sname:expr => {
-            $(
-                $name:expr => $arg_count:expr$(,)?
-            ),*
-        }, $methods:ident) => {
+        $(
+          $name:expr => $arg_count:expr$(,)?
+        ),*
+    }, $methods:ident) => {
         $(
             $methods.insert(
                 Symbol::from(stringify!($name)),
@@ -28,7 +28,18 @@ macro_rules! fields {
             );
          )*
     };
-}
+    ($sname:expr => {
+        $(
+          $name:tt @ $func:expr => $arg_count:expr$(,)?
+        ),*
+    }, $methods:ident) => {
+        $(
+            $methods.insert(
+                Symbol::from(stringify!($name)),
+                Value::Fn(GcRef::new(Fn::new_native($arg_count, $func))),
+            );
+         )*
+    };}
 
 impl YexModule {
     /// Creates a new Yex type.
@@ -243,8 +254,8 @@ impl YexModule {
     pub fn result() -> Self {
         let mut methods = EnvTable::new();
         fields!(Result => {
-            ok => 1,
-            fail => 1,
+            ok   @  literal::result::vm_ok => 1,
+            fail @  literal::result::vm_fail => 1,
         }, methods);
         methods.insert(
             Symbol::from("show"),

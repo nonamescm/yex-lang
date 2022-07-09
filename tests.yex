@@ -187,5 +187,14 @@ let _ =
 	|> Ast.parse
 	|> eval
 	|> fn result = assert "Calculator test failed" (result == 4.2)
-
+let _ = 
+	match (Result.ok 10) 
+		with
+			| Result.ok 10 -> ()
+			| _ -> assert "Result (ok) test failed!" false
+let _ = 
+	match (Result.fail 10)
+		with 
+			| Result.fail 10 -> ()
+			| Result.ok 10 -> assert "Result (err) test failed!"
 let _ = println "Everything is alright!"
