@@ -76,7 +76,7 @@ use std::{mem::swap, ops, ptr};
 /// model
 pub struct VirtualMachine {
     stack: Stack,
-    locals: [Value; 1024],
+    locals: Vec<Value>,
     used_locals: usize,
     /// the constants of the bytecode
     pub constants: Vec<Value>,
@@ -271,9 +271,14 @@ impl VirtualMachine {
             OpCode::Save(offset) => {
                 let value = self.pop();
 
+                if self.used_locals + 1 >= self.locals.capacity() {
+                    let cap = self.locals.capacity();
+                    self.locals.resize(cap, NIL);
+                }
+
+                self.locals[offset + (self.used_locals - *frame_locals)] = value;
                 self.used_locals += 1;
                 *frame_locals += 1;
-                self.locals[offset + (self.used_locals - *frame_locals)] = value;
             }
             OpCode::Drop(_) => {
                 *frame_locals -= 1;
@@ -514,7 +519,7 @@ impl Default for VirtualMachine {
         let prelude = prelude::prelude();
         Self {
             stack: STACK,
-            locals: [NIL; 1024],
+            locals: vec![NIL; u16::MAX.into()],
             used_locals: 0,
             constants: Vec::new(),
             globals: prelude,
