@@ -21,7 +21,7 @@ use list::List;
 use symbol::Symbol;
 use yexmodule::YexModule;
 
-use self::{ffi::FFI, symbol::YexSymbol, tuple::Tuple};
+use self::{ffi::Ffi, symbol::YexSymbol, tuple::Tuple};
 
 pub fn show(_: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
     match &x[0] {
@@ -119,7 +119,7 @@ pub enum Value {
     /// Tagged tuples
     Tagged(GcRef<YexModule>, Symbol, Tuple),
     /// External Libraries
-    FFI(FFI),
+    FFI(Ffi),
     /// null
     Nil,
 }
@@ -378,7 +378,7 @@ impl_get!(GcRef<YexModule>: Module);
 impl_get!(GcRef<Fn>: Fn);
 impl_get!(Symbol: Sym(s) => s.0);
 impl_get!(List: List);
-impl_get!(FFI: FFI);
+impl_get!(Ffi: FFI);
 impl_get!(Tuple: Tuple);
 impl_get!((GcRef<YexModule>, Symbol, Tuple): Tagged(m, s, t) => (m.clone(), *s, t.clone()));
 impl_get!(usize: Num(n) => {
