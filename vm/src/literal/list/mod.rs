@@ -1,4 +1,4 @@
-pub mod methods;
+pub(crate) mod methods;
 
 use crate::{
     gc::GcRef,
