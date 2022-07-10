@@ -15,11 +15,14 @@
     clippy::missing_panics_doc
 )]
 //! Virtual Machine implementation for the yex programming language
-mod env;
-mod error;
+#[allow(missing_docs)]
+pub mod env;
+#[allow(missing_docs)]
+pub mod error;
 #[doc(hidden)]
 pub mod gc;
-mod literal;
+#[allow(missing_docs)]
+pub mod literal;
 mod opcode;
 mod prelude;
 mod stack;

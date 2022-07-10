@@ -1,4 +1,5 @@
 use std::{
+    any::Any,
     cmp::Ordering,
     mem,
     ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub},
@@ -21,7 +22,11 @@ use list::List;
 use symbol::Symbol;
 use yexmodule::YexModule;
 
-use self::{ffi::Ffi, symbol::YexSymbol, tuple::Tuple};
+use self::{
+    ffi::{userdata::UserData, Ffi},
+    symbol::YexSymbol,
+    tuple::Tuple,
+};
 
 pub fn show(_: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
     match &x[0] {
@@ -33,12 +38,14 @@ pub fn show(_: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
         Value::Num(n) => Ok(n.to_string()),
         Value::Bool(b) => Ok(b.to_string()),
         Value::FFI(f) => Ok(f.to_string()),
+        Value::UserData(u) => Ok(format!("<userdata({:?})>", u.type_id())),
         Value::Fn(f) => Ok(format!("fn({})", f.arity)),
         Value::Nil => Ok("nil".to_string()),
         Value::Module(m) => Ok(format!("type '{}'", m.name.as_str())),
     }
 }
 
+#[must_use]
 pub fn nil() -> Value {
     Value::Nil
 }
@@ -118,6 +125,8 @@ pub enum Value {
     Tuple(Tuple),
     /// Tagged tuples
     Tagged(GcRef<YexModule>, Symbol, Tuple),
+    /// FFI User Data
+    UserData(UserData),
     /// External Libraries
     FFI(Ffi),
     /// null
@@ -126,7 +135,7 @@ pub enum Value {
 
 impl Clone for Value {
     fn clone(&self) -> Self {
-        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, FFI};
+        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, UserData, FFI};
 
         match self {
             List(xs) => List(xs.clone()),
@@ -138,6 +147,7 @@ impl Clone for Value {
             Module(t) => Module(t.clone()),
             Tuple(t) => Tuple(t.clone()),
             FFI(f) => FFI(f.clone()),
+            UserData(u) => UserData(u.clone()),
             Tagged(m, s, t) => Tagged(m.clone(), *s, t.clone()),
             Nil => Nil,
         }
@@ -165,6 +175,7 @@ impl Value {
             Value::Module(t) => mem::size_of_val(&t),
             Value::Tuple(t) | Value::Tagged(_, _, t) => t.len(),
             Value::FFI(f) => mem::size_of_val(f),
+            Value::UserData(d) => mem::size_of_val(d),
             Value::Nil => 4,
         }
     }
@@ -185,7 +196,7 @@ impl Value {
     /// Convert the constant to a boolean
     #[must_use]
     pub fn to_bool(&self) -> bool {
-        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, FFI};
+        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, UserData, FFI};
 
         match self {
             Bool(b) => *b,
@@ -193,14 +204,15 @@ impl Value {
             Num(n) if *n == 0.0 => false,
             Nil => false,
             List(xs) => !xs.is_empty(),
-            Sym(_) | Str(_) | Num(_) | Fn(_) | FFI(_) | Module(_) | Tuple(_) | Tagged(..) => true,
+            Sym(_) | Str(_) | Num(_) | Fn(_) | FFI(_) | Module(_) | Tuple(_) | Tagged(..)
+            | UserData(_) => true,
         }
     }
 
     /// returns the type of the value
     #[must_use]
     pub fn type_of(&self) -> GcRef<YexModule> {
-        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, FFI};
+        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, UserData, FFI};
 
         match self {
             Module(t) | Tagged(t, _, _) => return t.clone(),
@@ -217,7 +229,7 @@ impl Value {
             Sym(_) => YexModule::sym(),
             Tuple(_) => YexModule::tuple(),
             FFI(_) => YexModule::ffi(),
-            Module(_) | Tagged(..) => unreachable!(),
+            Module(_) | UserData(_) | Tagged(..) => unreachable!(),
         };
 
         GcRef::new(ty)
@@ -240,7 +252,7 @@ impl From<Value> for bool {
 
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, FFI};
+        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, UserData, FFI};
         let tk = match self {
             Fn(f) => format!("fn({})", f.arity),
             Nil => "nil".to_string(),
@@ -250,6 +262,7 @@ impl std::fmt::Display for Value {
             Num(n) => n.to_string(),
             Module(t) => format!("type '{}'", t.name),
             Tuple(t) => format!("{t}"),
+            UserData(u) => format!("<userdata({:?})>", u.type_id()),
             FFI(f) => f.to_string(),
             Tagged(_, tag, value) => {
                 write!(f, "({}", tag.as_str())?;

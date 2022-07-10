@@ -1,4 +1,5 @@
 pub mod methods;
+pub mod userdata;
 
 use std::fmt::{Debug, Display};
 
@@ -16,7 +17,10 @@ pub struct Ffi {
     path: String,
 }
 impl Ffi {
-    pub unsafe fn open(path: String) -> Result<Self, dlopen::Error> {
+    /// Open a external library
+    /// # SAFETY:
+    ///   This depends on safety of `dlopen`.
+    pub(crate) unsafe fn open(path: String) -> Result<Self, dlopen::Error> {
         let module: Container<Api> = Container::load(&path)?;
         Ok(Self {
             module: GcRef::new(module),
@@ -25,9 +29,9 @@ impl Ffi {
         })
     }
 
-    pub fn get(&mut self, val: impl Into<Symbol>) -> Option<Value> {
+    pub fn get(&mut self, val: &Symbol) -> Option<Value> {
         let table = self.table.get_or_insert(self.module.init());
-        table.get(&val.into())
+        table.get(val)
     }
 }
 impl Debug for Ffi {
