@@ -57,11 +57,11 @@ let list_test =
 		"List tests failed"
 		(
 			[1, 2, 3]
-			|> List.map (fn i = i * 2)
-			|> List.map (fn i = i + 1)
-			|> List.filter (fn i = i != 3)
-			|> List.fold (fn acc x = acc + x) 0
-			|> (fn x = x == 12)
+			|> List.map (fn i -> i * 2)
+			|> List.map (fn i -> i + 1)
+			|> List.filter (fn i -> i != 3)
+			|> List.fold (fn acc x -> acc + x) 0
+			|> (fn x -> x == 12)
 		)
 
 def tailcall counter _ =
@@ -87,7 +87,7 @@ let ops_tests =
 
 
 let collect =
-	List.fold (fn a b = a + b) ""
+	List.fold (fn a b -> a + b) ""
 
 def numeric? chr =
 	Str.ord chr >= 48 && Str.ord chr <= 57 || chr == "."
@@ -186,7 +186,7 @@ let _ =
 	|> lex
 	|> Ast.parse
 	|> eval
-	|> fn result = assert "Calculator test failed" (result == 4.2)
+	|> fn result -> assert "Calculator test failed" (result == 4.2)
 let _ = 
 	match (Result.ok 10) 
 		with
