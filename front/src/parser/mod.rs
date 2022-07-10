@@ -104,7 +104,7 @@ impl Parser {
         while self.current.token != Tkt::End {
             self.expect(&Tkt::Def)?;
             let bind = self.var_decl()?;
-            let value = self.function()?;
+            let value = self.function(false)?;
 
             members.push(Def { value, bind });
         }
@@ -129,7 +129,7 @@ impl Parser {
         self.expect(&Tkt::Def)?;
 
         let bind = self.var_decl()?;
-        let value = self.function()?;
+        let value = self.function(false)?;
 
         Ok(Stmt::new(StmtKind::Def(Def { value, bind }), line, column))
     }
@@ -234,10 +234,16 @@ impl Parser {
         ))
     }
 
-    fn args(&mut self) -> ParseResult<Vec<(Vec<Symbol>, Pattern)>> {
+    fn args(&mut self, is_lambda: bool) -> ParseResult<Vec<(Vec<Symbol>, Pattern)>> {
         let mut args = vec![self.primary_pat()?];
-        while self.current.token != Tkt::Assign {
-            args.push(self.primary_pat()?);
+        if is_lambda {
+            while self.current.token != Tkt::Arrow {
+                args.push(self.primary_pat()?);
+            }
+        } else {
+            while self.current.token != Tkt::Assign {
+                args.push(self.primary_pat()?);
+            }
         }
         Ok(args)
     }
@@ -339,10 +345,10 @@ impl Parser {
 
     fn fn_(&mut self) -> ParseResult<Expr> {
         self.expect(&Tkt::Fn)?;
-        self.function()
+        self.function(true)
     }
 
-    fn function(&mut self) -> ParseResult<Expr> {
+    fn function(&mut self, is_lambda: bool) -> ParseResult<Expr> {
         let line = self.current.line;
         let column = self.current.column;
 
@@ -351,14 +357,14 @@ impl Parser {
         let mut ids = vec![];
         let mut args = vec![];
 
-        let pats = self.args()?;
+        let pats = self.args(is_lambda)?;
 
         for (names, arg) in pats {
             ids.extend(names);
             args.push(arg);
         }
 
-        let body = self.fn_body()?;
+        let body = self.fn_body(is_lambda)?;
 
         for id in ids {
             self.locals.remove(&id);
@@ -376,8 +382,12 @@ impl Parser {
         ))
     }
 
-    fn fn_body(&mut self) -> ParseResult<Expr> {
-        self.expect(&Tkt::Assign)?;
+    fn fn_body(&mut self, is_lambda: bool) -> ParseResult<Expr> {
+        if is_lambda {
+            self.expect(&Tkt::Arrow)?;
+        } else {
+            self.expect(&Tkt::Assign)?;
+        }
         self.expr()
     }
 
@@ -534,7 +544,7 @@ impl Parser {
         self.check_unused(&name)?;
         self.locals.insert(name);
 
-        let value = self.function()?;
+        let value = self.function(false)?;
 
         self.expect(&Tkt::In)?;
 
