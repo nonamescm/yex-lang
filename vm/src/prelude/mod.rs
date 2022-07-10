@@ -2,22 +2,26 @@ use crate::{
     env::EnvTable,
     error::InterpretError,
     gc::GcRef,
-    literal::{fun::FnKind, nil, show, TryGet, Value},
+    literal::{nil, show, TryGet, Value},
     raise_err, InterpretResult, Symbol, VirtualMachine, YexModule,
 };
 use std::io::{self, Write};
+
 #[macro_export]
 /// Insert a function into a `EnvTable`
 macro_rules! insert_fn {
     ($table:ident, $name: expr, $fn: expr) => {
         insert_fn!($table, $name, $fn, 1)
     };
+
     ($table:ident, $name: expr, $fn: expr, $arity:expr) => {
         $table.insert(
             $crate::Symbol::new($name),
-            Value::Fn(GcRef::new($crate::literal::fun::Fn {
+            $crate::literal::Value::Fn($crate::gc::GcRef::new($crate::literal::fun::Fn {
                 arity: $arity,
-                body: GcRef::new(FnKind::Native(|_, it| $fn(&*it))),
+                body: $crate::gc::GcRef::new($crate::literal::fun::FnKind::Native(|_, it| {
+                    $fn(&*it)
+                })),
                 args: $crate::StackVec::new(),
             })),
         )
@@ -26,9 +30,9 @@ macro_rules! insert_fn {
     (:vm $table:ident, $name: expr, $fn: expr, $arity:expr) => {
         $table.insert(
             $crate::Symbol::new($name),
-            Value::Fn(GcRef::new($crate::literal::fun::Fn {
+            $crate::literal::Value::Fn($crate::gc::GcRef::new($crate::literal::fun::Fn {
                 arity: $arity,
-                body: GcRef::new(FnKind::Native(|vm, it| {
+                body: $crate::gc::GcRef::new($crate::literal::fun::FnKind::Native(|vm, it| {
                     $fn(unsafe { vm.as_mut().unwrap() }, &*it)
                 })),
                 args: $crate::StackVec::new(),
