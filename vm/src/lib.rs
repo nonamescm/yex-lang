@@ -3,11 +3,11 @@
 #![deny(clippy::all)]
 #![allow(clippy::unit_arg, clippy::option_map_unit_fn)]
 //! Virtual Machine implementation for the yex programming language
-mod env;
-mod error;
+pub mod env;
+pub mod error;
 #[doc(hidden)]
 pub mod gc;
-mod literal;
+pub mod literal;
 mod opcode;
 mod prelude;
 mod stack;
