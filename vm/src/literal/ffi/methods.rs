@@ -2,7 +2,7 @@ use crate::{
     error::InterpretResult,
     gc::GcRef,
     literal::{result, TryGet},
-    Value, VirtualMachine,
+    Symbol, Value, VirtualMachine,
 };
 
 use super::Ffi;
@@ -18,6 +18,6 @@ pub fn open(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
 }
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let mut this: Ffi = args[1].get()?;
-    let identifier: String = args[0].get()?;
-    Ok(this.get(identifier).unwrap_or(Value::Nil))
+    let identifier: Symbol = args[0].get()?;
+    Ok(this.get(&identifier).unwrap_or(Value::Nil))
 }
