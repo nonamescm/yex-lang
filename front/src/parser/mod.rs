@@ -959,15 +959,15 @@ impl Parser {
 
 #[test]
 fn parse_fn() {
-    crate::parse_expr("fn arg = 10").unwrap();
+    crate::parse_expr("fn arg -> 10").unwrap();
 }
 
 #[test]
 fn parse_fn_err_no_pattern() {
-    assert!(crate::parse_expr("fn = 20").is_err());
+    assert!(crate::parse_expr("fn -> 20").is_err());
 }
 
 #[test]
 fn parse_fn_err_no_expr() {
-    assert!(crate::parse_expr("fn arg = ").is_err());
+    assert!(crate::parse_expr("fn arg -> ").is_err());
 }
