@@ -12,7 +12,7 @@ pub fn open(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
     let res = unsafe { Ffi::open(path) };
     //TODO: Create a error type for this
     match res.map_err(|err| result::fail(vec![Value::Str(GcRef::new(err.to_string()))])) {
-        Ok(f) => Ok(Value::FFI(f)),
+        Ok(f) => Ok(result::ok(vec![Value::FFI(f)])),
         Err(e) => Ok(e),
     }
 }
