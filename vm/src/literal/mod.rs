@@ -388,6 +388,7 @@ impl_get!(GcRef<Fn>: Fn);
 impl_get!(Symbol: Sym(s) => s.0);
 impl_get!(List: List);
 impl_get!(Ffi: FFI);
+impl_get!(UserData: UserData);
 impl_get!(Tuple: Tuple);
 impl_get!((GcRef<YexModule>, Symbol, Tuple): Tagged(m, s, t) => (m.clone(), *s, t.clone()));
 impl_get!(usize: Num(n) => {
