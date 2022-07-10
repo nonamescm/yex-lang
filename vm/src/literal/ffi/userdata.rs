@@ -5,7 +5,7 @@ use std::{
 
 use crate::gc::GcRef;
 #[derive(Debug, Clone)]
-pub struct UserData(GcRef<Box<dyn Any>>);
+pub struct UserData(pub GcRef<Box<dyn Any>>);
 
 impl PartialEq for UserData {
     fn eq(&self, _: &Self) -> bool {
