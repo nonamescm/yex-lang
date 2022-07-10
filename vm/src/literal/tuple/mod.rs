@@ -14,11 +14,13 @@ impl From<Vec<Value>> for Tuple {
 
 impl Tuple {
     /// Returns the length of the tuple
+    #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
     /// checks if self is `unit` (a.k.a. empty tuple)
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -31,7 +33,7 @@ impl std::fmt::Display for Tuple {
             "({})",
             self.0
                 .iter()
-                .map(|v| v.to_string())
+                .map(std::string::ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(", ")
         )

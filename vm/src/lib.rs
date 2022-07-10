@@ -1,7 +1,19 @@
-#![deny(missing_docs)]
-#![allow(unused_unsafe)]
-#![deny(clippy::all)]
-#![allow(clippy::unit_arg, clippy::option_map_unit_fn)]
+#![deny(missing_docs, clippy::all)]
+#![warn(clippy::pedantic)]
+#![allow(
+    unused_unsafe,
+    clippy::unit_arg,
+    clippy::option_map_unit_fn,
+    clippy::module_name_repetitions,
+    clippy::needless_pass_by_value,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::unnecessary_wraps,
+    clippy::too_many_lines,
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc
+)]
 //! Virtual Machine implementation for the yex programming language
 mod env;
 mod error;
@@ -95,6 +107,7 @@ impl VirtualMachine {
     }
 
     /// Pop's the last value on the stack
+    #[must_use]
     pub fn pop_last(&self) -> &Value {
         self.stack.last().unwrap_or(&Value::Nil)
     }
@@ -178,7 +191,7 @@ impl VirtualMachine {
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn run_op(&mut self, op: OpCode, frame_locals: &mut usize) -> InterpretResult<()> {
         match op {
             OpCode::Nop => (),
@@ -216,7 +229,7 @@ impl VirtualMachine {
                 for _ in 0..n {
                     vec.push(self.pop());
                 }
-                for elem in vec.into_iter() {
+                for elem in vec {
                     self.push(elem);
                 }
             }
@@ -349,7 +362,7 @@ impl VirtualMachine {
                 let module: GcRef<YexModule> = self.pop().get()?;
                 let tup: Tuple = self.pop().get()?;
 
-                self.push(Value::Tagged(module, tag, tup))
+                self.push(Value::Tagged(module, tag, tup));
             }
 
             OpCode::TagOf => match self.pop() {
@@ -383,7 +396,7 @@ impl VirtualMachine {
     /// Debug the values on the stack and in the bytecode
     pub fn debug_stack(&self, _: &OpCode) {}
 
-    #[inline(always)]
+    #[inline]
     fn call_args(&mut self, arity: usize, fun: &Fn) -> Option<FnArgs> {
         if fun.is_bytecode() && fun.args.is_empty() {
             return None;
@@ -406,7 +419,7 @@ impl VirtualMachine {
         Some(args)
     }
 
-    #[inline(always)]
+    #[inline]
     pub(crate) fn call(&mut self, arity: usize) -> InterpretResult<()> {
         let fun: GcRef<Fn> = self.pop().get()?;
 
@@ -417,7 +430,7 @@ impl VirtualMachine {
                 args.push(self.pop());
             }
 
-            self.push(Value::Fn(GcRef::new(fun.apply(args))));
+            self.push(Value::Fn(GcRef::new(fun.apply(&args))));
             return Ok(());
         }
 
@@ -437,7 +450,7 @@ impl VirtualMachine {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     fn call_bytecode(
         &mut self,
         bytecode: BytecodeRef,
@@ -447,7 +460,7 @@ impl VirtualMachine {
 
         args.map(|stack| {
             for arg in stack {
-                self.push(arg)
+                self.push(arg);
             }
         });
 
@@ -456,7 +469,7 @@ impl VirtualMachine {
         Ok(())
     }
 
-    #[inline(always)]
+    #[inline]
     fn call_native(&mut self, fp: NativeFn, args: Option<FnArgs>) -> InterpretResult<()> {
         let args = args.unwrap_or_else(FnArgs::new).reverse().into();
         let result = fp(self, args);
@@ -483,7 +496,7 @@ impl VirtualMachine {
 
     #[track_caller]
     pub(crate) fn push(&mut self, constant: Value) {
-        self.stack.push(constant)
+        self.stack.push(constant);
     }
 
     #[track_caller]

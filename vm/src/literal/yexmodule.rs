@@ -45,11 +45,13 @@ macro_rules! fields {
 
 impl YexModule {
     /// Creates a new Yex type.
+    #[must_use]
     pub fn new(name: Symbol, fields: EnvTable) -> Self {
         Self { name, fields }
     }
 
     /// Creates a new List type.
+    #[must_use]
     pub fn list() -> Self {
         let mut methods = EnvTable::new();
 
@@ -127,6 +129,7 @@ impl YexModule {
     }
 
     /// Creates a new Tuple type.
+    #[must_use]
     pub fn tuple() -> Self {
         let mut methods = EnvTable::new();
 
@@ -149,13 +152,14 @@ impl YexModule {
     }
 
     /// Creates a new Num type.
+    #[must_use]
     pub fn num() -> Self {
         let mut methods = EnvTable::new();
 
         methods.insert(
             Symbol::from("show"),
             Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
-                super::show(vm, x).map(|x| x.into())
+                super::show(vm, x).map(std::convert::Into::into)
             }))),
         );
 
@@ -163,13 +167,14 @@ impl YexModule {
     }
 
     /// Creates a new Sym type.
+    #[must_use]
     pub fn sym() -> Self {
         let mut methods = EnvTable::new();
 
         methods.insert(
             Symbol::from("show"),
             Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
-                super::show(vm, x).map(|x| x.into())
+                super::show(vm, x).map(std::convert::Into::into)
             }))),
         );
 
@@ -177,6 +182,7 @@ impl YexModule {
     }
 
     /// Creates a new Str type.
+    #[must_use]
     pub fn str() -> Self {
         let mut methods = EnvTable::new();
 
@@ -218,7 +224,7 @@ impl YexModule {
         methods.insert(
             Symbol::from("show"),
             Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
-                super::show(vm, x).map(|x| x.into())
+                super::show(vm, x).map(std::convert::Into::into)
             }))),
         );
 
@@ -226,13 +232,14 @@ impl YexModule {
     }
 
     /// Creates a new Bool type.
+    #[must_use]
     pub fn bool() -> Self {
         let mut methods = EnvTable::new();
 
         methods.insert(
             Symbol::from("show"),
             Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
-                super::show(vm, x).map(|x| x.into())
+                super::show(vm, x).map(std::convert::Into::into)
             }))),
         );
 
@@ -240,19 +247,21 @@ impl YexModule {
     }
 
     /// Creates a new Fn type.
+    #[must_use]
     pub fn fun() -> Self {
         let mut methods = EnvTable::new();
 
         methods.insert(
             Symbol::from("show"),
             Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
-                super::show(vm, x).map(|x| x.into())
+                super::show(vm, x).map(std::convert::Into::into)
             }))),
         );
 
         Self::new(Symbol::from("Fn"), methods)
     }
     /// Creates a new Result type
+    #[must_use]
     pub fn result() -> Self {
         let mut methods = EnvTable::new();
         fields!(Result => {
@@ -262,12 +271,13 @@ impl YexModule {
         methods.insert(
             Symbol::from("show"),
             Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
-                super::show(vm, x).map(|x| x.into())
+                super::show(vm, x).map(std::convert::Into::into)
             }))),
         );
         Self::new(Symbol::from("Result"), methods)
     }
     /// Generates a new FFI type
+    #[must_use]
     pub fn ffi() -> Self {
         let mut methods = EnvTable::new();
         fields!(FFI => {
@@ -277,13 +287,14 @@ impl YexModule {
         Self::new(Symbol::from("FFI"), methods)
     }
     /// Creates a new Nil type.
+    #[must_use]
     pub fn nil() -> Self {
         let mut methods = EnvTable::new();
 
         methods.insert(
             Symbol::from("show"),
             Value::Fn(GcRef::new(Fn::new_native(1, |vm, x| {
-                super::show(vm, x).map(|x| x.into())
+                super::show(vm, x).map(std::convert::Into::into)
             }))),
         );
 

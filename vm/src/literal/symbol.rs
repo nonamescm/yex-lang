@@ -13,7 +13,7 @@ pub struct Symbol {
 
 impl Hash for Symbol {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_usize(self.hash)
+        state.write_usize(self.hash);
     }
 }
 
@@ -43,10 +43,10 @@ impl Symbol {
     pub fn new<T: Into<String>>(str: T) -> Self {
         let str = str.into();
 
-        let mut hash: usize = 2166136261;
+        let mut hash: usize = 2_166_136_261;
         for b in str.bytes() {
             hash ^= b as usize;
-            hash = hash.wrapping_mul(16777619);
+            hash = hash.wrapping_mul(16_777_619);
         }
 
         Self {
@@ -56,6 +56,7 @@ impl Symbol {
     }
 
     /// Returns the intern symbol str
+    #[must_use]
     pub fn as_str(&self) -> &str {
         self.string
     }

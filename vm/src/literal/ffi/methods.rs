@@ -16,6 +16,7 @@ pub fn open(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> 
         Err(e) => Ok(e),
     }
 }
+
 pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let mut this: Ffi = args[1].get()?;
     let identifier: String = args[0].get()?;
