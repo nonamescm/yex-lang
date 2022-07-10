@@ -17,7 +17,10 @@ pub struct Ffi {
     path: String,
 }
 impl Ffi {
-    pub unsafe fn open(path: String) -> Result<Self, dlopen::Error> {
+    /// Open a external library
+    /// # SAFETY:
+    ///   This depends on safety of `dlopen`.
+    pub(crate) unsafe fn open(path: String) -> Result<Self, dlopen::Error> {
         let module: Container<Api> = Container::load(&path)?;
         Ok(Self {
             module: GcRef::new(module),
