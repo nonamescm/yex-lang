@@ -19,11 +19,13 @@ pub struct Node {
 
 impl List {
     /// Creates a List
+    #[must_use]
     pub const fn new() -> Self {
         Self { head: None }
     }
 
     /// Checks if the list is empty
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.head == None
     }
@@ -51,11 +53,13 @@ impl List {
     }
 
     /// Returns the current element
+    #[must_use]
     pub fn head(&self) -> Option<Value> {
         self.head.as_ref().map(|node| node.elem.clone())
     }
 
     /// Returns a index into the list
+    #[must_use]
     pub fn index(&self, index: usize) -> Value {
         if index == 0 {
             self.head().unwrap_or_else(nil)
@@ -70,6 +74,7 @@ impl List {
     }
 
     /// Returns the list length
+    #[must_use]
     pub fn len(&self) -> usize {
         let mut xs = self.head.as_ref();
         let mut count = 0;
@@ -81,17 +86,19 @@ impl List {
     }
 
     /// Converts list to Vec
+    #[must_use]
     pub fn to_vec(&self) -> Vec<Value> {
         let mut vec = vec![];
         let mut head = self.clone();
         while head.head().is_some() {
-            vec.push(head.head().unwrap().to_owned());
+            vec.push(head.head().unwrap().clone());
             head = head.tail();
         }
         vec
     }
 
     /// Iterate over all elements of `self`
+    #[must_use]
     pub fn iter(&self) -> Iter {
         Iter {
             next: self.head.as_deref(),
@@ -105,7 +112,7 @@ impl List {
         let mut list = Self::new();
         while let Some(elem) = node {
             list = list.prepend(elem.elem.clone());
-            node = elem.next.as_ref()
+            node = elem.next.as_ref();
         }
         list
     }
@@ -150,10 +157,10 @@ impl std::fmt::Display for List {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;
         for (len, value) in self.iter().enumerate() {
-            if len != self.len() - 1 {
-                write!(f, "{}, ", value)?;
-            } else {
+            if len == self.len() - 1 {
                 write!(f, "{}", value)?;
+            } else {
+                write!(f, "{}, ", value)?;
             }
         }
         write!(f, "]")
@@ -177,8 +184,8 @@ impl<'a> Iterator for Iter<'a> {
 impl FromIterator<Value> for List {
     fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
         let mut list = Self::new();
-        for item in iter.into_iter() {
-            list = list.prepend(item)
+        for item in iter {
+            list = list.prepend(item);
         }
         list
     }

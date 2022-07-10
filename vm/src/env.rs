@@ -30,19 +30,22 @@ impl EnvTable {
     const BASE_VALUE: usize = 4;
 
     /// Creates a new table
+    #[must_use]
     pub fn new() -> Self {
         Self::with_capacity(Self::BASE_VALUE)
     }
 
     /// Creates a new table with the given capacity
+    #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         let entries = unsafe {
-            let entries = alloc(Layout::array::<Entry>(capacity).unwrap()) as *mut Entry;
+            #[allow(clippy::cast_ptr_alignment)]
+            let entries = alloc(Layout::array::<Entry>(capacity).unwrap()).cast::<Entry>();
             for index in 0..capacity {
                 entries.add(index).write(Entry {
                     key: None,
                     value: nil(),
-                })
+                });
             }
             entries
         };
@@ -63,10 +66,10 @@ impl EnvTable {
             match (*entry).key {
                 Some(k) if k == *key => return (&mut *entry, true),
                 None if (*entry).value.is_nil() => {
-                    return if !last_null.is_null() {
-                        (last_null, false)
-                    } else {
+                    return if last_null.is_null() {
                         (entry, false)
+                    } else {
+                        (last_null, false)
                     }
                 }
                 None if last_null.is_null() => {
@@ -81,7 +84,7 @@ impl EnvTable {
     pub fn insert(&mut self, key: Symbol, value: Value) {
         if self.count + (self.capacity / Self::BASE_VALUE) >= self.capacity {
             let len = self.capacity * 2;
-            self.realloc(len)
+            self.realloc(len);
         }
 
         let (entry, init) = unsafe { Self::find_entry(self.entries, self.capacity, &key) };
@@ -96,14 +99,15 @@ impl EnvTable {
     }
 
     fn realloc(&mut self, len: usize) {
-        let entries = unsafe { alloc(Layout::array::<Entry>(len).unwrap()) as *mut Entry };
+        #[allow(clippy::cast_ptr_alignment)]
+        let entries = unsafe { alloc(Layout::array::<Entry>(len).unwrap()).cast::<Entry>() };
 
         for index in 0..len {
             unsafe {
                 entries.add(index).write(Entry {
                     key: None,
                     value: nil(),
-                })
+                });
             }
         }
 
@@ -123,7 +127,7 @@ impl EnvTable {
 
         unsafe {
             dealloc(
-                self.entries as *mut u8,
+                self.entries.cast::<u8>(),
                 Layout::array::<Entry>(self.capacity).unwrap(),
             );
         }
@@ -133,6 +137,7 @@ impl EnvTable {
     }
 
     /// Indexes an item in the table
+    #[must_use]
     pub fn get(&self, key: &Symbol) -> Option<Value> {
         unsafe {
             let (entry, init) = Self::find_entry(self.entries, self.capacity, key);
@@ -145,12 +150,14 @@ impl EnvTable {
     }
 
     /// Returns the table length
+    #[must_use]
     pub fn len(&self) -> usize {
         self.count
     }
 
     /// Checks if the table is empty
     #[allow(dead_code)]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.count == 0
     }
@@ -190,7 +197,7 @@ impl Drop for EnvTable {
     fn drop(&mut self) {
         unsafe {
             dealloc(
-                self.entries as *mut u8,
+                self.entries.cast::<u8>(),
                 Layout::array::<Entry>(self.capacity).unwrap(),
             );
         }

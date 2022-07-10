@@ -35,14 +35,14 @@ impl<T> GcRef<T> {
     fn inc_ref(&self) {
         unsafe {
             let ref_count = self.ref_count();
-            self.inner.as_ref().count.set(ref_count + 1)
+            self.inner.as_ref().count.set(ref_count + 1);
         }
     }
 
     fn dec_ref(&self) {
         unsafe {
             let ref_count = self.ref_count();
-            self.inner.as_ref().count.set(ref_count - 1)
+            self.inner.as_ref().count.set(ref_count - 1);
         }
     }
 
@@ -52,7 +52,7 @@ impl<T> GcRef<T> {
 }
 
 impl<T> Clone for GcRef<T> {
-    #[inline(always)]
+    #[inline]
     fn clone(&self) -> Self {
         self.inc_ref();
         Self::from_inner(self.inner)
@@ -61,14 +61,14 @@ impl<T> Clone for GcRef<T> {
 
 impl<T> std::ops::Deref for GcRef<T> {
     type Target = T;
-    #[inline(always)]
+    #[inline]
     fn deref(&self) -> &Self::Target {
         unsafe { &self.inner.as_ref().inner }
     }
 }
 
 impl<T> Drop for GcRef<T> {
-    #[inline(always)]
+    #[inline]
     fn drop(&mut self) {
         self.dec_ref();
 

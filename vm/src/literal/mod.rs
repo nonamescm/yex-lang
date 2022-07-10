@@ -45,6 +45,7 @@ pub fn show(_: *mut VirtualMachine, x: Vec<Value>) -> InterpretResult<String> {
     }
 }
 
+#[must_use]
 pub fn nil() -> Value {
     Value::Nil
 }
@@ -134,7 +135,7 @@ pub enum Value {
 
 impl Clone for Value {
     fn clone(&self) -> Self {
-        use Value::*;
+        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, UserData, FFI};
 
         match self {
             List(xs) => List(xs.clone()),
@@ -155,11 +156,13 @@ impl Clone for Value {
 
 impl Value {
     /// checks if the constant is `nil`
+    #[must_use]
     pub fn is_nil(&self) -> bool {
         self == &Self::Nil
     }
 
     /// Returns the size of `self`
+    #[must_use]
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         match self {
@@ -170,10 +173,9 @@ impl Value {
             Value::Fn(f) => mem::size_of_val(&f),
             Value::Bool(_) => mem::size_of::<bool>(),
             Value::Module(t) => mem::size_of_val(&t),
-            Value::Tuple(t) => t.len(),
+            Value::Tuple(t) | Value::Tagged(_, _, t) => t.len(),
             Value::FFI(f) => mem::size_of_val(f),
             Value::UserData(d) => mem::size_of_val(d),
-            Value::Tagged(_, _, t) => t.len(),
             Value::Nil => 4,
         }
     }
@@ -192,30 +194,25 @@ impl Value {
     }
 
     /// Convert the constant to a boolean
+    #[must_use]
     pub fn to_bool(&self) -> bool {
-        use Value::*;
+        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, UserData, FFI};
 
         match self {
             Bool(b) => *b,
-            Sym(_) => true,
             Str(s) if s.is_empty() => false,
-            Str(_) => true,
             Num(n) if *n == 0.0 => false,
-            Num(_) => true,
             Nil => false,
             List(xs) => !xs.is_empty(),
-            Fn(_) => true,
-            FFI(_) => true,
-            Module(_) => true,
-            Tuple(_) => true,
-            UserData(_) => true,
-            Tagged(..) => true,
+            Sym(_) | Str(_) | Num(_) | Fn(_) | FFI(_) | Module(_) | Tuple(_) | Tagged(..)
+            | UserData(_) => true,
         }
     }
 
     /// returns the type of the value
+    #[must_use]
     pub fn type_of(&self) -> GcRef<YexModule> {
-        use Value::*;
+        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, UserData, FFI};
 
         match self {
             Module(t) | Tagged(t, _, _) => return t.clone(),
@@ -255,7 +252,7 @@ impl From<Value> for bool {
 
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use Value::*;
+        use Value::{Bool, Fn, List, Module, Nil, Num, Str, Sym, Tagged, Tuple, UserData, FFI};
         let tk = match self {
             Fn(f) => format!("fn({})", f.arity),
             Nil => "nil".to_string(),

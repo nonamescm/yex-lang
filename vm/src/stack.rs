@@ -12,7 +12,8 @@ pub struct StackVec<T, const S: usize> {
 impl<T, const S: usize> StackVec<T, S> {
     const UNINIT: MaybeUninit<T> = MaybeUninit::uninit();
     const ARRAY_INIT: [MaybeUninit<T>; S] = [Self::UNINIT; S];
-    /// Creates a new StackVec
+    /// Creates a new `StackVec`
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             len: 0,
@@ -36,7 +37,7 @@ impl<T, const S: usize> StackVec<T, S> {
         unsafe { mem::replace(&mut self.array[self.len], MaybeUninit::uninit()).assume_init() }
     }
 
-    /// Returns the StackVec length
+    /// Returns the `StackVec` length
     pub fn len(&self) -> usize {
         self.len
     }
@@ -70,7 +71,7 @@ impl<T, const S: usize> StackVec<T, S> {
         self.pop();
     }
 
-    /// Reverses the StackVec in place
+    /// Reverses the `StackVec` in place
     #[must_use]
     #[track_caller]
     pub fn reverse(self) -> Self {
@@ -108,7 +109,7 @@ impl<T, const S: usize> StackVec<T, S> {
     }
 
     #[track_caller]
-    /// Manually updates the length of the StackVec
+    /// Manually updates the length of the `StackVec`
     /// # Safety
     /// This function doesn't check if the new length is valid, it's up to the caller to ensure
     /// that the new length is valid and all the elements are initialized
@@ -117,7 +118,7 @@ impl<T, const S: usize> StackVec<T, S> {
     }
 
     #[track_caller]
-    /// Returns a MaybeUninit reference to the element at the given index
+    /// Returns a `MaybeUninit` reference to the element at the given index
     /// # Safety
     /// This function is unsafe because it doesn't check if the index is out of bounds, it's up to
     /// the caller to make sure that the index is valid
@@ -164,7 +165,12 @@ impl<T, const S: usize> Iterator for IntoIter<T, S> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.next < self.array.len() {
             let item = unsafe {
-                (self.array.array.get_unchecked_mut(self.next).as_ptr() as *const T).read()
+                self.array
+                    .array
+                    .get_unchecked_mut(self.next)
+                    .as_ptr()
+                    .cast::<T>()
+                    .read()
             };
             self.next += 1;
             Some(item)
@@ -176,16 +182,16 @@ impl<T, const S: usize> Iterator for IntoIter<T, S> {
 
 impl<T, const S: usize> DoubleEndedIterator for IntoIter<T, S> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        if !self.array.is_empty() {
-            Some(self.array.pop())
-        } else {
+        if self.array.is_empty() {
             None
+        } else {
+            Some(self.array.pop())
         }
     }
 }
 
 #[macro_export]
-/// Creates a new StackVec
+/// Creates a new `StackVec`
 macro_rules! stackvec {
     ($ty: ty; $len: expr) => {
         $crate::StackVec::<$ty, $len>::new()
@@ -208,7 +214,7 @@ impl<T, const S: usize> FromIterator<T> for StackVec<T, S> {
     fn from_iter<U: IntoIterator<Item = T>>(iter: U) -> Self {
         let mut stackvec = Self::new();
         for it in iter {
-            stackvec.push(it)
+            stackvec.push(it);
         }
         stackvec
     }
@@ -230,7 +236,7 @@ impl<T, const S: usize> IntoIterator for StackVec<T, S> {
     type Item = T;
     type IntoIter = IntoIter<T, S>;
 
-    /// Consumes the StackVec, returing an iterator over it's elements
+    /// Consumes the `StackVec`, returing an iterator over it's elements
     fn into_iter(self) -> Self::IntoIter {
         IntoIter {
             array: self,
@@ -249,6 +255,6 @@ impl<T, const S: usize> Deref for StackVec<T, S> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        unsafe { mem::transmute(&self.array[0..self.len]) }
+        unsafe { &*(std::ptr::addr_of!(self.array[0..self.len]) as *const [T]) }
     }
 }

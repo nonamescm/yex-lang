@@ -1,6 +1,6 @@
 use crate::Symbol;
 
-/// OpCodes for the virtualMachine
+/// `OpCode`s for the virtualMachine
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum OpCode {
     /// Do nothing
@@ -234,6 +234,7 @@ pub struct OpCodeMetadata {
 
 impl OpCodeMetadata {
     /// Creates a new [`OpCodeMetadata`]
+    #[must_use]
     pub fn new(line: usize, column: usize, opcode: OpCode) -> Self {
         Self {
             line,

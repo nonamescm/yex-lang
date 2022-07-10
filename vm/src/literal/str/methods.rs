@@ -12,8 +12,7 @@ pub fn get(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     let char = string
         .chars()
         .nth(index)
-        .map(|c| c.to_string().into())
-        .unwrap_or_else(nil);
+        .map_or_else(nil, |c| c.to_string().into());
     Ok(char)
 }
 
@@ -39,7 +38,7 @@ pub fn chars(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
     let str: String = args[0].get()?;
     let iter = str.chars().map(|c| c.to_string().into());
 
-    Ok(List::from_iter(iter.rev()).into())
+    Ok(iter.rev().collect::<List>().into())
 }
 
 pub fn ord(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {

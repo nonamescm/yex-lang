@@ -52,7 +52,7 @@ impl Compiler {
             opcode: op,
             line: loc.line,
             column: loc.column,
-        })
+        });
     }
 
     fn emit_ops(&mut self, ops: &[OpCode], node: &Location) {

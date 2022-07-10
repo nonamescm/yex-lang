@@ -27,6 +27,7 @@ pub struct Fn {
 
 impl Fn {
     /// Create a new function
+    #[must_use]
     pub fn new_bt(arity: usize, body: Bytecode) -> Self {
         Self {
             arity,
@@ -44,14 +45,15 @@ impl Fn {
         }
     }
 
-    /// Converts the Fn to a GcRef<Fn>
+    /// Converts the Fn to a `GcRef`<Fn>
     #[must_use]
     pub fn to_gcref(self) -> GcRef<Fn> {
         GcRef::new(self)
     }
 
     /// Apply the function to the given arguments
-    pub fn apply(&self, app: FnArgs) -> Self {
+    #[must_use]
+    pub fn apply(&self, app: &FnArgs) -> Self {
         let mut args = stackvec![];
         for arg in app.iter().rev().chain(self.args.iter()) {
             args.push(arg.clone());
@@ -65,11 +67,13 @@ impl Fn {
     }
 
     /// Checks if the function is a native function
+    #[must_use]
     pub fn is_native(&self) -> bool {
         matches!(*self.body, FnKind::Native(_))
     }
 
     /// Checks if the function is a bytecode function
+    #[must_use]
     pub fn is_bytecode(&self) -> bool {
         matches!(*self.body, FnKind::Bytecode(_))
     }

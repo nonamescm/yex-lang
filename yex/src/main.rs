@@ -1,14 +1,18 @@
+#![warn(clippy::pedantic)]
 use rustyline::Editor;
-use std::{env::args, fs::{self, File}, process::exit};
+use std::{
+    env::args,
+    fs::{self, File},
+    process::exit,
+};
 use vm::{OpCode, OpCodeMetadata, VirtualMachine};
 
 fn eval_file(file: &str) {
-    let file = match fs::read_to_string(file) {
-        Ok(file) => file,
-        Err(..) => {
-            eprintln!("error reading {}", file);
-            exit(1);
-        }
+    let file = if let Ok(file) = fs::read_to_string(file) {
+        file
+    } else {
+        eprintln!("error reading {}", file);
+        exit(1);
     };
 
     let (bt, ct) = match front::parse(file) {
@@ -36,7 +40,7 @@ fn patch_bytecode(ops: &mut [OpCodeMetadata], old_len: usize) {
     }
 }
 
-fn start(args: Vec<String>) -> i32 {
+fn start(args: impl Iterator<Item = String>) -> i32 {
     let mut repl = Editor::<()>::new();
 
     let path = format!("{}/.yex_history", std::env::var("HOME").unwrap());
@@ -45,9 +49,9 @@ fn start(args: Vec<String>) -> i32 {
         repl.load_history(&path).ok();
     }
 
-    if args.len() > 1 {
-        for args in args.iter().skip(1) {
-            eval_file(args);
+    if args.size_hint().0 > 1 {
+        for args in args.skip(1) {
+            eval_file(&args);
         }
         return 0;
     }
@@ -55,12 +59,11 @@ fn start(args: Vec<String>) -> i32 {
     let mut vm = VirtualMachine::default();
 
     loop {
-        let line = match repl.readline("yex> ") {
-            Ok(str) => str.trim().to_string(),
-            Err(_) => {
-                repl.save_history(&path).ok();
-                return 0;
-            }
+        let line = if let Ok(str) = repl.readline("yex> ") {
+            str.trim().to_string()
+        } else {
+            repl.save_history(&path).ok();
+            return 0;
         };
 
         if line.is_empty() || line.starts_with("//") {
@@ -99,6 +102,5 @@ fn start(args: Vec<String>) -> i32 {
 }
 
 fn main() {
-    let args = args().collect();
-    exit(start(args));
+    exit(start(args()));
 }
