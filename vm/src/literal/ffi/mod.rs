@@ -31,7 +31,7 @@ impl Ffi {
 
     pub fn get(&mut self, val: &Symbol) -> Option<Value> {
         let table = self.table.get_or_insert(self.module.init());
-        table.get(&val)
+        table.get(val)
     }
 }
 impl Debug for Ffi {
