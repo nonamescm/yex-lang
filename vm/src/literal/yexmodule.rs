@@ -22,7 +22,7 @@ macro_rules! fields {
             $methods.insert(
                 Symbol::from(stringify!($name)),
                 Value::Fn(GcRef::new(Fn::new_native($arg_count, |_, args| {
-                    let this: GcRef<Self> = GcRef::new(Self::default());
+                    let this: GcRef<Self> = GcRef::new(YexModule::default());
                     let tup = Tuple(GcRef::new(args.into_boxed_slice()));
                     let value = Value::Tagged(this, Symbol::from(concat!(stringify!($sname), ".", stringify!($name))), tup);
                     Ok(value)
