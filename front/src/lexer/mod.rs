@@ -310,3 +310,25 @@ impl Iterator for Lexer {
         Some(x)
     }
 }
+
+#[test]
+fn unclosed_string_delimiter() {
+    assert!(Lexer::new(r#"""#).get().is_err());
+}
+
+#[test]
+fn string_delimiter() {
+    assert!(Lexer::new("\"\"").get().is_ok());
+}
+
+#[test]
+fn parse_number() {
+    let token = Lexer::new("100").get().unwrap();
+    assert_eq!(token.token, TokenType::Num(100.0))
+}
+
+#[test]
+fn parse_string() {
+    let string = Lexer::new(r#""Hello, world!""#).get().unwrap();
+    assert_eq!(string.token, TokenType::Str(String::from("Hello, world!")))
+}

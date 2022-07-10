@@ -971,3 +971,38 @@ fn parse_fn_err_no_pattern() {
 fn parse_fn_err_no_expr() {
     assert!(crate::parse_expr("fn arg -> ").is_err());
 }
+
+#[test]
+fn parse_local_let() {
+    assert!(crate::parse_expr("let x = 10 in x").is_ok());
+}
+
+#[test]
+fn parse_tuple() {
+    assert!(crate::parse_expr("(1, 2, 3)").is_ok());
+}
+
+#[test]
+fn parse_global_def() {
+    assert!(crate::parse("def c a b = a + b").is_ok());
+}
+
+#[test]
+fn parse_global_let() {
+    assert!(crate::parse("let a = 10").is_ok());
+}
+
+#[test]
+fn parse_codition_or() {
+    assert!(crate::parse_expr("2 || 2").is_ok())
+}
+
+#[test]
+fn parse_codition_and() {
+    assert!(crate::parse_expr("2 && 2").is_ok())
+}
+
+#[test]
+fn parse_list() {
+    assert!(crate::parse_expr("[1, 2, 3]").is_ok());
+}

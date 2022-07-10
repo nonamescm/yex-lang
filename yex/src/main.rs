@@ -101,6 +101,17 @@ fn start(args: impl Iterator<Item = String>) -> i32 {
     }
 }
 
+#[test]
+fn test_yex_file() {
+    use std::path::Path;
+    if Path::new("../tests.yex").exists() {
+        let args = vec![String::new(), String::from("../tests.yex")].into_iter();
+        assert_eq!(start(args), 0);
+    } else {
+        eprintln!("can't find ./tests.yex, so not running it.");
+    }
+}
+
 fn main() {
     exit(start(args()));
 }
