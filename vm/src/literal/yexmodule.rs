@@ -22,9 +22,9 @@ macro_rules! fields {
             $methods.insert(
                 Symbol::from(stringify!($name)),
                 $crate::literal::Value::Fn($crate::gc::GcRef::new($crate::literal::Fn::new_native($arg_count, |_, args| {
-                    let this: GcRef<YexModule> = GcRef::new(YexModule::default());
-                    let tup = Tuple(GcRef::new(args.into_boxed_slice()));
-                    let value = Value::Tagged(this, Symbol::from(concat!(stringify!($sname), ".", stringify!($name))), tup);
+                    let this: GcRef<YexModule> = $crate::gc::GcRef::new($crate::literal::module::YexModule::default());
+                    let tup = $crate::literal::tuple::Tuple($crate::gc::GcRef::new(args.into_boxed_slice()));
+                    let value = $crate::literal::Value::Tagged(this, $crate::literal::Symbol::from(concat!(::stringify!($sname), ".", stringify!($name))), tup);
                     Ok(value)
                 }))),
             );
@@ -37,8 +37,8 @@ macro_rules! fields {
     }, $methods:ident) => {
         $(
             $methods.insert(
-                Symbol::from(stringify!($name)),
-                Value::Fn(GcRef::new(Fn::new_native($arg_count, $func))),
+                $crate::literal::Symbol::from(stringify!($name)),
+                $crate::literal::Value::Fn($crate::gc::GcRef::new($crate::literal::fun::Fn::new_native($arg_count, $func))),
             );
          )*
     };}
