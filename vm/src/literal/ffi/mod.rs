@@ -29,9 +29,9 @@ impl Ffi {
         })
     }
 
-    pub fn get(&mut self, val: impl Into<Symbol>) -> Option<Value> {
+    pub fn get(&mut self, val: &Symbol) -> Option<Value> {
         let table = self.table.get_or_insert(self.module.init());
-        table.get(&val.into())
+        table.get(&val)
     }
 }
 impl Debug for Ffi {
