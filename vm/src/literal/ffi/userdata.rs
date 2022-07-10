@@ -1,33 +1,34 @@
-use std::{
-    any::Any,
-    ops::{Deref, DerefMut},
-};
+use std::any::Any;
 
 use crate::gc::GcRef;
 #[derive(Debug, Clone)]
 pub struct UserData(pub GcRef<Box<dyn Any>>);
-
+impl UserData {
+    pub fn new<T>(val: T) -> Self
+    where
+        T: Any,
+    {
+        Self(GcRef::new(Box::new(val)))
+    }
+}
 impl PartialEq for UserData {
     fn eq(&self, _: &Self) -> bool {
         false
     }
 }
 
-impl Deref for UserData {
-    type Target = dyn Any;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for UserData {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 #[test]
 fn userdata_ne() {
-    let item = UserData(GcRef::new(Box::new(())));
+    let item = UserData::new(10);
     assert_ne!(item, item);
+}
+#[test]
+fn userdata_basic() {
+    let item = UserData::new(10_i32);
+    assert!(item.0.downcast_ref::<i32>().is_some());
+}
+#[test]
+fn userdata_cmp() {
+    let item = UserData::new(String::from("Hello"));
+    assert_eq!(item.0.downcast_ref(), Some(&String::from("Hello")));
 }
