@@ -170,6 +170,8 @@ impl VirtualMachine {
                 OpCode::TCall(arity) => {
                     self.valid_tail_call(arity, bytecode)?;
                     ip = 0;
+                    self.used_locals -= frame_locals;
+                    frame_locals = 0;
                     continue;
                 }
 
@@ -289,7 +291,7 @@ impl VirtualMachine {
 
                 if self.used_locals + 1 >= self.locals.capacity() {
                     let cap = self.locals.capacity();
-                    self.locals.resize(cap, NIL);
+                    self.locals.resize(cap * 2, NIL);
                 }
 
                 self.locals[offset + (self.used_locals - *frame_locals)] = value;
