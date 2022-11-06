@@ -13,7 +13,7 @@
 
 ## About
 
-Yex is a functional scripting language written in rust. <!--TODO: More information-->
+Yex is a scripting language written in rust. <!--TODO: More information-->
 
 ## Installation
 
