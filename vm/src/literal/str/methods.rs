@@ -63,5 +63,5 @@ pub fn chr(_: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value> {
     Ok(code.into())
 }
 pub fn new(_: *mut VirtualMachine, _: Vec<Value>) -> InterpretResult<Value> {
-    Ok(Value::Str(GcRef::new(String::from(""))))
+    Ok(Value::Str(GcRef::new(String::new())))
 }

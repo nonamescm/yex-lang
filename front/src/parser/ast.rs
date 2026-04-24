@@ -127,8 +127,10 @@ impl<'a> From<UnOp> for &'a [OpCode] {
 
 #[derive(Debug)]
 pub struct Bind {
+    #[allow(clippy::struct_field_names)]
     pub bind: VarDecl,
     pub value: Box<Expr>,
+    #[allow(unused)]
     pub location: Location,
 }
 

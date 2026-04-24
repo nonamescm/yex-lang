@@ -24,7 +24,7 @@ pub fn show(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
         write!(s, "{}, ", super::super::show(vm, vec![x.clone()])?).unwrap();
     }
 
-    if xs.0.len() > 0 {
+    if !xs.0.is_empty() {
         s.pop();
         s.pop();
     }

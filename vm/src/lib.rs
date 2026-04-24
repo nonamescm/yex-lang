@@ -127,7 +127,6 @@ impl VirtualMachine {
 
     /// Executes a given set of bytecode instructions
     pub fn run(&mut self, bytecode: BytecodeRef) -> InterpretResult<()> {
-        let bytecode = bytecode;
         let mut try_stack = vec![];
 
         let mut ip = 0;
@@ -217,8 +216,8 @@ impl VirtualMachine {
             }
 
             OpCode::Swap(a, b) => unsafe {
-                let a = self.stack.get_uninit_mut(a) as *mut _;
-                let b = self.stack.get_uninit_mut(b) as *mut _;
+                let a = std::ptr::from_mut(self.stack.get_uninit_mut(a));
+                let b = std::ptr::from_mut(self.stack.get_uninit_mut(b));
 
                 ptr::swap(a, b);
             },
@@ -386,7 +385,7 @@ impl VirtualMachine {
             | OpCode::Jmp(..)
             | OpCode::Jmf(..)
             | OpCode::TCall(..) => unreachable!(),
-        };
+        }
 
         Ok(())
     }
@@ -409,10 +408,8 @@ impl VirtualMachine {
 
         let mut args = stackvec![];
 
-        let mut i = 1;
-        for _ in 0..arity {
+        for i in (1..).take(arity) {
             unsafe { args.insert_at(arity - i, self.pop()) };
-            i += 1;
         }
 
         unsafe { args.set_len(arity) };
@@ -476,7 +473,7 @@ impl VirtualMachine {
 
     #[inline]
     fn call_native(&mut self, fp: NativeFn, args: Option<FnArgs>) -> InterpretResult<()> {
-        let args = args.unwrap_or_else(FnArgs::new).reverse().into();
+        let args = args.unwrap_or_default().reverse().into();
         let result = fp(self, args);
         self.try_push(result)
     }

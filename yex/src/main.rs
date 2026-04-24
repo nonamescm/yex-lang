@@ -8,17 +8,15 @@ use std::{
 use vm::{OpCode, OpCodeMetadata, VirtualMachine};
 
 fn eval_file(file: &str) {
-    let file = if let Ok(file) = fs::read_to_string(file) {
-        file
-    } else {
-        eprintln!("error reading {}", file);
+    let Ok(file) = fs::read_to_string(file) else {
+        eprintln!("error reading {file}");
         exit(1);
     };
 
     let (bt, ct) = match front::parse(file) {
         Ok(res) => res,
         Err(e) => {
-            eprintln!("{}", e);
+            eprintln!("{e}");
             exit(1);
         }
     };
@@ -27,7 +25,7 @@ fn eval_file(file: &str) {
 
     vm.set_consts(ct);
     if let Err(e) = vm.run(&bt) {
-        eprintln!("{}", e);
+        eprintln!("{e}");
         exit(1);
     }
 }
@@ -77,11 +75,11 @@ fn start(args: impl Iterator<Item = String>) -> i32 {
                 Ok((mut bt, ct)) => {
                     patch_bytecode(&mut bt, vm.constants.len());
                     vm.constants.extend(ct);
-                    vm.run(&bt).unwrap_or_else(|e| println!("{}", e));
+                    vm.run(&bt).unwrap_or_else(|e| println!("{e}"));
                     println!("{}", vm.pop_last());
                 }
                 Err(err) => {
-                    eprintln!("{}", err);
+                    eprintln!("{err}");
                 }
             }
         } else {
@@ -89,11 +87,11 @@ fn start(args: impl Iterator<Item = String>) -> i32 {
                 Ok((mut bt, ct)) => {
                     patch_bytecode(&mut bt, vm.constants.len());
                     vm.constants.extend(ct);
-                    vm.run(&bt).unwrap_or_else(|e| println!("{}", e));
+                    vm.run(&bt).unwrap_or_else(|e| println!("{e}"));
                     println!("{}", vm.pop_last());
                 }
                 Err(err) => {
-                    eprintln!("{}", err);
+                    eprintln!("{err}");
                 }
             }
         }

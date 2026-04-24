@@ -27,7 +27,7 @@ impl List {
     /// Checks if the list is empty
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.head == None
+        self.head.is_none()
     }
 
     /// Prepends a value to the end, returning the list
@@ -43,12 +43,11 @@ impl List {
     /// Returns the list tail
     #[must_use]
     pub fn tail(&self) -> Self {
-        let tail = self.head.as_ref().map(|node| node.next.clone());
-        let tail = match tail {
-            Some(v) => v,
-            None => None,
-        };
-
+        let tail = self
+            .head
+            .as_ref()
+            .map(|node| node.next.clone())
+            .unwrap_or_default();
         Self { head: tail }
     }
 
@@ -78,7 +77,7 @@ impl List {
     pub fn len(&self) -> usize {
         let mut xs = self.head.as_ref();
         let mut count = 0;
-        while xs != None {
+        while xs.is_some() {
             xs = xs.unwrap().next.as_ref();
             count += 1;
         }
@@ -99,7 +98,7 @@ impl List {
 
     /// Iterate over all elements of `self`
     #[must_use]
-    pub fn iter(&self) -> Iter {
+    pub fn iter(&self) -> Iter<'_> {
         Iter {
             next: self.head.as_deref(),
         }
@@ -132,21 +131,20 @@ impl List {
     /// collect the list into a string, separating elements with `sep`
     #[must_use]
     pub fn join(&self, sep: &str) -> String {
-        let mut head = self.head.clone();
-
+        let mut head = self.head.as_ref();
         let mut str = String::new();
 
         while let Some(node) = head {
             match &node.elem {
                 Value::Str(s) => str.push_str(s),
                 val => str.push_str(&val.to_string()),
-            };
+            }
 
             if node.next.is_some() {
                 str.push_str(sep);
             }
 
-            head = node.next.clone();
+            head = node.next.as_ref();
         }
 
         str
@@ -158,9 +156,9 @@ impl std::fmt::Display for List {
         write!(f, "[")?;
         for (len, value) in self.iter().enumerate() {
             if len == self.len() - 1 {
-                write!(f, "{}", value)?;
+                write!(f, "{value}")?;
             } else {
-                write!(f, "{}, ", value)?;
+                write!(f, "{value}, ")?;
             }
         }
         write!(f, "]")
@@ -171,7 +169,7 @@ pub struct Iter<'a> {
     next: Option<&'a Node>,
 }
 
-impl<'a> Iterator for Iter<'a> {
+impl Iterator for Iter<'_> {
     type Item = Value;
     fn next(&mut self) -> Option<Self::Item> {
         self.next.map(|node| {
@@ -188,5 +186,19 @@ impl FromIterator<Value> for List {
             list = list.prepend(item);
         }
         list
+    }
+}
+
+impl<'a> IntoIterator for &'a List {
+    type Item = Value;
+    type IntoIter = Iter<'a>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl Default for List {
+    fn default() -> Self {
+        Self::new()
     }
 }

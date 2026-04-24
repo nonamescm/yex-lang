@@ -41,7 +41,7 @@ pub fn fold(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
     let mut acc = args[1].clone();
     let fun = args[0].clone();
 
-    for it in xs.iter() {
+    for it in &xs {
         vm.push(it);
         vm.push(acc);
         vm.push(fun.clone());
@@ -62,7 +62,7 @@ pub fn filter(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Valu
 
     let mut ys = List::new();
 
-    for x in xs.iter() {
+    for x in &xs {
         vm.push(x.clone());
         vm.push(fun.clone());
 
@@ -114,7 +114,7 @@ pub fn find(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
 
     let fun = &args[0];
 
-    for x in xs.iter() {
+    for x in &xs {
         vm.push(x.clone());
         vm.push(fun.clone());
 
@@ -139,7 +139,7 @@ pub fn show(vm: *mut VirtualMachine, args: Vec<Value>) -> InterpretResult<Value>
 
     let mut s = String::from('[');
 
-    for x in xs.iter() {
+    for x in &xs {
         write!(s, "{}, ", super::super::show(vm, vec![x])?).unwrap();
     }
 

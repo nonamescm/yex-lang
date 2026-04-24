@@ -105,7 +105,7 @@ impl From<Fn> for Value {
 }
 
 /// Immediate values that can be consumed
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub enum Value {
     /// float-precision numbers
     Num(f64),
@@ -130,6 +130,7 @@ pub enum Value {
     /// External Libraries
     FFI(Ffi),
     /// null
+    #[default]
     Nil,
 }
 
@@ -170,9 +171,9 @@ impl Value {
             Value::Num(_) => mem::size_of::<f64>(),
             Value::Sym(_) => mem::size_of::<Symbol>(),
             Value::Str(s) => s.len(),
-            Value::Fn(f) => mem::size_of_val(&f),
+            Value::Fn(f) => mem::size_of_val(f),
             Value::Bool(_) => mem::size_of::<bool>(),
-            Value::Module(t) => mem::size_of_val(&t),
+            Value::Module(t) => mem::size_of_val(t),
             Value::Tuple(t) | Value::Tagged(_, _, t) => t.len(),
             Value::FFI(f) => mem::size_of_val(f),
             Value::UserData(d) => mem::size_of_val(d),
@@ -217,7 +218,7 @@ impl Value {
         match self {
             Module(t) | Tagged(t, _, _) => return t.clone(),
             _ => {}
-        };
+        }
 
         let ty = match self {
             List(_) => YexModule::list(),
@@ -233,12 +234,6 @@ impl Value {
         };
 
         GcRef::new(ty)
-    }
-}
-
-impl Default for Value {
-    fn default() -> Self {
-        Self::Nil
     }
 }
 
@@ -258,7 +253,7 @@ impl std::fmt::Display for Value {
             Nil => "nil".to_string(),
             List(xs) => format!("{}", *xs),
             Str(s) => "\"".to_owned() + s + "\"",
-            Sym(s) => format!("{}", s),
+            Sym(s) => format!("{s}"),
             Num(n) => n.to_string(),
             Module(t) => format!("type '{}'", t.name),
             Tuple(t) => format!("{t}"),
@@ -275,7 +270,7 @@ impl std::fmt::Display for Value {
             }
             Bool(b) => b.to_string(),
         };
-        write!(f, "{}", tk)
+        write!(f, "{tk}")
     }
 }
 

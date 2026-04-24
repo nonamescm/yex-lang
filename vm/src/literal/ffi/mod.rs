@@ -3,7 +3,7 @@ pub mod userdata;
 
 use std::fmt::{Debug, Display};
 
-use crate::{gc::GcRef, EnvTable, Symbol, Value};
+use crate::{EnvTable, Symbol, Value, gc::GcRef};
 use dlopen::wrapper::{Container, WrapperApi};
 use dlopen_derive::WrapperApi;
 
@@ -24,7 +24,7 @@ impl Ffi {
     /// # SAFETY:
     ///   This depends on safety of `dlopen`.
     pub(crate) unsafe fn open(path: String) -> Result<Self, dlopen::Error> {
-        let module: Container<Api> = Container::load(&path)?;
+        let module: Container<Api> = unsafe { Container::load(&path)? };
         Ok(Self {
             module: GcRef::new(module),
             table: None,

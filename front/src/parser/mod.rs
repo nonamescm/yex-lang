@@ -395,7 +395,7 @@ impl Parser {
     fn var_decl(&mut self) -> ParseResult<VarDecl> {
         let name = match self.current.token {
             Tkt::Name(id) => id,
-            ref other => self.throw(format!("Expected name, found '{}'", other))?,
+            ref other => self.throw(format!("Expected name, found '{other}'"))?,
         };
 
         self.next()?;
@@ -462,7 +462,7 @@ impl Parser {
 
         let pat = match self.current.token {
             Tkt::Num(n) => Pattern::Lit(Literal::Num(n)),
-            Tkt::Str(ref s) => Pattern::Lit(Literal::Str(s.to_string())),
+            Tkt::Str(ref s) => Pattern::Lit(Literal::Str(s.clone())),
             Tkt::Nil => Pattern::Lit(Literal::Unit),
             Tkt::True => Pattern::Lit(Literal::Bool(true)),
             Tkt::False => Pattern::Lit(Literal::Bool(false)),
@@ -967,7 +967,7 @@ impl Parser {
             Tkt::Try => self.try_()?,
 
             // not supported
-            other => self.throw(format!("unexpected token '{}'", other))?,
+            other => self.throw(format!("unexpected token '{other}'"))?,
         };
 
         Ok(obj)

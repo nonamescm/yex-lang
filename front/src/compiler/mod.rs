@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
 use vm::{
-    gc::GcRef, stackvec, Bytecode, EnvTable, Fn, FnKind, List, OpCode, OpCodeMetadata, Symbol,
-    Value, YexModule,
+    Bytecode, EnvTable, Fn, FnKind, List, OpCode, OpCodeMetadata, Symbol, Value, YexModule,
+    gc::GcRef, stackvec,
 };
 
 use crate::parser::ast::{
-    BinOp, Bind, Def, Expr, ExprKind, LetBind, Literal, Location, MatchArm, Pattern, Stmt, StmtKind, VarDecl
+    BinOp, Bind, Def, Expr, ExprKind, LetBind, Literal, Location, MatchArm, Pattern, Stmt,
+    StmtKind, VarDecl,
 };
 
 #[derive(Default)]
@@ -71,11 +72,11 @@ impl Compiler {
     }
 
     fn emit_const(&mut self, const_: Value, node: &Location) -> usize {
-        if !matches!(const_, Value::Module(_)) {
-            if let Some(idx) = self.constants.iter().position(|c| c == &const_) {
-                self.emit_op(OpCode::Push(idx), node);
-                return idx;
-            }
+        if !matches!(const_, Value::Module(_))
+            && let Some(idx) = self.constants.iter().position(|c| c == &const_)
+        {
+            self.emit_op(OpCode::Push(idx), node);
+            return idx;
         }
 
         let pos = self.constants.len();
@@ -177,7 +178,7 @@ impl Compiler {
         loc: &Location,
     ) -> (Vec<VarDecl>, Vec<usize>) {
         match pattern {
-            Pattern::Lit(ref lt) => {
+            Pattern::Lit(lt) => {
                 // compares the value against the literal
                 self.emit_lit(lt, loc);
                 self.emit_op(OpCode::Eq, loc);
@@ -360,7 +361,7 @@ impl Compiler {
 
         // emit all the patterns, most of them are probably just variable assignments, but some of
         // them may be complex patterns, so we still need to check for the should_pop value
-        for arg in args.iter() {
+        for arg in args {
             let (_, fixes) = self.match_pattern(arg, false, loc);
 
             fix_stack.extend(fixes);
@@ -416,7 +417,7 @@ impl Compiler {
             ExprKind::App { callee, args, tail } => {
                 // iterate over the arguments
                 // pushing them onto the stack
-                for arg in args.iter() {
+                for arg in args {
                     self.expr(arg);
                 }
 
@@ -558,7 +559,7 @@ impl Compiler {
             ExprKind::List(xs) => {
                 // prepend each element to the list, in the reverse order
                 // since it's a linked list
-                for x in xs.iter() {
+                for x in xs {
                     self.expr(x);
                 }
 
@@ -678,7 +679,7 @@ impl Compiler {
             } => {
                 self.type_(name, variants, members, &node.location);
             }
-        };
+        }
 
         self.unique_counter = 0;
     }
@@ -707,7 +708,7 @@ impl Compiler {
 
         for (name, args) in variants {
             if args.is_empty() {
-                patch_list.push((name, name.as_str().split('.').last().unwrap().into()));
+                patch_list.push((name, name.as_str().split('.').next_back().unwrap().into()));
                 continue;
             }
 
@@ -727,7 +728,7 @@ impl Compiler {
             };
 
             table.insert(
-                name.as_str().split('.').last().unwrap().into(),
+                name.as_str().split('.').next_back().unwrap().into(),
                 constructor.into(),
             );
         }

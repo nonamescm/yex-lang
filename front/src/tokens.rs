@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub enum TokenType {
     // Literals
     Num(f64),
@@ -69,13 +69,8 @@ pub enum TokenType {
     Pipe,
     Bar,
 
+    #[default]
     Eof,
-}
-
-impl Default for TokenType {
-    fn default() -> Self {
-        Self::Eof
-    }
 }
 
 impl std::fmt::Display for TokenType {
@@ -83,8 +78,8 @@ impl std::fmt::Display for TokenType {
         let res = match self {
             Self::Num(n) => n.to_string(),
             Self::Str(s) => "\"".to_owned() + s + "\"",
-            Self::Sym(s) => format!(":{}", s),
-            Self::Name(v) => format!("{}", v),
+            Self::Sym(s) => format!(":{s}"),
+            Self::Name(v) => format!("{v}"),
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),
             Self::Nil => "nil".into(),
@@ -147,7 +142,7 @@ impl std::fmt::Display for TokenType {
             Self::Eof => "<eof>".into(),
         };
 
-        write!(f, "{}", res)
+        write!(f, "{res}")
     }
 }
 
@@ -178,6 +173,7 @@ pub fn fetch_keyword<T: AsRef<str>>(word: T) -> Option<TokenType> {
 pub struct Token {
     pub line: usize,
     pub column: usize,
+    #[allow(clippy::struct_field_names)]
     pub token: TokenType,
 }
 

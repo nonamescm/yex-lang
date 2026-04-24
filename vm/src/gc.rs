@@ -25,7 +25,7 @@ impl<T> GcRef<T> {
     }
 
     pub unsafe fn mut_ref(&mut self) -> &mut T {
-        &mut (*self.inner.as_ptr()).inner
+        unsafe { &mut (*self.inner.as_ptr()).inner }
     }
 
     fn from_inner(inner: NonNull<Ref<T>>) -> Self {

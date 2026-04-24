@@ -49,7 +49,7 @@ impl<T, const S: usize> StackVec<T, S> {
 
     #[track_caller]
     /// Returns an iterator of mutable references to the elements
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> + DoubleEndedIterator {
+    pub fn iter_mut(&mut self) -> impl DoubleEndedIterator<Item = &mut T> {
         self.array[0..self.len]
             .iter_mut()
             .map(|it| unsafe { it.assume_init_mut() })
@@ -57,7 +57,7 @@ impl<T, const S: usize> StackVec<T, S> {
 
     #[track_caller]
     /// Returns an iterator of references to the elements
-    pub fn iter(&self) -> impl Iterator<Item = &T> + DoubleEndedIterator {
+    pub fn iter(&self) -> impl DoubleEndedIterator<Item = &T> {
         self.array[0..self.len]
             .iter()
             .map(|it| unsafe { it.assume_init_ref() })
@@ -136,9 +136,9 @@ impl<T: std::fmt::Debug, const S: usize> std::fmt::Debug for StackVec<T, S> {
 
             for (index, line) in fmt.lines().enumerate() {
                 if index < count - 1 {
-                    writeln!(f, "    {}", line)?;
+                    writeln!(f, "    {line}")?;
                 } else {
-                    writeln!(f, "    {},", line)?;
+                    writeln!(f, "    {line},")?;
                 }
             }
         }

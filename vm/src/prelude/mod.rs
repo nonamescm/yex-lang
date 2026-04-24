@@ -65,7 +65,7 @@ fn debug_stack(vm: &mut VirtualMachine, _args: &[Value]) -> InterpretResult<Valu
 
 fn input(args: &[Value]) -> InterpretResult<Value> {
     let prompt: String = args[0].get()?;
-    print!("{}", prompt);
+    print!("{prompt}");
 
     io::stdout().flush()?;
 

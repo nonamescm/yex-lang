@@ -1,12 +1,12 @@
 use std::{
-    alloc::{alloc, dealloc, Layout},
+    alloc::{Layout, alloc, dealloc},
     ptr::null_mut,
     slice,
 };
 
 use crate::{
-    literal::{nil, Value},
     Symbol,
+    literal::{Value, nil},
 };
 
 type Key = Symbol;
@@ -61,21 +61,21 @@ impl EnvTable {
         let mut last_null: *mut Entry = null_mut();
 
         loop {
-            let entry = entries.add(index);
+            let entry = unsafe { entries.add(index) };
             index = (index + 1) & (capacity - 1);
-            match (*entry).key {
-                Some(k) if k == *key => return (&mut *entry, true),
-                None if (*entry).value.is_nil() => {
+            match unsafe { (*entry).key } {
+                Some(k) if k == *key => return (&raw mut *entry, true),
+                None if unsafe { (*entry).value.is_nil() } => {
                     return if last_null.is_null() {
                         (entry, false)
                     } else {
                         (last_null, false)
-                    }
+                    };
                 }
                 None if last_null.is_null() => {
                     last_null = entry;
                 }
-                _ => continue,
+                _ => {}
             }
         }
     }
@@ -115,12 +115,9 @@ impl EnvTable {
             unsafe {
                 let entry = self.entries.add(index);
 
-                match (*entry).key {
-                    Some(k) => {
-                        let new = Self::find_entry(entries, len, &k).0;
-                        new.swap(entry);
-                    }
-                    None => continue,
+                if let Some(k) = (*entry).key {
+                    let new = Self::find_entry(entries, len, &k).0;
+                    new.swap(entry);
                 }
             }
         }
@@ -211,6 +208,6 @@ impl PartialEq for EnvTable {
         }
 
         self.iter()
-            .all(|(key, value)| other.get(&key).map_or(false, |v| value == v))
+            .all(|(key, value)| other.get(&key).is_some_and(|v| value == v))
     }
 }

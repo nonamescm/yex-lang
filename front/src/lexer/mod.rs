@@ -55,7 +55,7 @@ impl Lexer {
                 self.line += 1;
             }
             _ => self.column += 1,
-        };
+        }
         self.current()
     }
 
@@ -104,7 +104,7 @@ impl Lexer {
             '\\' => '\\',
             '"' => '"',
             'r' => '\r',
-            other => self.throw(format!("Unknow escape char '{}'", other))?,
+            other => self.throw(format!("Unknow escape char '{other}'"))?,
         };
         self.next();
         Ok(char.into())
@@ -204,7 +204,7 @@ impl Lexer {
                 let n = self.take_while(|c| c.is_numeric() || c == '.')?;
                 match n.parse::<f64>() {
                     Ok(n) => TokenType::Num(n),
-                    Err(_) => self.throw(format!("Can't parse number {}", n))?,
+                    Err(_) => self.throw(format!("Can't parse number {n}"))?,
                 }
             }
             c if c.is_alphabetic() || c == '_' => {
@@ -291,7 +291,7 @@ impl Lexer {
                 return self.get();
             }
 
-            c => self.throw(format!("Unknown start of token '{}'", c))?,
+            c => self.throw(format!("Unknown start of token '{c}'"))?,
         };
 
         Ok(Token {

@@ -5,6 +5,7 @@ pub type NativeFn = fn(*mut VirtualMachine, Vec<Value>) -> InterpretResult<Value
 pub type FnBody = GcRef<FnKind>;
 pub type FnArgs = StackVec<Value, 8>;
 
+#[allow(unpredictable_function_pointer_comparisons)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// The kind of a function.
 pub enum FnKind {
