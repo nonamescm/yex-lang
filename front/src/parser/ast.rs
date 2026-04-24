@@ -162,6 +162,12 @@ impl MatchArm {
 }
 
 #[derive(Debug)]
+pub struct LetBind {
+    pub bind: Pattern,
+    pub value: Box<Expr>,
+}
+
+#[derive(Debug)]
 pub enum ExprKind {
     If {
         cond: Box<Expr>,
@@ -170,8 +176,7 @@ pub enum ExprKind {
     },
 
     Let {
-        bind: Pattern,
-        value: Box<Expr>,
+        binds: Vec<LetBind>,
         body: Box<Expr>,
     },
     Def {

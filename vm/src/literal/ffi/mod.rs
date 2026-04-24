@@ -6,16 +6,19 @@ use std::fmt::{Debug, Display};
 use crate::{gc::GcRef, EnvTable, Symbol, Value};
 use dlopen::wrapper::{Container, WrapperApi};
 use dlopen_derive::WrapperApi;
+
 #[derive(WrapperApi)]
 pub struct Api {
     init: fn() -> EnvTable,
 }
+
 #[derive(Clone)]
 pub struct Ffi {
     module: GcRef<Container<Api>>,
     table: Option<EnvTable>,
     path: String,
 }
+
 impl Ffi {
     /// Open a external library
     /// # SAFETY:
@@ -34,16 +37,19 @@ impl Ffi {
         table.get(val)
     }
 }
+
 impl Debug for Ffi {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "FFI {{ path: {}, module: ?? }}", self.path)
     }
 }
+
 impl Display for Ffi {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "<{}>", self.path)
     }
 }
+
 impl PartialEq for Ffi {
     fn eq(&self, other: &Self) -> bool {
         self.path == other.path

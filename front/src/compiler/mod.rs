@@ -6,7 +6,7 @@ use vm::{
 };
 
 use crate::parser::ast::{
-    BinOp, Bind, Def, Expr, ExprKind, Literal, Location, MatchArm, Pattern, Stmt, StmtKind, VarDecl,
+    BinOp, Bind, Def, Expr, ExprKind, LetBind, Literal, Location, MatchArm, Pattern, Stmt, StmtKind, VarDecl
 };
 
 #[derive(Default)]
@@ -453,12 +453,18 @@ impl Compiler {
 
             ExprKind::Match { expr, arms } => self.match_expr(expr, arms, loc),
 
-            ExprKind::Let { bind, value, body } => {
-                // compiles the value and pushes it on the stack
-                self.expr(value);
+            ExprKind::Let { binds, body } => {
+                let mut declarations = Vec::new();
+                let mut fix_stack = Vec::new();
+                for LetBind { bind, value } in binds {
+                    // compiles the value and pushes it on the stack
+                    self.expr(value);
 
-                // try to match against the value
-                let (declarations, fix_stack) = self.match_pattern(bind, false, loc);
+                    // try to match against the value
+                    let (symbols, fixes) = self.match_pattern(bind, false, loc);
+                    declarations.extend_from_slice(&symbols);
+                    fix_stack.extend_from_slice(&fixes);
+                }
 
                 self.expr(body);
 

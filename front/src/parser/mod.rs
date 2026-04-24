@@ -5,6 +5,7 @@ use vm::Symbol;
 use crate::{
     error::{ParseError, ParseResult},
     lexer::Lexer,
+    parser::ast::LetBind,
     tokens::{Token, TokenType as Tkt},
 };
 
@@ -502,18 +503,35 @@ impl Parser {
         Ok((vec![], pat))
     }
 
+    fn let_bind(&mut self) -> ParseResult<(Vec<Symbol>, LetBind)> {
+        let (ids, bind) = self.pattern()?;
+        self.expect(&Tkt::Assign)?;
+        let value = self.expr()?;
+
+        Ok((
+            ids,
+            LetBind {
+                bind,
+                value: Box::new(value),
+            },
+        ))
+    }
+
     fn let_(&mut self) -> ParseResult<Expr> {
         let line = self.current.line;
         let column = self.current.column;
 
         self.expect(&Tkt::Let)?;
 
-        let (ids, bind) = self.pattern()?;
+        let mut binds = Vec::new();
+        let mut ids = Vec::new();
 
-        self.expect(&Tkt::Assign)?;
-
-        let value = self.expr()?;
-
+        while self.current.token != Tkt::In {
+            let (symbols, bind) = self.let_bind()?;
+            ids.extend(symbols);
+            self.expect(&Tkt::Semicolon)?;
+            binds.push(bind);
+        }
         self.expect(&Tkt::In)?;
 
         let body = self.expr()?;
@@ -524,8 +542,7 @@ impl Parser {
 
         Ok(Expr::new(
             ExprKind::Let {
-                bind,
-                value: Box::new(value),
+                binds,
                 body: Box::new(body),
             },
             line,
@@ -974,7 +991,7 @@ fn parse_fn_err_no_expr() {
 
 #[test]
 fn parse_local_let() {
-    assert!(crate::parse_expr("let x = 10 in x").is_ok());
+    assert!(crate::parse_expr("let x = 10; in x").is_ok());
 }
 
 #[test]
